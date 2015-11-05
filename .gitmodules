@@ -28,3 +28,15 @@
 [submodule "resin-zc702"]
 	path = resin-zc702
 	url = git@github.com:resin-io/resin-zc702.git
+[submodule "yocto-daisy/meta-openembedded"]
+	path = yocto-daisy/meta-openembedded
+	url = git://github.com/openembedded/meta-openembedded
+[submodule "yocto-fido/meta-openembedded"]
+	path = yocto-fido/meta-openembedded
+	url = git://github.com/openembedded/meta-openembedded
+[submodule "yocto-daisy/poky"]
+	path = yocto-daisy/poky
+	url = git://git.yoctoproject.org/poky
+[submodule "yocto-fido/poky"]
+	path = yocto-fido/poky
+	url = git://git.yoctoproject.org/poky
