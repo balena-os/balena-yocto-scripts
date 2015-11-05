@@ -1,0 +1,30 @@
+[submodule "resin-beaglebone"]
+	path = resin-beaglebone
+	url = git@github.com:resin-io/resin-beaglebone.git
+[submodule "resin-edison"]
+	path = resin-edison
+	url = git@github.com:resin-io/resin-edison.git
+[submodule "resin-fsl-arm"]
+	path = resin-fsl-arm
+	url = git@github.com:resin-io/resin-fsl-arm.git
+[submodule "resin-intel"]
+	path = resin-intel
+	url = git@github.com:resin-io/resin-intel.git
+[submodule "resin-odroid"]
+	path = resin-odroid
+	url = git@github.com:resin-io/resin-odroid.git
+[submodule "resin-parallella"]
+	path = resin-parallella
+	url = git@github.com:resin-io/resin-parallella.git
+[submodule "resin-raspberrypi"]
+	path = resin-raspberrypi
+	url = git@github.com:resin-io/resin-raspberrypi.git
+[submodule "resin-ts"]
+	path = resin-ts
+	url = git@github.com:resin-io/resin-ts.git
+[submodule "resin-via-arm"]
+	path = resin-via-arm
+	url = git@github.com:resin-io/resin-via-arm.git
+[submodule "resin-zc702"]
+	path = resin-zc702
+	url = git@github.com:resin-io/resin-zc702.git
