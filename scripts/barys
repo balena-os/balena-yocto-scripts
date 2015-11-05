@@ -1,0 +1,500 @@
+#!/bin/bash
+
+#
+# Build A Resin Yocto Script
+# --------------------------
+#
+# HARD ASSUMPTIONS
+# * This script resides in a directory called scripts in resin-yocto repository.
+# * Build will be created in the directory where resin-yocto was cloned.
+# * If build with shared downloads directory this will be assumed in the
+# directory where resin-yocto was cloned.
+# * Script ran as normal user.
+#
+# Signed-off-by: Theodor Gherzan <theodor@resin.io>
+# Signed-off-by: Andrei Gherzan <andrei@resin.io>
+#
+
+BARYSVERSION=1.2
+
+# JSON machine desciption file
+JSON=device-types.json
+
+# Default values
+COMPRESS_TOOL="xz"
+BUILDDIR=build
+REMOVEBUILD=no
+COMPRESS=no
+STAGING=no
+SUPERVISOR_TAG=production
+SHARED_DOWNLOADS=
+SHARED_SSTATE=
+DRY_RUN=no
+LOG=no
+RM_WORK=
+LOGFILE=`pwd`/`basename "$0"`.log
+MACHINES=
+BITBAKEARGS=
+YOCTO_VERSION=
+EXIT_CODE=0
+
+function help {
+    echo "Usage: "`basename "$0"`" --yocto <yocto-version> [options]"
+
+    echo
+    echo -e "Mandatory arguments:"
+
+    echo -e "\t--yocto"
+    echo -e "\t\t Select yocto version. This flag restricts available"
+    echo -e "\t\t buildable machines based on yocto version."
+        echo -e "\t\t Supported yocto versions:"
+    for yoctover in ${YOCTO_VERSIONS}; do
+        echo -e "\t\t\t $yoctover"
+    done
+
+    echo
+    echo -e "Options:"
+
+    echo -e "\t-h | --help"
+    echo -e "\t\t Print this message."
+
+    echo -e "\t-m | --machine"
+    echo -e "\t\t Build a supported machine."
+    echo -e "\t\t Supported machines organized by yocto version:"
+    for yoctover in ${YOCTO_VERSIONS}; do
+        echo -e "\t\t\t $yoctover"
+        for machine in `jq -r ".[] | select(.yocto.version == \"$yoctover\") | [.yocto.machine] | sort | .[] | select(. != null)" $DEVICE_TYPES_JSON`; do
+            echo -e "\t\t\t\t $machine"
+        done
+    done
+    echo -e "\t\t Default: build all supported machines for the selected yocto version."
+
+    echo -e "\t-k | --continue"
+    echo -e "\t\t Run bitbake with \"-k\" argument."
+    echo -e "\t\t From bitbake manual:"
+    echo -e "\t\t\t Continue as much as possible after an error. While the"
+    echo -e "\t\t\t target that failed and anything depending on it cannot"
+    echo -e "\t\t\t be built, as much as possible will be built before"
+    echo -e "\t\t\t stopping"
+
+    echo -e "\t-c | --compress"
+    echo -e "\t\t Run build with compress variable (RESIN_SDIMG_COMPRESSION)"
+    echo -e "\t\t using $COMPRESS_TOOL."
+    echo -e "\t\t Default: no."
+
+    echo -e "\t-s | --staging"
+    echo -e "\t\t Run a staging build."
+    echo -e "\t\t Default: no."
+
+    echo -e "\t--supervisor-tag"
+    echo -e "\t\t Use a specific supervisor tag."
+    echo -e "\t\t Default: production."
+
+    echo -e "\t-r | --remove-build"
+    echo -e "\t\t Run a clean build by removing the build directory before"
+    echo -e "\t\t building."
+    echo -e "\t\t Build directory name is configurable with -b|--build-name."
+    echo -e "\t\t Default: no."
+
+    echo -e "\t-b | --build-name"
+    echo -e "\t\t Set build directory name."
+    echo -e "\t\t If clean build was selected with -r|--remove-build this"
+    echo -e "\t\t directory will be removed."
+    echo -e "\t\t Default: build."
+
+    echo -e "\t--shared-downloads"
+    echo -e "\t\t Use a custom absolute path for DL_DIR."
+    echo -e "\t\t Default: don't have a custom path."
+
+    echo -e "\t--shared-sstate"
+    echo -e "\t\t Use a custom absolute path for SSTATE_DIR."
+    echo -e "\t\t Default: don't have a custom path."
+
+    echo -e "\t-l | --log"
+    echo -e "\t\t Log in "`basename "$0"`".log."
+    echo -e "\t\t Default: no."
+
+    echo -e "\t-n | --dry-run"
+    echo -e "\t\t Don't run bitbake bun only configure build as requested."
+    echo -e "\t\t Machine is ignored and will need to be modified accordingly"
+    echo -e "\t\t in local.conf file or using MACHINE=yyy in front of bitbake"
+    echo -e "\t\t commands"
+    echo -e "\t\t Default: no."
+
+    echo -e "\t--rm-work"
+    echo -e "\t\t Inherit rm_work in local.conf."
+    echo -e "\t\t Default: no."
+
+    echo -e "\t-i | --interactive"
+    echo -e "\t\t Run tool in interactive mode."
+    echo -e "\t\t Default: no."
+
+    echo -e "\t-v | --version"
+    echo -e "\t\t Print version"
+}
+
+function log {
+    # Address log levels
+    case $1 in
+        ERROR)
+            loglevel=ERROR
+            shift
+            ;;
+        WARN)
+            loglevel=WARNING
+            shift
+            ;;
+        *)
+            loglevel=LOG
+            ;;
+    esac
+    ENDTIME=$(date +%s)
+    if [ "z$LOG" == "zyes" ]; then
+        printf "[%09d%s%s\n" "$(($ENDTIME - $STARTTIME))" "][$loglevel]" "$1" | tee -a $LOGFILE
+    else
+        printf "[%09d%s%s\n" "$(($ENDTIME - $STARTTIME))" "][$loglevel]" "$1"
+    fi
+    if [ "$loglevel" == "ERROR" ]; then
+        exit 1
+    fi
+}
+
+function check_machine {
+    found=0
+    for mi in `jq -r ".[] | select(.yocto.version == \"$YOCTO_VERSION\") | [.yocto.machine] | sort | .[] | select(. != null)" $DEVICE_TYPES_JSON`; do
+        if [ "$1" == "$mi" ]; then
+            found=1
+            break
+        fi
+    done
+}
+
+function check_yoctoversion {
+    found=0
+    for yoctover in ${YOCTO_VERSIONS}; do
+        if [ "$1" == "$yoctover" ]; then
+            found=1
+            break
+        fi
+    done
+}
+
+# Timer
+STARTTIME=$(date +%s)
+
+# Get the absolute script location
+pushd `dirname $0` > /dev/null 2>&1
+SCRIPTPATH=`pwd`
+popd > /dev/null 2>&1
+
+# Get the supported yocto versions
+YOCTO_VERSIONS=$(ls $SCRIPTPATH/.. | grep yocto | grep -v yocto-all)
+if [ -z "$YOCTO_VERSIONS" ]; then
+    log ERROR "Cannot find yocto layers. Did you repo init/sync?"
+fi
+
+# Define a helper variable for device types json file
+DEVICE_TYPES_JSON=$SCRIPTPATH/../yocto-all/resin-device-types/$JSON
+
+# Make sure the device json is in place
+if [ ! -f $DEVICE_TYPES_JSON ]; then
+    log ERROR "Cannot find $DEVICE_TYPES_JSON."
+fi
+
+# This script depends on jq
+if ! `which jq > /dev/null 2>&1`; then
+    log ERROR "jq dependency failed. Make sure you have jq installed on your system."
+fi
+
+# Backup $@
+SCRIPT_ARGUMENTS=$@
+
+# Parse arguments
+while [[ $# -ge 1 ]]; do
+    i="$1"
+    case $i in
+        -h|--help)
+            help
+            exit 0
+            ;;
+        --yocto)
+            if [ -z "$2" ]; then
+                log ERROR "\"$1\" argument needs a value."
+            fi
+            check_yoctoversion $2
+            if [ $found -eq 0 ]; then
+                log ERROR "\"$2\" is not a supported yocto version."
+            else
+                YOCTO_VERSION=$2
+                shift
+            fi
+            ;;
+        -m|--machine)
+            if [ -z "$2" ]; then
+                log ERROR "\"$1\" argument needs a value."
+            fi
+            check_machine $2
+            if [ $found -eq 0 ]; then
+                log ERROR "\"$2\" is not a supported machine."
+            else
+                MACHINES="$MACHINES $2"
+                shift
+            fi
+            ;;
+        -k|--continue)
+            BITBAKEARGS="$BITBAKEARGS -k"
+            ;;
+        -c|--compress)
+            COMPRESS=yes
+            ;;
+        -s|--staging)
+            STAGING=yes
+            ;;
+        --supervisor-tag)
+            if [ -z "$2" ]; then
+                log ERROR "\"$1\" argument needs a value."
+            fi
+            SUPERVISOR_TAG=$2
+            shift
+            ;;
+        -r|--remove-build)
+            REMOVEBUILD=yes
+            ;;
+        -b|--build-name)
+            if [ -z "$2" ]; then
+                log ERROR "\"$1\" argument needs a value."
+            fi
+            BUILDDIR=$2
+            shift
+            ;;
+        --shared-downloads)
+            # Argument needs to be non-empty and absolute path
+            if [ -z "$2" ] || [ "${2:0:1}" != "/" ]; then
+                log ERROR "\"$1\" argument is invalid."
+            fi
+            SHARED_DOWNLOADS=$2
+            shift
+            ;;
+        --shared-sstate)
+            # Argument needs to be non-empty and absolute path
+            if [ -z "$2" ] || [ "${2:0:1}" != "/" ]; then
+                log ERROR "\"$1\" argument is invalid."
+            fi
+            SHARED_SSTATE=$2
+            shift
+            ;;
+        -l|--log)
+            LOG=yes
+            ;;
+        -n|--dry-run)
+            DRY_RUN=yes
+            ;;
+        --rm-work)
+            RM_WORK=yes
+            ;;
+        -i|--interactive)
+            echo -n "Supported yocto versions:"
+            for yver in ${YOCTO_VERSIONS}; do
+                echo -n " $yver"
+            done
+            echo "."
+            read -p "Select yocto version: " yver
+            check_yoctoversion $yver
+            if [ $found -eq 0 ]; then
+                log ERROR "\"$m\" is not a supported yocto version."
+            fi
+            YOCTO_VERSION=$yver
+
+            echo -n "Supported machines:"
+            for m in `jq -r ".[] | select(.yocto.version == \"$YOCTO_VERSION\") | [.yocto.machine] | sort | .[] | select(. != null)" $DEVICE_TYPES_JSON`; do
+                echo -n " $m"
+            done
+            echo "."
+            read -p "Select machines. Space separated or empty for all: " m
+            MACHINES=$m
+            for m in $MACHINES; do
+                check_machine $m
+                if [ $found -eq 0 ]; then
+                    log ERROR "\"$m\" is not a supported machine."
+                fi
+            done
+
+            read -p "Run bitbake with \"-k\"? yes/[no] " yn
+            case $yn in
+                [Yy]* ) BITBAKEARGS="$BITBAKEARGS -k";;
+            esac
+
+            read -p "Compress final images with $COMPRESS_TOOL? yes/[no] " yn
+            case $yn in
+                [Yy]* ) COMPRESS=yes;;
+            esac
+
+            read -p "Staging builds? yes/[no] " yn
+            case $yn in
+                [Yy]* ) STAGING=yes;;
+            esac
+
+            read -p "Supervisor version? [$SUPERVISOR_TAG] " yn
+            if [ -n "$yn" ]; then
+                SUPERVISOR_TAG=$yn
+            fi
+
+            read -p "Remove build directory? yes/[no] " yn
+            case $yn in
+                [Yy]* ) REMOVEBUILD=yes;;
+            esac
+
+            read -p "Build name? [$BUILDDIR] " yn
+            if [ -n "$yn" ]; then
+                BUILDDIR=$yn
+            fi
+
+            read -p "Shared downloads directory? yes/[no] " yn
+            case $yn in
+                [Yy]* )
+                    read -p "Shared downloads path? " SHARED_DOWNLOADS
+                    if [ -z "$SHARED_DOWNLOADS" ] || [ "${SHARED_DOWNLOADS:0:1}" != "/" ]; then
+                        log ERROR "Provided path is invalid."
+                    fi
+                    ;;
+            esac
+
+            read -p "Shared sstate directory? yes/[no] " yn
+            case $yn in
+                [Yy]* )
+                    read -p "Shared sstate path? " SHARED_SSTATE
+                    if [ -z "$SHARED_SSTATE" ] || [ "${SHARED_SSTATE:0:1}" != "/" ]; then
+                        log ERROR "Provided path is invalid."
+                    fi
+                    ;;
+            esac
+
+            read -p "Generate log? yes/[no] " yn
+            case $yn in
+                [Yy]* ) LOG=yes;;
+            esac
+
+            read -p "Inherit rm_work? yes/[no] " yn
+            case $yn in
+                [Yy]* ) RM_WORK=yes;;
+            esac
+
+            read -p "Dry run? yes/[no] " yn
+            case $yn in
+                [Yy]* ) DRY_RUN=yes;;
+            esac
+
+            # This is interactive so just abort arguments parsing
+            break
+            ;;
+        -v|--version )
+            echo $BARYSVERSION
+            exit 0
+            ;;
+        *)
+            log ERROR "Unrecognized option $1."
+            ;;
+    esac
+    shift
+done
+
+if [ -z "$YOCTO_VERSION" ]; then
+    log ERROR "--yocto is a mandatory argument."
+fi
+
+# LOGFILE init and header
+if [ "z$LOG" == "zyes" ]; then
+    echo "================"`basename "$0"`" HEADER START====================" > $LOGFILE
+    date >> $LOGFILE
+    echo "Script called from: "`pwd` >> $LOGFILE
+    echo "Script called as: $0 $SCRIPT_ARGUMENTS" >> $LOGFILE
+    echo "Selected yocto version: $YOCTO_VERSION" >> $LOGFILE
+    echo "Selected machines: $MACHINES" >> $LOGFILE
+    echo "Selected bitbake arguments: $BITBAKEARGS" >> $LOGFILE
+    echo "Build directory name: $BUILDDIR" >> $LOGFILE
+    echo "Remove build directory? $REMOVEBUILD" >> $LOGFILE
+    echo "Compressed image? $COMPRESS" >> $LOGFILE
+    echo "Shared downloads directory: $SHARED_DOWNLOADS" >> $LOGFILE
+    echo "Shared sstate directory: $SHARED_SSTATE" >> $LOGFILE
+    echo "Staging builds? $STAGING" >> $LOGFILE
+    echo "Supervisor version: $SUPERVISOR_TAG" >> $LOGFILE
+    echo "Inherit rm_work? $RM_WORK" >> $LOGFILE
+    echo "================"`basename "$0"`" HEADER STOP=====================" >> $LOGFILE
+fi
+
+# We now know the selected yocto version - so we can compute all the available machines
+SUPPORTED_MACHINES=`jq -r ".[] | select(.yocto.version == \"$YOCTO_VERSION\") | [.yocto.machine] | sort | .[] | select(. != null)" $DEVICE_TYPES_JSON`
+
+if [ "x$REMOVEBUILD" == "xyes" ]; then
+    log "Removing old build in $SCRIPTPATH/../${YOCTO_VERSION}/$BUILDDIR."
+    log "This might take a while ..."
+    rm -rf $SCRIPTPATH/../${YOCTO_VERSION}/$BUILDDIR
+fi
+
+cd $SCRIPTPATH/../${YOCTO_VERSION}
+
+# Configure build
+$SCRIPTPATH/generate-conf-notes.sh $SCRIPTPATH/../yocto-all/meta-resin/meta-resin-${YOCTO_VERSION##*-}/conf $DEVICE_TYPES_JSON $YOCTO_VERSION
+
+export TEMPLATECONF=../../yocto-all/meta-resin/meta-resin-${YOCTO_VERSION##*-}/conf/samples
+source poky/oe-init-build-env $BUILDDIR
+if [ "x$STAGING" == "xyes" ]; then
+    sed -i "s/.*RESIN_STAGING_BUILD ?=.*/RESIN_STAGING_BUILD ?= \"yes\"/g" conf/local.conf
+fi
+if [ -n "$SUPERVISOR_TAG" ]; then
+    sed -i "s/.*SUPERVISOR_TAG ?=.*/SUPERVISOR_TAG ?= \"$SUPERVISOR_TAG\"/g" conf/local.conf
+fi
+if [ "x$COMPRESS" == "xyes" ]; then
+    sed -i "s/.*RESIN_SDIMG_COMPRESSION ?=.*/RESIN_SDIMG_COMPRESSION ?= \"${COMPRESS_TOOL}\"/g" conf/local.conf
+fi
+if [ "x$RM_WORK" == "xyes" ]; then
+    sed -i "s/.*INHERIT += \"rm_work\".*/INHERIT += \"rm_work\"/g" conf/local.conf
+fi
+if [ -n "$SHARED_DOWNLOADS" ]; then
+    sed -i "s#.*DL_DIR ?=.*#DL_DIR ?= \"$SHARED_DOWNLOADS\"#g" conf/local.conf
+fi
+if [ -n "$SHARED_SSTATE" ]; then
+    sed -i "s#.*SSTATE_DIR ?=.*#SSTATE_DIR ?= \"$SHARED_SSTATE\"#g" conf/local.conf
+fi
+log "Resin build initialized in $BUILDDIR."
+
+# Start builds
+if [ "$DRY_RUN" == "yes" ]; then
+  log "Dry run requested so don't start builds."
+  log WARN "Don't forget to setup build MACHINE as this script ignores it in dry run mode."
+else
+  if [ -z "$MACHINES" ]; then
+      ITERATOR_MACHINES="${SUPPORTED_MACHINES}"
+  else
+      ITERATOR_MACHINES="$MACHINES"
+  fi
+  for machine in $ITERATOR_MACHINES; do
+      IMAGE=`cat $DEVICE_TYPES_JSON | jq  -r '.[].yocto | select(.machine == '\"${machine}\"').image'`
+      if [ -z "$IMAGE" ] || [ "z$IMAGE" == "znull" ]; then
+          log ERROR "No target image defined for $machine."
+      fi
+      log "Run build for $machine: MACHINE=$machine bitbake $IMAGE $BITBAKEARGS"
+      log "This might take a while ..."
+      env MACHINE=$machine bitbake ${IMAGE} $BITBAKEARGS
+      if [ $? -eq 0 ]; then
+          log "Build for $machine suceeded."
+      else
+          log "Build for $machine failed. Check failed log in $BUILDDIR/tmp/log/cooker/$machine ."
+          EXIT_CODE=2 # Fail at the end
+      fi
+  done
+  for machine in $ITERATOR_MACHINES; do
+        IMAGE=`cat $DEVICE_TYPES_JSON | jq  -r '.[].yocto | select(.machine == '\"${machine}\"').image'`
+        FSTYPE=`cat $DEVICE_TYPES_JSON | jq  -r '.[].yocto | select(.machine == '\"${machine}\"').fstype'`
+        if [ -z "$IMAGE" ] || [ -z "$FSTYPE" ] || [ "z$IMAGE" == "znull" ] || [ "z$FSTYPE" == "znull" ]; then
+          log ERROR "No target image and/or fstype defined for $machine."
+      fi
+        log "If build for $machine succeeded, final image should have been generated here:"
+        log "   $BUILDDIR/tmp/deploy/images/$machine/$IMAGE-$machine.$FSTYPE"
+  done
+fi
+
+log "Done."
+echo "===================="`basename "$0"`" STOP========================" >> $LOGFILE
+
+exit $EXIT_CODE

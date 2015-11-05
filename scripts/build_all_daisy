@@ -1,0 +1,12 @@
+#!/bin/bash
+
+#
+# Helper script for running barys
+#
+
+# Get the absolute script location
+pushd `dirname $0` > /dev/null 2>&1
+SCRIPTPATH=`pwd`
+popd > /dev/null 2>&1
+
+$SCRIPTPATH/barys -k -s -b build --yocto yocto-daisy --shared-downloads $SCRIPTPATH/../yocto-daisy/shared-downloads --shared-sstate $SCRIPTPATH/../yocto-daisy/shared-sstate -l $@

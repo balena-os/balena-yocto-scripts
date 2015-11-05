@@ -1,0 +1,25 @@
+[Unit]
+Description=RCE
+Requires=\
+    rce.socket \
+    var-lib-rce.mount \
+    \x2erce.mount
+Wants=connman.service
+After=\
+    connman.service \
+    rce.socket \
+    var-lib-rce.mount \
+    \x2erce.mount
+
+[Service]
+Type=notify
+Restart=always
+ExecStart=@BINDIR@/rce --restart=false -s btrfs -d -g /var/lib/rce
+MountFlags=slave
+LimitNOFILE=1048576
+LimitNPROC=1048576
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
+Also=rce.socket

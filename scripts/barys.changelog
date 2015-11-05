@@ -1,0 +1,18 @@
+1.3
+===
+- Add support for specifying the supervisor tag to include
+
+1.2
+===
+- Add support for multiple yocto versions
+
+1.1
+===
+- Add support for custom paths while using SHARED_SSTATE and DL_DIR
+- Fail with exit code 2 if at least one of the bitbake failed
+- Fix interactive build name
+- Use description of boards from resin-device-types and implement conf-notes.txt generator
+
+1.0
+===
+- Initial version
