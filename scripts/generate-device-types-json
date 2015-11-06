@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Get the absolute script location
+pushd `dirname $0` > /dev/null 2>&1
+SCRIPTPATH=`pwd`
+popd > /dev/null 2>&1
+
+mkdir -p $SCRIPTPATH/../resin-device-types/device-types
+for file in $SCRIPTPATH/../resin-bsp-*/*.coffee; do
+    echo "Initializing device-types for $file."
+    cp $file $SCRIPTPATH/../resin-device-types/device-types
+done
