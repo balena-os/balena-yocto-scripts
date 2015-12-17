@@ -60,13 +60,6 @@ function help {
 
     echo -e "\t-m | --machine"
     echo -e "\t\t Build a supported machine."
-    echo -e "\t\t Supported machines organized by yocto version:"
-    for yoctover in ${YOCTO_VERSIONS}; do
-        echo -e "\t\t\t $yoctover"
-        for machine in `jq -r ".[] | select(.yocto.version == \"$yoctover\") | [.yocto.machine] | sort | .[] | select(. != null)" $DEVICE_TYPES_JSON`; do
-            echo -e "\t\t\t\t $machine"
-        done
-    done
     echo -e "\t\t Default: build all supported machines for the selected yocto version."
 
     echo -e "\t-k | --continue"
@@ -159,26 +152,6 @@ function log {
     fi
 }
 
-function check_machine {
-    found=0
-    for mi in `jq -r ".[] | select(.yocto.version == \"$YOCTO_VERSION\") | [.yocto.machine] | sort | .[] | select(. != null)" $DEVICE_TYPES_JSON`; do
-        if [ "$1" == "$mi" ]; then
-            found=1
-            break
-        fi
-    done
-}
-
-function check_yoctoversion {
-    found=0
-    for yoctover in ${YOCTO_VERSIONS}; do
-        if [ "$1" == "$yoctover" ]; then
-            found=1
-            break
-        fi
-    done
-}
-
 # Timer
 STARTTIME=$(date +%s)
 
@@ -188,22 +161,9 @@ SCRIPTPATH=`pwd`
 popd > /dev/null 2>&1
 
 # Get the supported yocto versions
-YOCTO_VERSIONS=$(ls $SCRIPTPATH/.. | grep yocto | grep -v yocto-all)
+YOCTO_VERSIONS=$(ls $SCRIPTPATH/../../layers/poky/)
 if [ -z "$YOCTO_VERSIONS" ]; then
     log ERROR "Cannot find yocto layers. Did you repo init/sync?"
-fi
-
-# Define a helper variable for device types json file
-DEVICE_TYPES_JSON=$SCRIPTPATH/../yocto-all/resin-device-types/$JSON
-
-# Make sure the device json is in place
-if [ ! -f $DEVICE_TYPES_JSON ]; then
-    log ERROR "Cannot find $DEVICE_TYPES_JSON."
-fi
-
-# This script depends on jq
-if ! `which jq > /dev/null 2>&1`; then
-    log ERROR "jq dependency failed. Make sure you have jq installed on your system."
 fi
 
 # Backup $@
@@ -305,10 +265,6 @@ while [[ $# -ge 1 ]]; do
             fi
             YOCTO_VERSION=$yver
 
-            echo -n "Supported machines:"
-            for m in `jq -r ".[] | select(.yocto.version == \"$YOCTO_VERSION\") | [.yocto.machine] | sort | .[] | select(. != null)" $DEVICE_TYPES_JSON`; do
-                echo -n " $m"
-            done
             echo "."
             read -p "Select machines. Space separated or empty for all: " m
             MACHINES=$m
@@ -398,10 +354,6 @@ while [[ $# -ge 1 ]]; do
     shift
 done
 
-if [ -z "$YOCTO_VERSION" ]; then
-    log ERROR "--yocto is a mandatory argument."
-fi
-
 # LOGFILE init and header
 if [ "z$LOG" == "zyes" ]; then
     echo "================"`basename "$0"`" HEADER START====================" > $LOGFILE
@@ -422,9 +374,6 @@ if [ "z$LOG" == "zyes" ]; then
     echo "================"`basename "$0"`" HEADER STOP=====================" >> $LOGFILE
 fi
 
-# We now know the selected yocto version - so we can compute all the available machines
-SUPPORTED_MACHINES=`jq -r ".[] | select(.yocto.version == \"$YOCTO_VERSION\") | [.yocto.machine] | sort | .[] | select(. != null)" $DEVICE_TYPES_JSON`
-
 if [ "x$REMOVEBUILD" == "xyes" ]; then
     log "Removing old build in $SCRIPTPATH/../${YOCTO_VERSION}/$BUILDDIR."
     log "This might take a while ..."
@@ -436,8 +385,10 @@ cd $SCRIPTPATH/../${YOCTO_VERSION}
 # Configure build
 $SCRIPTPATH/generate-conf-notes.sh $SCRIPTPATH/../yocto-all/meta-resin/meta-resin-${YOCTO_VERSION##*-}/conf $DEVICE_TYPES_JSON $YOCTO_VERSION
 
-export TEMPLATECONF=../../yocto-all/meta-resin/meta-resin-${YOCTO_VERSION##*-}/conf/samples
-source poky/oe-init-build-env $BUILDDIR
+RESIN_MACHINE_LAYER=$(ls ${SCRIPTPATH}/../../layers/ | grep meta-resin-)
+
+export TEMPLATECONF=${SCRIPTPATH}/../../layers/${RESIN_MACHINE_LAYER}/conf/samples
+source ${SCRIPTPATH}/../../layers/poky/oe-init-build-env ${SCRIPTPATH}/../../${BUILDDIR}
 if [ "x$STAGING" == "xyes" ]; then
     sed -i "s/.*RESIN_STAGING_BUILD ?=.*/RESIN_STAGING_BUILD ?= \"yes\"/g" conf/local.conf
 fi
