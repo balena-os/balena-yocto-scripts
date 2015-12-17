@@ -1,6 +1,3 @@
-[submodule "resin-bsp-beaglebone"]
-	path = resin-bsp-beaglebone
-	url = git@github.com:resin-io/resin-bsp-beaglebone.git
 [submodule "resin-bsp-edison"]
 	path = resin-bsp-edison
 	url = git@github.com:resin-io/resin-bsp-edison.git
@@ -43,3 +40,6 @@
 [submodule "resin-device-types"]
 	path = resin-device-types
 	url = git@github.com:resin-io/resin-device-types.git
+[submodule "resin-beaglebone"]
+	path = resin-beaglebone
+	url = git@github.com:resin-io/resin-beaglebone.git
