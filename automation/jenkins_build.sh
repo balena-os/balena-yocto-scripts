@@ -54,6 +54,7 @@ fi
     --rm-work
 
 # Write deploy artifacts
+# TODO: UPDATE to use the new `build-device-type.json` in the specific type's folder
 BUILD_DEPLOY_DIR=deploy
 DEVICE_TYPES_JSON=$SCRIPTPATH/../yocto-all/resin-device-types/device-types.json
 
