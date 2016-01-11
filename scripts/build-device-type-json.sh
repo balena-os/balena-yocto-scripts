@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Usage:
+# ./build-device-type-json.sh ./path/to/device-type-folder/device-type-slug.coffee
+# this generates ./path/to/device-type-folder/device-type-slug.json
+
 mydir=`dirname $0`
 filedir=`dirname $1`
 filename=`basename $1`
