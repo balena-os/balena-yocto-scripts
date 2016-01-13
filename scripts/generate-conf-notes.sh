@@ -6,18 +6,31 @@
 #
 # Signed-off-by: Theodor Gherzan <theodor@resin.io>
 # Signed-off-by: Andrei Gherzan <andrei@resin.io>
+# Signed-off-by: Florin Sarbu <florin@resin.io>
 #
 
 CONF=$1             # CONFNAME file directory location
-JSON=$2             # JSON file full path
-YOCTO_VERSION=$3    # Yocto version used
 CONFNAME="conf-notes.txt"
 
 # The conf directory is yocto version specific
 CONF=$CONF/samples
 
 # Checks
-if [ $# -ne 3 ] || ! `which jq > /dev/null 2>&1` || [ ! -f $JSON ] || [ -z $CONF ] || [ ! -d $CONF ]; then
+
+if [ $# -lt 2 ]; then
+    echo -e 'Usage:\n'
+    echo -e "./generate-conf-notes.sh ./path/to/meta-resin-<target>/conf/ <json1> <json2> ...\n"
+    exit 0
+fi
+
+for json in "${@:2}"; do
+    if [ ! -f $json ]; then
+      echo -e "File $json does not exist. Exiting!\n"
+      exit 1
+    fi
+done
+
+if ! `which jq > /dev/null 2>&1` || [ -z $CONF ] || [ ! -d $CONF ]; then
     exit 1
 fi
 
@@ -32,15 +45,15 @@ echo -e "
  ---------------------------------- \n" > $CONF/$CONFNAME
 
 echo "Resin specific targets are:" >> $CONF/$CONFNAME
-for target in `cat $JSON | jq  -r '[.[].yocto.image] | unique | sort | .[] | select( . != null)'`; do
-    echo "    $target" >> $CONF/$CONFNAME
-done
-echo >> $CONF/$CONFNAME
-
-for machine in `jq -r ".[] | select(.yocto.version == \"$YOCTO_VERSION\") | [.yocto.machine] | sort | .[] | select(. != null)" $JSON`; do
-    NAME=`cat $JSON | jq  -r '.[] | select(.yocto.machine == '\"${machine}\"').name'`
-    MACHINE=`cat $JSON | jq  -r '.[].yocto | select(.machine == '\"${machine}\"').machine'`
-    IMAGE=`cat $JSON | jq  -r '.[].yocto | select(.machine == '\"${machine}\"').image'`
+for json in "${@:2}"; do
+    IMAGE=`cat $json | jq  -r '.yocto.image | select( . != null)'`
+    if [ -z $IMAGE ]; then
+        continue
+    fi
+    echo "    $IMAGE" >> $CONF/$CONFNAME
+    echo >> $CONF/$CONFNAME
+    NAME=`cat $json | jq  -r '.name'`
+    MACHINE=`cat $json | jq  -r '.yocto.machine'`
     printf "%-30s : %s\n" "$NAME" "\$ MACHINE=$MACHINE bitbake $IMAGE" >> $CONF/$CONFNAME
 done
 echo >> $CONF/$CONFNAME
