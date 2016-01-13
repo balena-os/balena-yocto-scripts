@@ -6,7 +6,7 @@
 
 if [[ $# -ne 1 ]] ; then
     echo -e 'Usage:\n'
-    echo -e "./build-device-type-json.sh ./path/to/device-type-folder/device-type-slug.coffee\n"
+    echo -e "$0 ./path/to/device-type-folder/device-type-slug.coffee\n"
     exit 0
 fi
 
