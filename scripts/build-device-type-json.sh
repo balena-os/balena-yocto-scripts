@@ -4,6 +4,12 @@
 # ./build-device-type-json.sh ./path/to/device-type-folder/device-type-slug.coffee
 # this generates ./path/to/device-type-folder/device-type-slug.json
 
+if [[ $# -ne 1 ]] ; then
+    echo -e 'Usage:\n'
+    echo -e "./build-device-type-json.sh ./path/to/device-type-folder/device-type-slug.coffee\n"
+    exit 0
+fi
+
 mydir=`dirname $0`
 filedir=`dirname $1`
 filename=`basename $1`
