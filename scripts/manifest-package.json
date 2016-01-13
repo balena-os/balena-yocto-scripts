@@ -1,0 +1,7 @@
+{
+  "name": "resin-device-type-manifest",
+  "dependencies": {
+    "resin-device-types": "git+ssh://git@github.com:resin-io/resin-device-types.git#separate-manifests-build",
+    "coffee-script": "~1.10.0"
+  }
+}
