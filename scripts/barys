@@ -15,7 +15,7 @@
 # Signed-off-by: Andrei Gherzan <andrei@resin.io>
 #
 
-BARYSVERSION=1.3
+BARYSVERSION=1.4
 
 # Default values
 COMPRESS_TOOL="xz"
