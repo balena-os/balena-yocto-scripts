@@ -44,8 +44,8 @@ function help {
     echo -e "\t\t Print this message."
 
     echo -e "\t-m | --machine"
-    echo -e "\t\t Build a supported machine."
-    echo -e "\t\t Default: build all supported machines for the selected yocto version."
+    echo -e "\t\t Build a machine supported by this layer."
+    echo -e "\t\t Default: build all machines supported by this layer."
 
     echo -e "\t-k | --continue"
     echo -e "\t\t Run bitbake with \"-k\" argument."
@@ -159,7 +159,7 @@ popd > /dev/null 2>&1
 SCRIPT_ARGUMENTS=$@
 
 # get all the device type .json files
-DEVICE_TYPES_JSONS=$(ls $SCRIPTPATH/../../*.json | grep -v package.json)
+DEVICE_TYPES_JSONS=$(ls $SCRIPTPATH/../../*.json 2>/dev/null | grep -v package.json)
 if [ -z "${DEVICE_TYPES_JSONS}" ]; then
     log ERROR "No available .json. Please check your git repository."
 fi
