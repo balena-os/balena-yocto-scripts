@@ -16,11 +16,11 @@ filename=`basename $1`
 extension="${filename##*.}"
 slug="${filename%.*}"
 
-cp $mydir/manifest-package.json $filedir/package.json
 cd $filedir
-npm install --production
+npm install coffee-script --production
+cd ./resin-device-types && npm install --production && cd ..
 
-node > $slug.json << EOF
+NODE_PATH=. node > $slug.json << EOF
     require('coffee-script/register');
     var dt = require('resin-device-types');
     var manifest = require('./${filename}');
