@@ -417,6 +417,10 @@ else
 
   for machine in $ITERATOR_MACHINES; do
     for json in ${DEVICE_TYPES_JSONS}; do
+        MACHINE_IN_JSON=`cat $json | jq  -r '.yocto.machine'`
+        if [[ "$machine" != "${MACHINE_IN_JSON}" ]]; then
+          continue
+        fi
         IMAGE=`cat $json | jq  -r '.yocto | select(.machine == '\"${machine}\"').image'`
         FSTYPE=`cat $json | jq  -r '.yocto | select(.machine == '\"${machine}\"').fstype'`
         if [ -z "$IMAGE" ] || [ -z "$FSTYPE" ] || [ "z$IMAGE" == "znull" ] || [ "z$FSTYPE" == "znull" ]; then
