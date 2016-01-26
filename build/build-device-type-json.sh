@@ -21,5 +21,3 @@ NODE_PATH=. node > $slug.json << EOF
     console.log(JSON.stringify(builtManifest, null, '\t'));
 EOF
 done
-
-echo "Done"
