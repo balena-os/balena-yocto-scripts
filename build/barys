@@ -158,6 +158,9 @@ popd > /dev/null 2>&1
 # Backup $@
 SCRIPT_ARGUMENTS=$@
 
+# generate .json(s) from all the available .coffee files
+$SCRIPTPATH/build-device-type-json.sh
+
 # get all the device type .json files
 DEVICE_TYPES_JSONS=$(ls $SCRIPTPATH/../../*.json 2>/dev/null | grep -v package.json)
 if [ -z "${DEVICE_TYPES_JSONS}" ]; then
