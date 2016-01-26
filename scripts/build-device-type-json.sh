@@ -4,21 +4,13 @@
 # ./build-device-type-json.sh ./path/to/device-type-folder/device-type-slug.coffee
 # this generates ./path/to/device-type-folder/device-type-slug.json
 
-if [[ $# -ne 1 ]] ; then
-    echo -e 'Usage:\n'
-    echo -e "$0 ./path/to/device-type-folder/device-type-slug.coffee\n"
-    exit 0
-fi
-
 mydir=`dirname $0`
-filedir=`dirname $1`
-filename=`basename $1`
-extension="${filename##*.}"
-slug="${filename%.*}"
 
-cd $filedir
-npm install coffee-script --production
-cd ./resin-device-types && npm install --production && cd ..
+for filename in *.coffee; do
+    slug="${filename%.*}"
+    cd $mydir/../../
+    npm install coffee-script --production
+    cd ./resin-device-types && npm install --production && cd ..
 
 NODE_PATH=. node > $slug.json << EOF
     require('coffee-script/register');
@@ -28,5 +20,6 @@ NODE_PATH=. node > $slug.json << EOF
     var builtManifest = dt.buildManifest(manifest, slug);
     console.log(JSON.stringify(builtManifest, null, '\t'));
 EOF
+done
 
 echo "Done"
