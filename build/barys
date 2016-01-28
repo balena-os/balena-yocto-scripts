@@ -35,8 +35,6 @@ BITBAKEARGS=
 EXIT_CODE=0
 
 function help {
-    echo "Usage: "`basename "$0"`" --yocto <yocto-version> [options]"
-
     echo
     echo -e "Options:"
 
@@ -163,6 +161,7 @@ $SCRIPTPATH/build-device-type-json.sh
 
 # get all the device type .json files
 DEVICE_TYPES_JSONS=$(ls $SCRIPTPATH/../../*.json 2>/dev/null | grep -v package.json)
+
 if [ -z "${DEVICE_TYPES_JSONS}" ]; then
     log ERROR "No available .json. Please check your git repository."
 fi
