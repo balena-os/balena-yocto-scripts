@@ -1,18 +1,19 @@
 #!/bin/bash
 
 # Usage:
-# ./build-device-type-json.sh ./path/to/device-type-folder/device-type-slug.coffee
-# this generates ./path/to/device-type-folder/device-type-slug.json
+# ./build-device-type-json.sh
+# this generates device-type-slug.json in the root of the resin-<board> directory
 
 mydir=`dirname $0`
 
+cd $mydir/../../
+
 for filename in *.coffee; do
     slug="${filename%.*}"
-    cd $mydir/../../
     npm install coffee-script --production
     cd ./resin-device-types && npm install --production && cd ..
 
-NODE_PATH=. node > $slug.json << EOF
+NODE_PATH=. node > "$slug".json << EOF
     require('coffee-script/register');
     var dt = require('resin-device-types');
     var manifest = require('./${filename}');
