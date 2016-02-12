@@ -28,7 +28,9 @@ fi
 if [ "$metaResinBranch" == "__ignore__" ]; then
     echo "INFO: Using the default meta-resin revision (as configured in submodules)."
 else
+    echo "INFO: Using special meta-resin revision from build params."
     pushd $WORKSPACE/layers/meta-resin > /dev/null 2>&1
+    git fetch --all
     git checkout --force origin/$metaResinBranch
     popd > /dev/null 2>&1
 fi
