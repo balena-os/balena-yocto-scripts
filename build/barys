@@ -157,7 +157,7 @@ popd > /dev/null 2>&1
 SCRIPT_ARGUMENTS=$@
 
 # generate .json(s) from all the available .coffee files
-$SCRIPTPATH/build-device-type-json.sh
+$SCRIPTPATH/build-device-type-json.sh || exit 1
 
 # get all the device type .json files
 DEVICE_TYPES_JSONS=$(ls $SCRIPTPATH/../../*.json 2>/dev/null | grep -v package.json)
@@ -169,7 +169,7 @@ fi
 # Get the list of the supported machines out of all the available machine json files
 # (we may have multiple json files describing different machines based on the same resin layers; i.e. imx6 fsl based machines)
 for json in ${DEVICE_TYPES_JSONS}; do
-    SUPPORTED_MACHINES="${SUPPORTED_MACHINES} `jq -r "[.yocto.machine] | sort | .[] | select(. != null)" ${json}`"
+    SUPPORTED_MACHINES="${SUPPORTED_MACHINES} `jq -r "[.yocto.machine] | sort | .[] | select(. != null)" ${json} 2>/dev/null`" || { echo "Error - Please install the 'jq' package before running this script." >&2; exit 1; }
 done
 
 # Parse arguments
