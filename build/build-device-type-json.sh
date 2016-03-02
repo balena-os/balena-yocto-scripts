@@ -8,6 +8,8 @@ mydir=`dirname $0`
 
 cd $mydir/../../
 
+rm -f *.json
+
 function quit {
     rm -f "$slug".json
     echo $0: $1 >&2
