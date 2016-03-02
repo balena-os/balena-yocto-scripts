@@ -44,16 +44,30 @@ echo -e "
                                     
  ---------------------------------- \n" > $CONF/$CONFNAME
 
-echo "Resin specific targets are:" >> $CONF/$CONFNAME
+IMAGES=""
+BOARDS_COMMANDS=""
+
 for json in "${@:2}"; do
     IMAGE=`cat $json | jq  -r '.yocto.image | select( . != null)'`
-    if [ -z $IMAGE ]; then
-        continue
-    fi
-    echo "    $IMAGE" >> $CONF/$CONFNAME
-    echo >> $CONF/$CONFNAME
+    IMAGES="$IMAGES $IMAGE"
     NAME=`cat $json | jq  -r '.name'`
     MACHINE=`cat $json | jq  -r '.yocto.machine'`
-    printf "%-30s : %s\n" "$NAME" "\$ MACHINE=$MACHINE bitbake $IMAGE" >> $CONF/$CONFNAME
+    BOARD_COMMAND=$(printf "%-35s : %s\n" "$NAME" "\$ MACHINE=$MACHINE bitbake $IMAGE")
+    if [ -z "$BOARDS_COMMANDS" ]; then
+        BOARDS_COMMANDS="$BOARD_COMMAND"
+    else
+        BOARDS_COMMANDS="$BOARDS_COMMANDS\n$BOARD_COMMAND"
+    fi
 done
+
+# Unique images
+IMAGES=`echo $IMAGES | tr ' ' '\n' | sort -u`
+
+# Write conf file
+echo "Resin specific targets are:" >> $CONF/$CONFNAME
+for image in $IMAGES; do
+    echo -e "\t$image" >> $CONF/$CONFNAME
+done
+echo >> $CONF/$CONFNAME
+echo -e "$BOARDS_COMMANDS" >> $CONF/$CONFNAME
 echo >> $CONF/$CONFNAME
