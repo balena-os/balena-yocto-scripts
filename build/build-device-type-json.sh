@@ -3,9 +3,10 @@
 # Usage:
 # ./build-device-type-json.sh [directory]
 # this generates device-type-slug.json in the root of the resin-<board> directory
+# the directory can be passed as an optional argument, default is 2 levels higher than the script itself
 
 mydir=`dirname $0`
-rootdir=$1 || $mydir/../../
+rootdir=${1:-$mydir/../../}
 
 cd $rootdir
 
