@@ -367,6 +367,9 @@ export TEMPLATECONF=${SCRIPTPATH}/../../layers/${RESIN_MACHINE_LAYER}/conf/sampl
 source ${SCRIPTPATH}/../../layers/poky/oe-init-build-env ${SCRIPTPATH}/../../${BUILD_DIR}
 if [ "x$STAGING" == "xyes" ]; then
     sed -i "s/.*RESIN_STAGING_BUILD ?=.*/RESIN_STAGING_BUILD ?= \"yes\"/g" conf/local.conf
+else
+    # Always activate resinhup bundles in production builds
+    sed -i "s/.*RESINHUP ?=.*/RESINHUP ?= \"yes\"/g" conf/local.conf
 fi
 if [ -n "$SUPERVISOR_TAG" ]; then
     sed -i "s/.*SUPERVISOR_TAG ?=.*/SUPERVISOR_TAG ?= \"$SUPERVISOR_TAG\"/g" conf/local.conf
