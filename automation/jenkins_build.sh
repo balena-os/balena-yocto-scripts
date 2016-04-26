@@ -52,9 +52,18 @@ DEVICE_TYPE_JSON=$WORKSPACE/$MACHINE.json
 VERSION_HOSTOS=$(cat $WORKSPACE/build/tmp/deploy/images/$MACHINE/VERSION_HOSTOS)
 
 DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
+COMPRESSED=$(jq --raw-output '.yocto.compressed' $DEVICE_TYPE_JSON)
+ARCHIVE=$(jq --raw-output '.yocto.archive' $DEVICE_TYPE_JSON)
 mkdir -p $BUILD_DEPLOY_DIR
 rm -rf $BUILD_DEPLOY_DIR/* # do we have anything there?
 mv -v $(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/$DEPLOY_ARTIFACT) $BUILD_DEPLOY_DIR/$DEPLOY_ARTIFACT
+if [ "${COMPRESSED}" == 'true' ]; then
+	if [ "${ARCHIVE}" == 'true' ]; then
+		(cd $BUILD_DEPLOY_DIR && tar --remove-files -zcvf ${DEPLOY_ARTIFACT}.tar.gz $DEPLOY_ARTIFACT)
+	else
+		gzip $BUILD_DEPLOY_DIR/$DEPLOY_ARTIFACT
+	fi
+fi
 if [ -f $(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.resinhup-tar) ]; then
     mv -v $(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.resinhup-tar) $BUILD_DEPLOY_DIR/resinhup-$VERSION_HOSTOS.tar
 else
