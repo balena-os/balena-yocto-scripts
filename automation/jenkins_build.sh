@@ -58,11 +58,11 @@ mkdir -p $BUILD_DEPLOY_DIR
 rm -rf $BUILD_DEPLOY_DIR/* # do we have anything there?
 mv -v $(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/$DEPLOY_ARTIFACT) $BUILD_DEPLOY_DIR/$DEPLOY_ARTIFACT
 if [ "${COMPRESSED}" == 'true' ]; then
-	if [ "${ARCHIVE}" == 'true' ]; then
-		(cd $BUILD_DEPLOY_DIR && tar --remove-files -zcvf ${DEPLOY_ARTIFACT}.tar.gz $DEPLOY_ARTIFACT)
-	else
-		gzip $BUILD_DEPLOY_DIR/$DEPLOY_ARTIFACT
+	if [ "${ARCHIVE}" != 'true' ]; then
+		 mv $BUILD_DEPLOY_DIR/$DEPLOY_ARTIFACT $BUILD_DEPLOY_DIR/resin.img
+		 DEPLOY_ARTIFACT=resin.img
 	fi
+	(cd $BUILD_DEPLOY_DIR && tar --remove-files -zcvf ${DEPLOY_ARTIFACT}.tar.gz $DEPLOY_ARTIFACT)
 fi
 if [ -f $(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.resinhup-tar) ]; then
     mv -v $(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.resinhup-tar) $BUILD_DEPLOY_DIR/resinhup-$VERSION_HOSTOS.tar
