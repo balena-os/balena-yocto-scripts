@@ -62,7 +62,7 @@ if [ "${COMPRESSED}" == 'true' ]; then
 		 mv $BUILD_DEPLOY_DIR/$DEPLOY_ARTIFACT $BUILD_DEPLOY_DIR/resin.img
 		 DEPLOY_ARTIFACT=resin.img
 	fi
-	(cd $BUILD_DEPLOY_DIR && tar --remove-files -zcvf ${DEPLOY_ARTIFACT}.tar.gz $DEPLOY_ARTIFACT)
+	(cd $BUILD_DEPLOY_DIR && tar --remove-files --use-compress-program pigz -cvf ${DEPLOY_ARTIFACT}.tar.gz $DEPLOY_ARTIFACT)
 fi
 if [ -f $(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.resinhup-tar) ]; then
     mv -v $(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.resinhup-tar) $BUILD_DEPLOY_DIR/resinhup-$VERSION_HOSTOS.tar
