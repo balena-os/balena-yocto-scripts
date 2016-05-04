@@ -5,10 +5,9 @@
 # --------------------------
 #
 # HARD ASSUMPTIONS
-# * This script resides in a directory called scripts in resin-yocto repository.
-# * Build will be created in the directory where resin-yocto was cloned.
-# * If build with shared downloads directory this will be assumed in the
-# directory where resin-yocto was cloned.
+# * This script is in a repository which should be a submodule of a resin-<board>
+#   repository
+# * Build will be created two directories behind the one where this script resides.
 # * Script ran as normal user.
 #
 # Signed-off-by: Theodor Gherzan <theodor@resin.io>
