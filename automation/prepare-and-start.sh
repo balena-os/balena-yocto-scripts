@@ -37,8 +37,8 @@ trap 'cleanup fail' SIGINT SIGTERM
 
 # Create the normal user to be used for bitbake (barys)
 echo "[INFO] Creating and setting builder user $BUILDER_UID:$BUILDER_GID."
-groupadd docker
 groupadd -g $BUILDER_GID builder
+groupadd docker
 useradd -m -u $BUILDER_UID -g $BUILDER_GID -G docker builder
 
 # Start docker
