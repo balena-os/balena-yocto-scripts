@@ -40,6 +40,11 @@ else
     BARYS_ARGUMENTS_VAR="--staging"
 fi
 
+# When supervisorTag is provided, you the appropiate barys argument
+if [ "$supervisorTag" != "__ignore__" ]; then
+    BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --supervisor-tag $supervisorTag"
+fi
+
 # Checkout meta-resin
 if [ "$metaResinBranch" == "__ignore__" ]; then
     echo "[INFO] Using the default meta-resin revision (as configured in submodules)."
@@ -71,7 +76,6 @@ docker run --rm -t \
         --log \
         --remove-build \
         --machine "$MACHINE" \
-        --supervisor-tag "$supervisorTag" \
         ${BARYS_ARGUMENTS_VAR} \
         --shared-downloads /yocto/shared-downloads \
         --shared-sstate /yocto/shared-sstate \
