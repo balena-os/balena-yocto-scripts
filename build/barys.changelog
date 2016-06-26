@@ -1,3 +1,4 @@
+- Replace RESIN_STAGING_BUILD by DEBUG_IMAGE
 - Don't default SUPERVISOR_TAG to production
 
 1.4
