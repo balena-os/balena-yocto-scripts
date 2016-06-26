@@ -37,7 +37,7 @@ fi
 if [[ "$sourceBranch" == "production"* ]]; then
     BARYS_ARGUMENTS_VAR=""
 else
-    BARYS_ARGUMENTS_VAR="--staging"
+    BARYS_ARGUMENTS_VAR="--debug-image"
 fi
 
 # When supervisorTag is provided, you the appropiate barys argument
