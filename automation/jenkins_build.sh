@@ -1,4 +1,5 @@
 #!/bin/bash
+
 set -e
 
 BUILD_CONTAINER_NAME=yocto-build-$$
@@ -33,11 +34,10 @@ if [ -z "$BUILD_NUMBER" ] || [ -z "$WORKSPACE" ] || [ -z "$sourceBranch" ] || [ 
     exit 1
 fi
 
-# Specific staging / production flags
-if [[ "$sourceBranch" == "production"* ]]; then
-    BARYS_ARGUMENTS_VAR=""
-else
-    BARYS_ARGUMENTS_VAR="--debug-image"
+# Debug images based on environment variable
+if [ -n "$DEBUG_IMAGE" ]; then
+    echo "[INFO] Running a debug build..."
+    BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --debug-image"
 fi
 
 # When supervisorTag is provided, you the appropiate barys argument
