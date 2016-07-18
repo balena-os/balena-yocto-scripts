@@ -81,6 +81,15 @@ docker run --rm -t \
         --shared-sstate /yocto/shared-sstate \
         --rm-work
 
+# Run the test script in the device specific repository
+if [ -f $WORKSPACE/tests/start.sh ];
+then
+	echo "Custom test file exists - Beginning test"
+	/bin/bash $WORKSPACE/tests/start.sh
+else
+	echo "No custom test file exists - Continuing ahead"
+fi
+
 # Write deploy artifacts
 BUILD_DEPLOY_DIR=$WORKSPACE/deploy
 DEVICE_TYPE_JSON=$WORKSPACE/$MACHINE.json
