@@ -23,6 +23,7 @@ JENKINS_PERSISTENT_WORKDIR=$2
 JENKINS_DL_DIR=$JENKINS_PERSISTENT_WORKDIR/shared-downloads
 JENKINS_SSTATE_DIR=$JENKINS_PERSISTENT_WORKDIR/$MACHINE/sstate
 MAXBUILDS=2
+ENABLE_TESTS=${ENABLE_TESTS:=false}
 
 # Sanity checks
 if [ "$#" -ne 2 ]; then
@@ -81,13 +82,17 @@ docker run --rm -t \
         --shared-sstate /yocto/shared-sstate \
         --rm-work
 
-# Run the test script in the device specific repository
-if [ -f $WORKSPACE/tests/start.sh ];
+
+if [ "$ENABLE_TESTS" = true ];
 then
-	echo "Custom test file exists - Beginning test"
-	/bin/bash $WORKSPACE/tests/start.sh
-else
-	echo "No custom test file exists - Continuing ahead"
+	# Run the test script in the device specific repository
+	if [ -f $WORKSPACE/tests/start.sh ];
+	then
+		echo "Custom test file exists - Beginning test"
+		/bin/bash $WORKSPACE/tests/start.sh
+	else
+		echo "No custom test file exists - Continuing ahead"
+	fi
 fi
 
 # Write deploy artifacts
