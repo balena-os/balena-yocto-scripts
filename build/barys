@@ -220,7 +220,7 @@ while [[ $# -ge 1 ]]; do
         --shared-downloads)
             # Argument needs to be non-empty and absolute path
             if [ -z "$2" ] || [ "${2:0:1}" != "/" ]; then
-                log ERROR "\"$1\" argument is invalid."
+                log ERROR "\"$1\" argument is invalid. Argument needs to be a non-empty, absolute path."
             fi
             SHARED_DOWNLOADS=$2
             shift
@@ -228,7 +228,7 @@ while [[ $# -ge 1 ]]; do
         --shared-sstate)
             # Argument needs to be non-empty and absolute path
             if [ -z "$2" ] || [ "${2:0:1}" != "/" ]; then
-                log ERROR "\"$1\" argument is invalid."
+                log ERROR "\"$1\" argument is invalid. Argument needs to be a non-empty, absolute path."
             fi
             SHARED_SSTATE=$2
             shift
