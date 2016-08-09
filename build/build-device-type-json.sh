@@ -23,7 +23,8 @@ function quit {
 for filename in *.coffee; do
     slug="${filename%.*}"
 
-{ NODE_PATH=. node > "$slug".json 2>/dev/null << EOF
+which nodejs >/dev/null && NODE=nodejs || NODE=node
+{ NODE_PATH=. $NODE > "$slug".json 2>/dev/null << EOF
     require('resin-device-types/node_modules/coffee-script/register');
     var dt = require('resin-device-types');
     var manifest = require('./${filename}');
@@ -34,7 +35,7 @@ EOF
 } || quit "ERROR - Please install the 'nodejs' package before running this script."
 
 if [ ! -s "$slug".json ]; then
-    quit "ERROR - Please check your nodejs installation. The 'node' binary did not generate proper .json(s)."
+    quit "ERROR - Please check your nodejs installation. The '$NODE' binary did not generate a proper .json."
 fi
 done
 
