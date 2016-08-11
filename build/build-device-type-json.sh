@@ -23,7 +23,7 @@ function quit {
 for filename in *.coffee; do
     slug="${filename%.*}"
 
-which nodejs >/dev/null && NODE=nodejs || NODE=node
+which nodejs >/dev/null 2>&1 && NODE=nodejs || NODE=node
 { NODE_PATH=. $NODE > "$slug".json 2>/dev/null << EOF
     require('resin-device-types/node_modules/coffee-script/register');
     var dt = require('resin-device-types');
