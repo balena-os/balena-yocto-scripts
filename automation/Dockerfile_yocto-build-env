@@ -4,10 +4,13 @@ FROM ubuntu:15.04
 RUN apt-get update && apt-get install -y build-essential chrpath curl diffstat gcc-multilib gawk git-core libsdl1.2-dev texinfo unzip wget xterm cpio file && rm -rf /var/lib/apt/lists/*
 
 # Additional host packages required by resin
-RUN apt-get update && apt-get install -y jq npm nodejs sudo && rm -rf /var/lib/apt/lists/*
-
-# Fix path of node/nodejs
-RUN ln -s /usr/bin/nodejs /usr/bin/node
+RUN apt-get update && apt-get install -y apt-transport-https && rm -rf /var/lib/apt/lists/*
+RUN curl --silent https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
+ENV NODE_VERSION node_4.x
+ENV DISTRO vivid
+RUN echo "deb https://deb.nodesource.com/$NODE_VERSION $DISTRO main" | tee /etc/apt/sources.list.d/nodesource.list &&\
+  echo "deb-src https://deb.nodesource.com/$NODE_VERSION $DISTRO main" | tee -a /etc/apt/sources.list.d/nodesource.list
+RUN apt-get update && apt-get install -y jq nodejs sudo && rm -rf /var/lib/apt/lists/*
 
 # Install docker
 # https://github.com/docker/docker/blob/master/project/PACKAGERS.md#runtime-dependencies
