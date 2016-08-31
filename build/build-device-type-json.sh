@@ -5,12 +5,11 @@
 # this generates device-type-slug.json in the root of the resin-<board> directory
 # the directory can be passed as an optional argument, default is 2 levels higher than the script itself
 
-mydir=`dirname $0`
+echo "Building JSON manifest..."
+
+cd `dirname $0`
+mydir=`pwd -P`
 rootdir=${1:-$mydir/../../}
-
-cd $rootdir
-
-rm -f *.json
 
 function quit {
     rm -f "$slug".json
@@ -18,15 +17,18 @@ function quit {
     exit 1
 }
 
-(cd ./resin-device-types && npm install --production 1>/dev/null || quit "ERROR - Please install the 'npm' package before running this script.")
+npm install --production --silent >/dev/null || quit "ERROR - Please install the 'npm' package before running this script."
+
+which nodejs >/dev/null 2>&1 && NODE=nodejs || NODE=node
+
+cd $rootdir
+rm -f *.json
 
 for filename in *.coffee; do
     slug="${filename%.*}"
-
-which nodejs >/dev/null 2>&1 && NODE=nodejs || NODE=node
-{ NODE_PATH=. $NODE > "$slug".json 2>/dev/null << EOF
-    require('resin-device-types/node_modules/coffee-script/register');
-    var dt = require('resin-device-types');
+{ NODE_PATH=$mydir/node_modules $NODE > "$slug".json 2>/dev/null << EOF
+    require('coffee-script/register');
+    var dt = require('@resin.io/device-types');
     var manifest = require('./${filename}');
     var slug = '${slug}';
     var builtManifest = dt.buildManifest(manifest, slug);
@@ -39,4 +41,4 @@ if [ ! -s "$slug".json ]; then
 fi
 done
 
-echo "Done"
+echo "...Done"

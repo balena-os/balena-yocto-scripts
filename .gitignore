@@ -1,2 +1,4 @@
 *.swp
 barys.log
+build/node_modules
+*.log
