@@ -126,6 +126,24 @@ cp $DEVICE_TYPE_JSON $BUILD_DEPLOY_DIR/device-type.json
 # move to deploy directory the kernel modules headers so we have it as a build artifact in jenkins
 mv -v $WORKSPACE/build/tmp/deploy/images/$MACHINE/kernel_modules_headers.tar.bz2 $BUILD_DEPLOY_DIR
 
+# If this is a clean production build, push a resinhup package to dockerhub
+if [[ "$sourceBranch" == production* ]] && [ "$metaResinBranch" == "__ignore__" ] && [ "$supervisorTag" == "__ignore__" ]; then
+    echo "INFO: Pushing resinhup package to dockerhub."
+    SLUG=$(jq --raw-output '.slug' $DEVICE_TYPE_JSON)
+    DOCKER_REPO="resin/resinos"
+    DOCKER_TAG="$VERSION_HOSTOS-$SLUG"
+    if [ -f $BUILD_DEPLOY_DIR/resinhup-$VERSION_HOSTOS.tar ]; then
+        docker import $BUILD_DEPLOY_DIR/resinhup-$VERSION_HOSTOS.tar $DOCKER_REPO:$DOCKER_TAG
+        docker push $DOCKER_REPO:$DOCKER_TAG
+        docker rmi $DOCKER_REPO:$DOCKER_TAG # cleanup
+    else
+        echo "ERROR: The build didn't produce a resinhup package."
+        exit 1
+    fi
+else
+    echo "WARNING: There is no need to upload resinhup package for a non production clean build."
+fi
+
 # Cleanup the build directory
 # Keep this after writing all artifacts
 rm -rf $WORKSPACE/build
