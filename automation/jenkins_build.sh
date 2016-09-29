@@ -124,7 +124,7 @@ mv -v $WORKSPACE/build/tmp/deploy/images/$MACHINE/VERSION $BUILD_DEPLOY_DIR
 mv -v $WORKSPACE/build/tmp/deploy/images/$MACHINE/VERSION_HOSTOS $BUILD_DEPLOY_DIR
 cp $DEVICE_TYPE_JSON $BUILD_DEPLOY_DIR/device-type.json
 # move to deploy directory the kernel modules headers so we have it as a build artifact in jenkins
-mv -v $WORKSPACE/build/tmp/deploy/images/$MACHINE/kernel_modules_headers.tar.bz2 $BUILD_DEPLOY_DIR
+mv -v $WORKSPACE/build/tmp/deploy/images/$MACHINE/kernel_modules_headers.tar.gz $BUILD_DEPLOY_DIR
 
 # If this is a clean production build, push a resinhup package to dockerhub
 if [[ "$sourceBranch" == production* ]] && [ "$metaResinBranch" == "__ignore__" ] && [ "$supervisorTag" == "__ignore__" ]; then
