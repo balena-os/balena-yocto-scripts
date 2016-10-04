@@ -35,10 +35,10 @@ if [ -z "$BUILD_NUMBER" ] || [ -z "$WORKSPACE" ] || [ -z "$sourceBranch" ] || [ 
     exit 1
 fi
 
-# Debug images based on environment variable
-if [ -n "$DEBUG_IMAGE" ]; then
-    echo "[INFO] Running a debug build..."
-    BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --debug-image"
+# Development images based on environment variable
+if [ -n "$DEVELOPMENT_IMAGE" ]; then
+    echo "[INFO] Running a development build..."
+    BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --development-image"
 fi
 
 # When supervisorTag is provided, you the appropiate barys argument

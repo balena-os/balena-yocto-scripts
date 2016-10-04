@@ -21,7 +21,7 @@ COMPRESS_TOOL="xz"
 BUILD_DIR=build
 REMOVEBUILD=no
 COMPRESS=no
-DEBUG_IMAGE=no
+DEVELOPMENT_IMAGE=no
 SUPERVISOR_TAG=
 SHARED_DOWNLOADS=
 SHARED_SSTATE=
@@ -57,8 +57,8 @@ function help {
     echo -e "\t\t using $COMPRESS_TOOL."
     echo -e "\t\t Default: no."
 
-    echo -e "\t-d | --debug-image"
-    echo -e "\t\t Set images to include debug tweaks."
+    echo -e "\t-d | --development-image"
+    echo -e "\t\t Set images to include development tweaks."
     echo -e "\t\t Default: no."
 
     echo -e "\t--supervisor-tag"
@@ -197,8 +197,8 @@ while [[ $# -ge 1 ]]; do
         -c|--compress)
             COMPRESS=yes
             ;;
-        -d|--debug-image)
-            DEBUG_IMAGE=yes
+        -d|--development-image)
+            DEVELOPMENT_IMAGE=yes
             ;;
         --supervisor-tag)
             if [ -z "$2" ]; then
@@ -262,9 +262,9 @@ while [[ $# -ge 1 ]]; do
                 [Yy]* ) COMPRESS=yes;;
             esac
 
-            read -p "Debug image? yes/[no] " yn
+            read -p "Development image? yes/[no] " yn
             case $yn in
-                [Yy]* ) DEBUG_IMAGE=yes;;
+                [Yy]* ) DEVELOPMENT_IMAGE=yes;;
             esac
 
             read -p "Supervisor version? [$SUPERVISOR_TAG] " yn
@@ -344,7 +344,7 @@ if [ "z$LOG" == "zyes" ]; then
     echo "Compressed image? $COMPRESS" >> $LOGFILE
     echo "Shared downloads directory: $SHARED_DOWNLOADS" >> $LOGFILE
     echo "Shared sstate directory: $SHARED_SSTATE" >> $LOGFILE
-    echo "Debug image? $DEBUG_IMAGE" >> $LOGFILE
+    echo "Development image? $DEVELOPMENT_IMAGE" >> $LOGFILE
     echo "Forced supervisor image tag: $SUPERVISOR_TAG" >> $LOGFILE
     echo "Inherit rm_work? $RM_WORK" >> $LOGFILE
     echo "================"`basename "$0"`" HEADER STOP=====================" >> $LOGFILE
@@ -364,8 +364,8 @@ $SCRIPTPATH/generate-conf-notes.sh $SCRIPTPATH/../../layers/${RESIN_MACHINE_LAYE
 
 export TEMPLATECONF=${SCRIPTPATH}/../../layers/${RESIN_MACHINE_LAYER}/conf/samples
 source ${SCRIPTPATH}/../../layers/poky/oe-init-build-env ${SCRIPTPATH}/../../${BUILD_DIR}
-if [ "x$DEBUG_IMAGE" == "xyes" ]; then
-    sed -i "s/.*DEBUG_IMAGE =.*/DEBUG_IMAGE = \"1\"/g" conf/local.conf
+if [ "x$DEVELOPMENT_IMAGE" == "xyes" ]; then
+    sed -i "s/.*DEVELOPMENT_IMAGE =.*/DEVELOPMENT_IMAGE = \"1\"/g" conf/local.conf
 else
     # Always activate resinhup bundles in production builds
     sed -i "s/.*RESINHUP ?=.*/RESINHUP ?= \"yes\"/g" conf/local.conf
