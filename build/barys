@@ -61,6 +61,11 @@ function help {
     echo -e "\t\t Set images to include development tweaks."
     echo -e "\t\t Default: no."
 
+    echo -e "\t-a | --additional-variable"
+    echo -e "\t\t Inject additional local.conf variables."
+    echo -e "\t\t The format of the arguments need to be VARIABLE=VALUE ."
+    echo -e "\t\t VALUE doesn't support white spaces."
+
     echo -e "\t--supervisor-tag"
     echo -e "\t\t Use a specific supervisor tag."
     echo -e "\t\t Default: production."
@@ -242,6 +247,16 @@ while [[ $# -ge 1 ]]; do
         --rm-work)
             RM_WORK=yes
             ;;
+        -a|--additional-variable)
+            if [ -z "$2" ]; then
+                log ERROR "\"$1\" argument needs a value."
+            fi
+            if [ -z "$(echo "$2" | awk -F= '{print $2}')" ]; then
+                log ERROR "\"$2\" has the wrong argument format for \"$1\". Read help."
+            fi
+            ADDITIONAL_VARIABLES="$ADDITIONAL_VARIABLES $2"
+            shift
+            ;;
         -i|--interactive)
             read -p "Select machines. Space separated or empty for all: " m
             MACHINES=$m
@@ -385,6 +400,14 @@ fi
 if [ -n "$SHARED_SSTATE" ]; then
     sed -i "s#.*SSTATE_DIR ?=.*#SSTATE_DIR ?= \"$SHARED_SSTATE\"#g" conf/local.conf
 fi
+
+echo -e "\n# Barys: Additional variables" >> conf/local.conf
+for pair in $ADDITIONAL_VARIABLES; do
+    variable=$(echo "$pair" | awk -F= '{print $1}')
+    value=$(echo "$pair" | awk -F= '{print $2}')
+    echo "$variable=\"$value\"" >> conf/local.conf
+done
+
 log "Resin build initialized in $BUILD_DIR."
 
 # Start builds
