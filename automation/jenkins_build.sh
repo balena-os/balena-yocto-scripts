@@ -71,7 +71,7 @@ mkdir -p $JENKINS_SSTATE_DIR
 # Run build
 docker stop $BUILD_CONTAINER_NAME 2> /dev/null || true
 docker rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
-docker run --rm -t \
+docker run --rm \
     -v $WORKSPACE:/yocto/resin-board \
     -v $JENKINS_DL_DIR:/yocto/shared-downloads \
     -v $JENKINS_SSTATE_DIR:/yocto/shared-sstate \
