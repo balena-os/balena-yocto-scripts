@@ -134,15 +134,22 @@ cp $DEVICE_TYPE_JSON $BUILD_DEPLOY_DIR/device-type.json
 mv -v $WORKSPACE/build/tmp/deploy/images/$MACHINE/kernel_modules_headers.tar.gz $BUILD_DEPLOY_DIR
 
 # If this is a clean production build, push a resinhup package to dockerhub
+# and registry.resinstaging.io.
 if [[ "$sourceBranch" == production* ]] && [ "$metaResinBranch" == "__ignore__" ] && [ "$supervisorTag" == "__ignore__" ]; then
-    echo "INFO: Pushing resinhup package to dockerhub."
+    echo "INFO: Pushing resinhup package to dockerhub and registry.resinstaging.io."
     SLUG=$(jq --raw-output '.slug' $DEVICE_TYPE_JSON)
     DOCKER_REPO="resin/resinos"
     DOCKER_TAG="$VERSION_HOSTOS-$SLUG"
+    RESINREG_REPO="registry.resinstaging.io/resin/resinos"
+    RESINREG_TAG="$VERSION_HOSTOS-$SLUG"
     if [ -f $BUILD_DEPLOY_DIR/resinhup-$VERSION_HOSTOS.tar ]; then
         docker import $BUILD_DEPLOY_DIR/resinhup-$VERSION_HOSTOS.tar $DOCKER_REPO:$DOCKER_TAG
         docker push $DOCKER_REPO:$DOCKER_TAG
         docker rmi $DOCKER_REPO:$DOCKER_TAG # cleanup
+
+        docker import $BUILD_DEPLOY_DIR/resinhup-$VERSION_HOSTOS.tar $RESINREG_REPO:$RESINREG_TAG
+        docker push $RESINREG_REPO:$RESINREG_TAG
+        docker rmi $RESINREG_REPO:$RESINREG_TAG # cleanup
     else
         echo "ERROR: The build didn't produce a resinhup package."
         exit 1
