@@ -35,10 +35,10 @@ if [ -z "$BUILD_NUMBER" ] || [ -z "$WORKSPACE" ] || [ -z "$sourceBranch" ] || [ 
     exit 1
 fi
 
-# Development images based on environment variable
-if [ -n "$DEVELOPMENT_IMAGE" ]; then
-    echo "[INFO] Running a development build..."
-    BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --development-image"
+# Debug images based on environment variable
+if [ -n "$DEBUG_IMAGE" ]; then
+    echo "[INFO] Running a debug build..."
+    BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --debug-image"
 fi
 
 if [ "z$BUILD_TYPE" == "zresinos" ]; then
