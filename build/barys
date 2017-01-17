@@ -66,10 +66,6 @@ function help {
     echo -e "\t\t The format of the arguments need to be VARIABLE=VALUE ."
     echo -e "\t\t VALUE doesn't support white spaces."
 
-    echo -e "\t--resinio"
-    echo -e "\t\t Set build configuration for resin-io."
-    echo -e "\t\t Default: no."
-
     echo -e "\t--supervisor-tag"
     echo -e "\t\t Use a specific supervisor tag."
     echo -e "\t\t Default: production."
@@ -251,9 +247,6 @@ while [[ $# -ge 1 ]]; do
         --rm-work)
             RM_WORK=yes
             ;;
-        --resinio)
-            RESINIO_CONFIGURATION=yes
-            ;;
         -a|--additional-variable)
             if [ -z "$2" ]; then
                 log ERROR "\"$1\" argument needs a value."
@@ -406,20 +399,6 @@ if [ -n "$SHARED_DOWNLOADS" ]; then
 fi
 if [ -n "$SHARED_SSTATE" ]; then
     sed -i "s#.*SSTATE_DIR ?=.*#SSTATE_DIR ?= \"$SHARED_SSTATE\"#g" conf/local.conf
-fi
-if [ "x$RESINIO_CONFIGURATION" == "xyes" ]; then
-    # ResinIO build configuration
-    sed -i "s/.*RESIN_CONNECTABLE ?=.*/RESIN_CONNECTABLE ?= \"1\"/g" conf/local.conf
-    sed -i "s/.*RESIN_CONNECTABLE_ENABLE_SERVICES ?=.*/RESIN_CONNECTABLE_ENABLE_SERVICES ?= \"1\"/g" conf/local.conf
-    sed -i "s/^TARGET_REPOSITORY ?=.*/#TARGET_REPOSITORY ?= \"\"/g" conf/local.conf
-    sed -i "s/^TARGET_TAG ?=.*/#TARGET_TAG ?= \"\"/g" conf/local.conf
-else
-    # ResinOS build configuration
-    sed -i "s/.*RESIN_CONNECTABLE ?=.*/RESIN_CONNECTABLE ?= \"1\"/g" conf/local.conf
-    sed -i "s/.*RESIN_CONNECTABLE_ENABLE_SERVICES ?=.*/RESIN_CONNECTABLE_ENABLE_SERVICES ?= \"0\"/g" conf/local.conf
-    sed -i "s/.*TARGET_REPOSITORY ?=.*/TARGET_REPOSITORY ?= \"\"/g" conf/local.conf
-    sed -i "s/.*TARGET_TAG ?=.*/TARGET_TAG ?= \"\"/g" conf/local.conf
-    sed -i "s/.*DEVELOPMENT_IMAGE =.*/DEVELOPMENT_IMAGE = \"1\"/g" conf/local.conf
 fi
 
 echo -e "\n# Barys: Additional variables" >> conf/local.conf

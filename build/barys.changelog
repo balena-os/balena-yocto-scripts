@@ -1,4 +1,3 @@
-- Implement --resinio and make ResinOS default build configuration
 - Add support for injecting random local.conf variables
 - Replace RESIN_STAGING_BUILD by DEBUG_IMAGE
 - Don't default SUPERVISOR_TAG to production
