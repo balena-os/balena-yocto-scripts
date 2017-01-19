@@ -41,13 +41,6 @@ if [ -n "$DEBUG_IMAGE" ]; then
     BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --debug-image"
 fi
 
-if [ "z$BUILD_TYPE" == "zresinos" ]; then
-    echo "[INFO] Running a resinOS build..."
-else
-    echo "[INFO] Running a resinIO build..."
-    BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --resinio"
-fi
-
 # When supervisorTag is provided, you the appropiate barys argument
 if [ "$supervisorTag" != "__ignore__" ]; then
     BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --supervisor-tag $supervisorTag"
