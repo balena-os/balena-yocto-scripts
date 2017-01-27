@@ -43,7 +43,7 @@ useradd -m -u $BUILDER_UID -g $BUILDER_GID -G docker builder
 
 # Start docker
 echo "[INFO] Starting docker."
-docker daemon 2> /dev/null &
+docker daemon -g /var/lib/docker 2> /dev/null &
 echo "[INFO] Waiting for docker to initialize..."
 STARTTIME=$(date +%s)
 ENDTIME=$(date +%s)

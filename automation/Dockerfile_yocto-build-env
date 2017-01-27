@@ -28,3 +28,5 @@ RUN wget -q -O /usr/bin/docker https://get.docker.com/builds/Linux/x86_64/docker
 COPY prepare-and-start.sh /
 
 WORKDIR /yocto/resin-board
+
+VOLUME /var/lib/docker
