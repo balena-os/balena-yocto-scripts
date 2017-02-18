@@ -1,3 +1,4 @@
+- Rename RESIN_SDIMG_COMPRESSION to RESIN_RAW_IMG_COMPRESSION to follow resinOS
 - Implement --resinio and make ResinOS default build configuration
 - Add support for injecting random local.conf variables
 - Replace RESIN_STAGING_BUILD by DEBUG_IMAGE
