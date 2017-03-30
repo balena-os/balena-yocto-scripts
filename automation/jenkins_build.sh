@@ -75,6 +75,7 @@ docker run --rm \
     -v $WORKSPACE:/yocto/resin-board \
     -v $JENKINS_DL_DIR:/yocto/shared-downloads \
     -v $JENKINS_SSTATE_DIR:/yocto/shared-sstate \
+		-v $PWD/linux-artik7:/linux-artik7 \
     -e BUILDER_UID=$(id -u) \
     -e BUILDER_GID=$(id -g) \
     --name $BUILD_CONTAINER_NAME \
