@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 BUILD_CONTAINER_NAME=yocto-build-$$
 
@@ -17,6 +17,46 @@ cleanup() {
     fi
 }
 trap 'cleanup fail' SIGINT SIGTERM
+
+deploy_build () {
+	local DEPLOY_DIR="$1"
+	local CHECK_COMPRESSED="$2"
+
+	local DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
+	local COMPRESSED=$(jq --raw-output '.yocto.compressed' $DEVICE_TYPE_JSON)
+	local ARCHIVE=$(jq --raw-output '.yocto.archive' $DEVICE_TYPE_JSON)
+
+	rm -rf "$DEPLOY_DIR"
+	mkdir -p "$DEPLOY_DIR/image"
+
+	cp -v "$YOCTO_BUILD_DEPLOY/VERSION" "$DEPLOY_DIR"
+	cp -v "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS" "$DEPLOY_DIR"
+	cp -v "$DEVICE_TYPE_JSON" "$DEPLOY_DIR/device-type.json"
+
+	if [ $SLUG != "edge" ]; then
+		cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$DEPLOY_DIR"
+
+		if [ "$CHECK_COMPRESSED" == "true" ]; then
+			if [ "${COMPRESSED}" == 'true' ]; then
+				if [ "${ARCHIVE}" == 'true' ]; then
+					cp -v "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT" "$DEPLOY_DIR/image/$DEPLOY_ARTIFACT"
+					(cd "$DEPLOY_DIR/image" && tar --remove-files --use-compress-program pigz --directory="$DEPLOY_DIR/image/$DEPLOY_ARTIFACT" -cvf "$DEPLOY_ARTIFACT.tar.gz" .)
+				else
+					cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT") "$DEPLOY_DIR/image/resin.img"
+					(cd "$DEPLOY_DIR/image" && tar --remove-files --use-compress-program pigz -cvf resin.img.tar.gz resin.img)
+				fi
+			else
+				cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT") "$DEPLOY_DIR/image/resin.img"
+			fi
+		else
+			if [ -d "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT" ]; then
+				cp -rv "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT"/* "$DEPLOY_DIR/image"
+			else
+				cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT") "$DEPLOY_DIR/image/resin.img"
+			fi
+		fi
+	fi
+}
 
 MACHINE=$1
 JENKINS_PERSISTENT_WORKDIR=$2
@@ -35,10 +75,13 @@ if [ -z "$BUILD_NUMBER" ] || [ -z "$WORKSPACE" ] || [ -z "$sourceBranch" ] || [ 
     exit 1
 fi
 
-# Debug images based on environment variable
-if [ -n "$DEBUG_IMAGE" ]; then
-    echo "[INFO] Running a debug build..."
-    BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --debug-image"
+if [ "$buildFlavor" == "managed-dev" ]; then
+	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --debug-image"
+	DEVELOPMENT_IMAGE=yes
+	RESIN_MANAGED_IMAGE=yes
+elif [ "$buildFlavor" == "managed-prod" ]; then
+	DEVELOPMENT_IMAGE=no
+	RESIN_MANAGED_IMAGE=yes
 fi
 
 # When supervisorTag is provided, you the appropiate barys argument
@@ -96,64 +139,88 @@ then
 	fi
 fi
 
-# Write deploy artifacts
-BUILD_DEPLOY_DIR=$WORKSPACE/deploy
-DEVICE_TYPE_JSON=$WORKSPACE/$MACHINE.json
-VERSION_HOSTOS=$(cat $WORKSPACE/build/tmp/deploy/images/$MACHINE/VERSION_HOSTOS)
+# Artifacts
+YOCTO_BUILD_DEPLOY="$WORKSPACE/build/tmp/deploy/images/$MACHINE"
+VERSION_HOSTOS=$(cat "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS")
+DEVICE_TYPE_JSON="$WORKSPACE/$MACHINE.json"
+SLUG=$(jq --raw-output '.slug' $DEVICE_TYPE_JSON)
 
-DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
-COMPRESSED=$(jq --raw-output '.yocto.compressed' $DEVICE_TYPE_JSON)
-ARCHIVE=$(jq --raw-output '.yocto.archive' $DEVICE_TYPE_JSON)
-mkdir -p $BUILD_DEPLOY_DIR
-rm -rf $BUILD_DEPLOY_DIR/* # do we have anything there?
-mv -v $(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/$DEPLOY_ARTIFACT) $BUILD_DEPLOY_DIR/$DEPLOY_ARTIFACT
-if [ "${COMPRESSED}" == 'true' ]; then
-	if [ "${ARCHIVE}" == 'true' ]; then
-		(cd $BUILD_DEPLOY_DIR && tar --remove-files  --use-compress-program pigz --directory=$DEPLOY_ARTIFACT -cvf ${DEPLOY_ARTIFACT}.tar.gz .)
-	else
-		 mv $BUILD_DEPLOY_DIR/$DEPLOY_ARTIFACT $BUILD_DEPLOY_DIR/resin.img
-		(cd $BUILD_DEPLOY_DIR && tar --remove-files --use-compress-program pigz -cvf resin.img.tar.gz resin.img)
+# Jenkins artifacts
+echo "[INFO] Starting creating jenkins artifacts..."
+deploy_build "$WORKSPACE/deploy-jenkins" "true"
+
+# Deploy
+if [ "$deploy" == "yes" ]; then
+	echo "[INFO] Starting deployment..."
+	if [ "$deployTo" == "production" ]; then
+		echo "[INFO] Pushing resinhup package to dockerhub and registry.resinstaging.io."
+		DOCKER_REPO="resin/resinos"
+		RESINREG_REPO="registry.resinstaging.io/resin/resinos"
+		# Make sure the tags are valid
+		# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
+		DOCKER_TAG="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
+		RESINREG_TAG="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
+		RESINHUP_PATH=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.resinhup-tar)
+		if [ -f $RESINHUP_PATH ]; then
+			docker import $RESINHUP_PATH $DOCKER_REPO:$DOCKER_TAG
+			docker push $DOCKER_REPO:$DOCKER_TAG
+			docker rmi $DOCKER_REPO:$DOCKER_TAG # cleanup
+			docker import $RESINHUP_PATH $RESINREG_REPO:$RESINREG_TAG
+			docker push $RESINREG_REPO:$RESINREG_TAG
+			docker rmi $RESINREG_REPO:$RESINREG_TAG # cleanup
+		else
+			echo "[ERROR] The build didn't produce a resinhup package."
+			exit 1
+		fi
 	fi
+
+	# Deployment to s3
+	S3_VERSION_HOSTOS=$VERSION_HOSTOS
+	if [ "$DEVELOPMENT_IMAGE" == "yes" ]; then
+		S3_VERSION_HOSTOS=$VERSION_HOSTOS.dev
+	fi
+	S3_DEPLOY_DIR="$WORKSPACE/deploy-s3"
+	S3_DEPLOY_IMAGES_DIR="$S3_DEPLOY_DIR/$SLUG/$S3_VERSION_HOSTOS"
+	deploy_build "$S3_DEPLOY_IMAGES_DIR" "false"
+	if [ "$deployTo" == "production" ]; then
+		S3_ACCESS_KEY=${PRODUCTION_S3_ACCESS_KEY}
+		S3_SECRET_KEY=${PRODUCTION_S3_SECRET_KEY}
+		if [ "$RESIN_MANAGED_IMAGE" == "yes" ]; then
+			S3_BUCKET=resin-production-img-cloudformation/images
+		else
+			S3_BUCKET=resin-production-img-cloudformation/resinos
+		fi
+		S3_SYNC_OPTS="$S3_SYNC_OPTS --skip-existing"
+	elif [ "$deployTo" == "staging" ]; then
+		S3_ACCESS_KEY=${STAGING_S3_ACCESS_KEY}
+		S3_SECRET_KEY=${STAGING_S3_SECRET_KEY}
+		if [ "$RESIN_MANAGED_IMAGE" == "yes" ]; then
+			S3_BUCKET=resin-staging-img/images
+		else
+			S3_BUCKET=resin-staging-img/resinos
+		fi
+	else
+		echo "[ERROR] Refusing to deploy to anything other than production or master."
+		exit 1
+	fi
+	S3_CMD="s3cmd --access_key=${S3_ACCESS_KEY} --secret_key=${S3_SECRET_KEY}"
+	S3_SYNC_OPTS="--recursive --acl-public"
+	echo "$S3_VERSION_HOSTOS" > "$S3_DEPLOY_DIR/$SLUG/latest"
+	docker run \
+		-e BASE_DIR=/host/images \
+		-e S3_CMD="$S3_CMD" \
+		-e S3_SYNC_OPTS="$S3_SYNC_OPTS" \
+		-e S3_BUCKET="$S3_BUCKET" \
+		-e SLUG="$SLUG" \
+		-e BUILD_VERSION="$S3_VERSION_HOSTOS" \
+		-v $S3_DEPLOY_DIR:/host/images resin/resin-img:master /bin/sh -x -c '/usr/src/app/node_modules/.bin/coffee /usr/src/app/scripts/prepare.coffee \
+		&& apt-get -y update \
+		&& apt-get install -y s3cmd \
+		&& ([ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ] \
+		&& $S3_CMD $S3_SYNC_OPTS sync /host/images/${SLUG}/${BUILD_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/) \
+		&& $S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/'
 fi
-if [ -f $(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.resinhup-tar) ]; then
-    mv -v $(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.resinhup-tar) $BUILD_DEPLOY_DIR/resinhup-$VERSION_HOSTOS.tar
-else
-    echo "WARNING: No resinhup package found."
-fi
 
-mv -v $WORKSPACE/build/tmp/deploy/images/$MACHINE/VERSION $BUILD_DEPLOY_DIR
-mv -v $WORKSPACE/build/tmp/deploy/images/$MACHINE/VERSION_HOSTOS $BUILD_DEPLOY_DIR
-cp $DEVICE_TYPE_JSON $BUILD_DEPLOY_DIR/device-type.json
-# move to deploy directory the kernel modules headers so we have it as a build artifact in jenkins
-mv -v $WORKSPACE/build/tmp/deploy/images/$MACHINE/kernel_modules_headers.tar.gz $BUILD_DEPLOY_DIR
-
-# If this is a clean production build, push a resinhup package to dockerhub
-# and registry.resinstaging.io.
-if [[ "$sourceBranch" == production* ]] && [ "$metaResinBranch" == "__ignore__" ] && [ "$supervisorTag" == "__ignore__" ]; then
-    echo "INFO: Pushing resinhup package to dockerhub and registry.resinstaging.io."
-    SLUG=$(jq --raw-output '.slug' $DEVICE_TYPE_JSON)
-    DOCKER_REPO="resin/resinos"
-    RESINREG_REPO="registry.resinstaging.io/resin/resinos"
-    # Make sure the tags are valid
-    # https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
-    DOCKER_TAG="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
-    RESINREG_TAG="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
-    if [ -f $BUILD_DEPLOY_DIR/resinhup-$VERSION_HOSTOS.tar ]; then
-        docker import $BUILD_DEPLOY_DIR/resinhup-$VERSION_HOSTOS.tar $DOCKER_REPO:$DOCKER_TAG
-        docker push $DOCKER_REPO:$DOCKER_TAG
-        docker rmi $DOCKER_REPO:$DOCKER_TAG # cleanup
-
-        docker import $BUILD_DEPLOY_DIR/resinhup-$VERSION_HOSTOS.tar $RESINREG_REPO:$RESINREG_TAG
-        docker push $RESINREG_REPO:$RESINREG_TAG
-        docker rmi $RESINREG_REPO:$RESINREG_TAG # cleanup
-    else
-        echo "ERROR: The build didn't produce a resinhup package."
-        exit 1
-    fi
-else
-    echo "WARNING: There is no need to upload resinhup package for a non production clean build."
-fi
-
-# Cleanup the build directory
+# Cleanup
 # Keep this after writing all artifacts
 rm -rf $WORKSPACE/build
