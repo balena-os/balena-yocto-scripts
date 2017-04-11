@@ -160,7 +160,7 @@ deploy_build "$WORKSPACE/deploy-jenkins" "true"
 # Deploy
 if [ "$deploy" == "yes" ]; then
 	echo "[INFO] Starting deployment..."
-	if [ "$deployTo" == "production" ]; then
+	if [ "$deployTo" == "production" ] && [ "$DEVELOPMENT_IMAGE" == "no" ]; then
 		echo "[INFO] Pushing resinhup package to dockerhub and registry.resinstaging.io."
 		DOCKER_REPO="resin/resinos"
 		RESINREG_REPO="registry.resinstaging.io/resin/resinos"
