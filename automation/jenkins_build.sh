@@ -205,7 +205,6 @@ if [ "$deploy" == "yes" ]; then
 	fi
 	S3_CMD="s3cmd --access_key=${S3_ACCESS_KEY} --secret_key=${S3_SECRET_KEY}"
 	S3_SYNC_OPTS="--recursive --acl-public"
-	echo "$S3_VERSION_HOSTOS" > "$S3_DEPLOY_DIR/$SLUG/latest"
 	docker run \
 		-e BASE_DIR=/host/images \
 		-e S3_CMD="$S3_CMD" \
@@ -217,8 +216,11 @@ if [ "$deploy" == "yes" ]; then
 		&& apt-get -y update \
 		&& apt-get install -y s3cmd \
 		&& ([ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ] \
-		&& $S3_CMD $S3_SYNC_OPTS sync /host/images/${SLUG}/${BUILD_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/) \
-		&& $S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/'
+		&& $S3_CMD $S3_SYNC_OPTS sync /host/images/${SLUG}/${BUILD_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)'
+	if [ "$DEVELOPMENT_IMAGE" == "no" ]; then
+		echo "$S3_VERSION_HOSTOS" > "$S3_DEPLOY_DIR/$SLUG/latest"
+		$S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/
+	fi
 fi
 
 # Cleanup
