@@ -20,7 +20,7 @@ trap 'cleanup fail' SIGINT SIGTERM
 
 deploy_build () {
 	local DEPLOY_DIR="$1"
-	local CHECK_COMPRESSED="$2"
+	local REMOVE_COMPRESSED_FILES="$2"
 
 	local DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
 	local COMPRESSED=$(jq --raw-output '.yocto.compressed' $DEVICE_TYPE_JSON)
@@ -35,25 +35,22 @@ deploy_build () {
 
 	if [ $SLUG != "edge" ]; then
 		cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$DEPLOY_DIR"
-
-		if [ "$CHECK_COMPRESSED" == "true" ]; then
-			if [ "${COMPRESSED}" == 'true' ]; then
-				if [ "${ARCHIVE}" == 'true' ]; then
-					cp -v "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT" "$DEPLOY_DIR/image/$DEPLOY_ARTIFACT"
-					(cd "$DEPLOY_DIR/image" && tar --remove-files --use-compress-program pigz --directory="$DEPLOY_DIR/image/$DEPLOY_ARTIFACT" -cvf "$DEPLOY_ARTIFACT.tar.gz" .)
-				else
-					cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT") "$DEPLOY_DIR/image/resin.img"
-					(cd "$DEPLOY_DIR/image" && tar --remove-files --use-compress-program pigz -cvf resin.img.tar.gz resin.img)
+		if [ "${COMPRESSED}" == 'true' ]; then
+			if [ "${ARCHIVE}" == 'true' ]; then
+				cp -v "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT" "$DEPLOY_DIR/image/$DEPLOY_ARTIFACT"
+				(cd "$DEPLOY_DIR/image/$DEPLOY_ARTIFACT" && zip -r "../$DEPLOY_ARTIFACT.zip" .)
+				if [ "$REMOVE_COMPRESSED_FILES" == "true" ]; then
+					rm -rf $DEPLOY_DIR/image/$DEPLOY_ARTIFACT
 				fi
 			else
 				cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT") "$DEPLOY_DIR/image/resin.img"
+				(cd "$DEPLOY_DIR/image" && zip resin.img.zip resin.img)
+				if [ "$REMOVE_COMPRESSED_FILES" == "true" ]; then
+					rm -rf $DEPLOY_DIR/image/resin.img
+				fi
 			fi
 		else
-			if [ -d "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT" ]; then
-				cp -rv "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT"/* "$DEPLOY_DIR/image"
-			else
-				cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT") "$DEPLOY_DIR/image/resin.img"
-			fi
+			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT") "$DEPLOY_DIR/image/resin.img"
 		fi
 	fi
 }
