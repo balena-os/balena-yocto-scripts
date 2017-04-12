@@ -226,7 +226,7 @@ if [ "$deploy" == "yes" ]; then
 		&& apt-get install -y s3cmd \
 		&& ([ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ] \
 		&& $S3_CMD $S3_SYNC_OPTS sync /host/images/${SLUG}/${BUILD_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/) \
-		&& ([ "${DEVELOPMENT_IMAGE}" = "no" ] && echo "$S3_VERSION_HOSTOS" > "/host/images/${SLUG}/latest" && $S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/ || true)'
+		&& ([ "${DEVELOPMENT_IMAGE}" = "no" ] && echo "${BUILD_VERSION}" > "/host/images/${SLUG}/latest" && $S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/ || true)'
 fi
 
 # Cleanup
