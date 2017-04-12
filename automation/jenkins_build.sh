@@ -220,15 +220,13 @@ if [ "$deploy" == "yes" ]; then
 		-e S3_BUCKET="$S3_BUCKET" \
 		-e SLUG="$SLUG" \
 		-e BUILD_VERSION="$S3_VERSION_HOSTOS" \
+		-e DEVELOPMENT_IMAGE="$DEVELOPMENT_IMAGE" \
 		-v $S3_DEPLOY_DIR:/host/images resin/resin-img:master /bin/sh -x -c '/usr/src/app/node_modules/.bin/coffee /usr/src/app/scripts/prepare.coffee \
 		&& apt-get -y update \
 		&& apt-get install -y s3cmd \
 		&& ([ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ] \
-		&& $S3_CMD $S3_SYNC_OPTS sync /host/images/${SLUG}/${BUILD_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)'
-	if [ "$DEVELOPMENT_IMAGE" == "no" ]; then
-		echo "$S3_VERSION_HOSTOS" > "$S3_DEPLOY_DIR/$SLUG/latest"
-		$S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/
-	fi
+		&& $S3_CMD $S3_SYNC_OPTS sync /host/images/${SLUG}/${BUILD_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/) \
+		&& ([ "${DEVELOPMENT_IMAGE}" == "no" ] && echo "$S3_VERSION_HOSTOS" > "/host/images/${SLUG}/latest" && $S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/ || true)'
 fi
 
 # Cleanup
