@@ -210,14 +210,23 @@ if [ "$deploy" == "yes" ]; then
 		-e SLUG="$SLUG" \
 		-e BUILD_VERSION="$S3_VERSION_HOSTOS" \
 		-e DEVELOPMENT_IMAGE="$DEVELOPMENT_IMAGE" \
-		-v $S3_DEPLOY_DIR:/host/images resin/resin-img:master /bin/sh -x -c ' \
-		echo "${BUILD_VERSION}" > "/host/images/${SLUG}/latest" \
-		&& /usr/src/app/node_modules/.bin/coffee /usr/src/app/scripts/prepare.coffee \
-		&& apt-get -y update \
-		&& apt-get install -y s3cmd \
-		&& ([ "${DEVELOPMENT_IMAGE}" = "no" ] && $S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/ || true) \
-		&& ([ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ] \
-		&& $S3_CMD $S3_SYNC_OPTS sync /host/images/${SLUG}/${BUILD_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)'
+		-v $S3_DEPLOY_DIR:/host/images resin/resin-img:master /bin/sh -x -e -c ' \
+			echo "${BUILD_VERSION}" > "/host/images/${SLUG}/latest"
+			/usr/src/app/node_modules/.bin/coffee /usr/src/app/scripts/prepare.coffee
+			apt-get -y update
+			apt-get install -y s3cmd
+			if [ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ]; then
+				touch IGNORE
+				$S3_CMD put IGNORE s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
+				$S3_CMD $S3_SYNC_OPTS sync /host/images/${SLUG}/${BUILD_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
+				$S3_CMD rm s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/IGNORE
+				if [ "${DEVELOPMENT_IMAGE}" = "no" ]; then
+					$S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/
+				fi
+			else
+				exit 1
+			fi
+		'
 fi
 
 # Cleanup
