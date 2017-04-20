@@ -124,11 +124,9 @@ docker run --rm \
         --rm-work
 
 
-if [ "$ENABLE_TESTS" = true ];
-then
+if [ "$ENABLE_TESTS" = true ]; then
 	# Run the test script in the device specific repository
-	if [ -f $WORKSPACE/tests/start.sh ];
-	then
+	if [ -f $WORKSPACE/tests/start.sh ]; then
 		echo "Custom test file exists - Beginning test"
 		/bin/bash $WORKSPACE/tests/start.sh
 	else
