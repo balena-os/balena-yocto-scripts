@@ -169,53 +169,49 @@ deploy_resinhup_to_registries() {
 	docker rmi $_resinreg_repo:$_resinreg_tag # cleanup
 }
 
-# Deploy
-if [ "$deploy" = "yes" ]; then
-	echo "[INFO] Starting deployment..."
-	if [ "$deployTo" = "production" ] && [ "$DEVELOPMENT_IMAGE" = "no" ] && [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
-		deploy_resinhup_to_registries
-	fi
-
-	# Deployment to s3
-	S3_VERSION_HOSTOS=$VERSION_HOSTOS
+deploy_to_s3() {
+	local _s3_version_hostos=$VERSION_HOSTOS
 	if [ "$DEVELOPMENT_IMAGE" = "yes" ]; then
-		S3_VERSION_HOSTOS=$VERSION_HOSTOS.dev
+		_s3_version_hostos=$VERSION_HOSTOS.dev
 	fi
-	S3_DEPLOY_DIR="$WORKSPACE/deploy-s3"
-	S3_DEPLOY_IMAGES_DIR="$S3_DEPLOY_DIR/$SLUG/$S3_VERSION_HOSTOS"
-	deploy_build "$S3_DEPLOY_IMAGES_DIR" "false"
+	local _s3_deploy_dir="$WORKSPACE/deploy-s3"
+	local _s3_deploy_images_dir="$_s3_deploy_dir/$SLUG/$_s3_version_hostos"
+
+	deploy_build "$_s3_deploy_images_dir" "false"
+
+	local _s3_access_key _s3_secret_key _s3_bucket
 	if [ "$deployTo" = "production" ]; then
-		S3_ACCESS_KEY=${PRODUCTION_S3_ACCESS_KEY}
-		S3_SECRET_KEY=${PRODUCTION_S3_SECRET_KEY}
+		_s3_access_key=${PRODUCTION_S3_ACCESS_KEY}
+		_s3_secret_key=${PRODUCTION_S3_SECRET_KEY}
 		if [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
-			S3_BUCKET=resin-production-img-cloudformation/images
+			_s3_bucket=resin-production-img-cloudformation/images
 		else
-			S3_BUCKET=resin-production-img-cloudformation/resinos
+			_s3_bucket=resin-production-img-cloudformation/resinos
 		fi
 		S3_SYNC_OPTS="$S3_SYNC_OPTS --skip-existing"
 	elif [ "$deployTo" = "staging" ]; then
-		S3_ACCESS_KEY=${STAGING_S3_ACCESS_KEY}
-		S3_SECRET_KEY=${STAGING_S3_SECRET_KEY}
+		_s3_access_key=${STAGING_S3_ACCESS_KEY}
+		_s3_secret_key=${STAGING_S3_SECRET_KEY}
 		if [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
-			S3_BUCKET=resin-staging-img/images
+			_s3_bucket=resin-staging-img/images
 		else
-			S3_BUCKET=resin-staging-img/resinos
+			_s3_bucket=resin-staging-img/resinos
 		fi
 	else
 		echo "[ERROR] Refusing to deploy to anything other than production or master."
 		exit 1
 	fi
-	S3_CMD="s3cmd --access_key=${S3_ACCESS_KEY} --secret_key=${S3_SECRET_KEY}"
-	S3_SYNC_OPTS="--recursive --acl-public"
+	local _s3_cmd="s3cmd --access_key=${_s3_access_key} --secret_key=${_s3_secret_key}"
+	local _s3_sync_opts="--recursive --acl-public"
 	docker run \
 		-e BASE_DIR=/host/images \
-		-e S3_CMD="$S3_CMD" \
-		-e S3_SYNC_OPTS="$S3_SYNC_OPTS" \
-		-e S3_BUCKET="$S3_BUCKET" \
+		-e S3_CMD="$_s3_cmd" \
+		-e S3_SYNC_OPTS="$_s3_sync_opts" \
+		-e S3_BUCKET="$_s3_bucket" \
 		-e SLUG="$SLUG" \
-		-e BUILD_VERSION="$S3_VERSION_HOSTOS" \
+		-e BUILD_VERSION="$_s3_version_hostos" \
 		-e DEVELOPMENT_IMAGE="$DEVELOPMENT_IMAGE" \
-		-v $S3_DEPLOY_DIR:/host/images resin/resin-img:master /bin/sh -x -e -c ' \
+		-v $_s3_deploy_dir:/host/images resin/resin-img:master /bin/sh -x -e -c ' \
 			echo "${BUILD_VERSION}" > "/host/images/${SLUG}/latest"
 			/usr/src/app/node_modules/.bin/coffee /usr/src/app/scripts/prepare.coffee
 			apt-get -y update
@@ -232,6 +228,17 @@ if [ "$deploy" = "yes" ]; then
 				exit 1
 			fi
 		'
+
+}
+
+# Deploy
+if [ "$deploy" = "yes" ]; then
+	echo "[INFO] Starting deployment..."
+	if [ "$deployTo" = "production" ] && [ "$DEVELOPMENT_IMAGE" = "no" ] && [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
+		deploy_resinhup_to_registries
+	fi
+
+	deploy_to_s3
 fi
 
 # Cleanup
