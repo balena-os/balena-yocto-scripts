@@ -152,29 +152,36 @@ SLUG=$(jq --raw-output '.slug' $DEVICE_TYPE_JSON)
 echo "[INFO] Starting creating jenkins artifacts..."
 deploy_build "$WORKSPACE/deploy-jenkins" "true"
 
+deploy_resinhup_to_registries() {
+	local _docker_repo="resin/resinos"
+	local _resinreg_repo="registry.resinstaging.io/resin/resinos"
+	# Make sure the tags are valid
+	# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
+	local _docker_tag="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
+	local _resinreg_tag="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
+	local _resinhup_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.resinhup-tar)
+
+	echo "[INFO] Pushing resinhup package to dockerhub and registry.resinstaging.io."
+
+	if [ ! -f $_resinhup_path ]; then
+		echo "[ERROR] The build didn't produce a resinhup package."
+		exit 1
+	fi
+
+	docker import $_resinhup_path $_docker_repo:$_docker_tag
+	docker push $_docker_repo:$_docker_tag
+	docker rmi $_docker_repo:$_docker_tag # cleanup
+
+	docker import $_resinhup_path $_resinreg_repo:$_resinreg_tag
+	docker push $_resinreg_repo:$_resinreg_tag
+	docker rmi $_resinreg_repo:$_resinreg_tag # cleanup
+}
+
 # Deploy
 if [ "$deploy" = "yes" ]; then
 	echo "[INFO] Starting deployment..."
 	if [ "$deployTo" = "production" ] && [ "$DEVELOPMENT_IMAGE" = "no" ] && [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
-		echo "[INFO] Pushing resinhup package to dockerhub and registry.resinstaging.io."
-		DOCKER_REPO="resin/resinos"
-		RESINREG_REPO="registry.resinstaging.io/resin/resinos"
-		# Make sure the tags are valid
-		# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
-		DOCKER_TAG="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
-		RESINREG_TAG="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
-		RESINHUP_PATH=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.resinhup-tar)
-		if [ -f $RESINHUP_PATH ]; then
-			docker import $RESINHUP_PATH $DOCKER_REPO:$DOCKER_TAG
-			docker push $DOCKER_REPO:$DOCKER_TAG
-			docker rmi $DOCKER_REPO:$DOCKER_TAG # cleanup
-			docker import $RESINHUP_PATH $RESINREG_REPO:$RESINREG_TAG
-			docker push $RESINREG_REPO:$RESINREG_TAG
-			docker rmi $RESINREG_REPO:$RESINREG_TAG # cleanup
-		else
-			echo "[ERROR] The build didn't produce a resinhup package."
-			exit 1
-		fi
+		deploy_resinhup_to_registries
 	fi
 
 	# Deployment to s3
