@@ -33,25 +33,25 @@ deploy_build () {
 	cp -v "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS" "$DEPLOY_DIR"
 	cp -v "$DEVICE_TYPE_JSON" "$DEPLOY_DIR/device-type.json"
 
-	if [ $SLUG != "edge" ]; then
-		cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$DEPLOY_DIR"
-		if [ "${COMPRESSED}" == 'true' ]; then
-			if [ "${ARCHIVE}" == 'true' ]; then
-				cp -v "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT" "$DEPLOY_DIR/image/$DEPLOY_ARTIFACT"
-				(cd "$DEPLOY_DIR/image/$DEPLOY_ARTIFACT" && zip -r "../$DEPLOY_ARTIFACT.zip" .)
-				if [ "$REMOVE_COMPRESSED_FILES" == "true" ]; then
-					rm -rf $DEPLOY_DIR/image/$DEPLOY_ARTIFACT
-				fi
-			else
-				cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT") "$DEPLOY_DIR/image/resin.img"
-				(cd "$DEPLOY_DIR/image" && zip resin.img.zip resin.img)
-				if [ "$REMOVE_COMPRESSED_FILES" == "true" ]; then
-					rm -rf $DEPLOY_DIR/image/resin.img
-				fi
+	test "$SLUG" = "edge" && return
+
+	cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$DEPLOY_DIR"
+	if [ "${COMPRESSED}" == 'true' ]; then
+		if [ "${ARCHIVE}" == 'true' ]; then
+			cp -v "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT" "$DEPLOY_DIR/image/$DEPLOY_ARTIFACT"
+			(cd "$DEPLOY_DIR/image/$DEPLOY_ARTIFACT" && zip -r "../$DEPLOY_ARTIFACT.zip" .)
+			if [ "$REMOVE_COMPRESSED_FILES" == "true" ]; then
+				rm -rf $DEPLOY_DIR/image/$DEPLOY_ARTIFACT
 			fi
 		else
 			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT") "$DEPLOY_DIR/image/resin.img"
+			(cd "$DEPLOY_DIR/image" && zip resin.img.zip resin.img)
+			if [ "$REMOVE_COMPRESSED_FILES" == "true" ]; then
+				rm -rf $DEPLOY_DIR/image/resin.img
+			fi
 		fi
+	else
+		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT") "$DEPLOY_DIR/image/resin.img"
 	fi
 }
 
