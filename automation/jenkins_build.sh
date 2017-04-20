@@ -36,22 +36,24 @@ deploy_build () {
 	test "$SLUG" = "edge" && return
 
 	cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$_deploy_dir"
-	if [ "${_compressed}" = 'true' ]; then
-		if [ "${_archive}" = 'true' ]; then
-			cp -v "$YOCTO_BUILD_DEPLOY/$_deploy_artifact" "$_deploy_dir/image/$_deploy_artifact"
-			(cd "$_deploy_dir/image/$_deploy_artifact" && zip -r "../$_deploy_artifact.zip" .)
-			if [ "$_remove_compressed_file" = "true" ]; then
-				rm -rf $_deploy_dir/image/$_deploy_artifact
-			fi
-		else
-			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/resin.img"
-			(cd "$_deploy_dir/image" && zip resin.img.zip resin.img)
-			if [ "$_remove_compressed_file" = "true" ]; then
-				rm -rf $_deploy_dir/image/resin.img
-			fi
+	if [ "${_compressed}" != 'true' ]; then
+		# uncompressed, just copy and we're done
+		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/resin.img"
+		return
+	fi
+
+	if [ "${_archive}" = 'true' ]; then
+		cp -v "$YOCTO_BUILD_DEPLOY/$_deploy_artifact" "$_deploy_dir/image/$_deploy_artifact"
+		(cd "$_deploy_dir/image/$_deploy_artifact" && zip -r "../$_deploy_artifact.zip" .)
+		if [ "$_remove_compressed_file" = "true" ]; then
+			rm -rf $_deploy_dir/image/$_deploy_artifact
 		fi
 	else
 		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/resin.img"
+		(cd "$_deploy_dir/image" && zip resin.img.zip resin.img)
+		if [ "$_remove_compressed_file" = "true" ]; then
+			rm -rf $_deploy_dir/image/resin.img
+		fi
 	fi
 }
 
