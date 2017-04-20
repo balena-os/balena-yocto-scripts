@@ -19,39 +19,39 @@ cleanup() {
 trap 'cleanup fail' SIGINT SIGTERM
 
 deploy_build () {
-	local DEPLOY_DIR="$1"
-	local REMOVE_COMPRESSED_FILES="$2"
+	local _deploy_dir="$1"
+	local _remove_compressed_file="$2"
 
-	local DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
-	local COMPRESSED=$(jq --raw-output '.yocto.compressed' $DEVICE_TYPE_JSON)
-	local ARCHIVE=$(jq --raw-output '.yocto.archive' $DEVICE_TYPE_JSON)
+	local _deploy_artifact=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
+	local _compressed=$(jq --raw-output '.yocto.compressed' $DEVICE_TYPE_JSON)
+	local _archive=$(jq --raw-output '.yocto.archive' $DEVICE_TYPE_JSON)
 
-	rm -rf "$DEPLOY_DIR"
-	mkdir -p "$DEPLOY_DIR/image"
+	rm -rf "$_deploy_dir"
+	mkdir -p "$_deploy_dir/image"
 
-	cp -v "$YOCTO_BUILD_DEPLOY/VERSION" "$DEPLOY_DIR"
-	cp -v "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS" "$DEPLOY_DIR"
-	cp -v "$DEVICE_TYPE_JSON" "$DEPLOY_DIR/device-type.json"
+	cp -v "$YOCTO_BUILD_DEPLOY/VERSION" "$_deploy_dir"
+	cp -v "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS" "$_deploy_dir"
+	cp -v "$DEVICE_TYPE_JSON" "$_deploy_dir/device-type.json"
 
 	test "$SLUG" = "edge" && return
 
-	cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$DEPLOY_DIR"
-	if [ "${COMPRESSED}" == 'true' ]; then
-		if [ "${ARCHIVE}" == 'true' ]; then
-			cp -v "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT" "$DEPLOY_DIR/image/$DEPLOY_ARTIFACT"
-			(cd "$DEPLOY_DIR/image/$DEPLOY_ARTIFACT" && zip -r "../$DEPLOY_ARTIFACT.zip" .)
-			if [ "$REMOVE_COMPRESSED_FILES" == "true" ]; then
-				rm -rf $DEPLOY_DIR/image/$DEPLOY_ARTIFACT
+	cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$_deploy_dir"
+	if [ "${_compressed}" == 'true' ]; then
+		if [ "${_archive}" == 'true' ]; then
+			cp -v "$YOCTO_BUILD_DEPLOY/$_deploy_artifact" "$_deploy_dir/image/$_deploy_artifact"
+			(cd "$_deploy_dir/image/$_deploy_artifact" && zip -r "../$_deploy_artifact.zip" .)
+			if [ "$_remove_compressed_file" == "true" ]; then
+				rm -rf $_deploy_dir/image/$_deploy_artifact
 			fi
 		else
-			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT") "$DEPLOY_DIR/image/resin.img"
-			(cd "$DEPLOY_DIR/image" && zip resin.img.zip resin.img)
-			if [ "$REMOVE_COMPRESSED_FILES" == "true" ]; then
-				rm -rf $DEPLOY_DIR/image/resin.img
+			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/resin.img"
+			(cd "$_deploy_dir/image" && zip resin.img.zip resin.img)
+			if [ "$_remove_compressed_file" == "true" ]; then
+				rm -rf $_deploy_dir/image/resin.img
 			fi
 		fi
 	else
-		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT") "$DEPLOY_DIR/image/resin.img"
+		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/resin.img"
 	fi
 }
 
