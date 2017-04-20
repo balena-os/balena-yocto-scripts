@@ -5,16 +5,16 @@ set -ex
 BUILD_CONTAINER_NAME=yocto-build-$$
 
 cleanup() {
-    echo "[INFO] jenkins_build.sh: Cleanup."
+	echo "[INFO] jenkins_build.sh: Cleanup."
 
-    # Stop docker container
-    echo "[INFO] jenkins_build.sh: Cleaning up yocto-build container."
-    docker stop $BUILD_CONTAINER_NAME 2> /dev/null || true
-    docker rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
+	# Stop docker container
+	echo "[INFO] jenkins_build.sh: Cleaning up yocto-build container."
+	docker stop $BUILD_CONTAINER_NAME 2> /dev/null || true
+	docker rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
 
-    if [ "$1" == "fail" ]; then
-        exit 1
-    fi
+	if [ "$1" == "fail" ]; then
+		exit 1
+	fi
 }
 trap 'cleanup fail' SIGINT SIGTERM
 
@@ -64,12 +64,12 @@ ENABLE_TESTS=${ENABLE_TESTS:=false}
 
 # Sanity checks
 if [ "$#" -ne 2 ]; then
-    echo "Usage: jenkins_build.sh <MACHINE> <JENKINS_PERSISTENT_WORKDIR>"
-    exit 1
+	echo "Usage: jenkins_build.sh <MACHINE> <JENKINS_PERSISTENT_WORKDIR>"
+	exit 1
 fi
 if [ -z "$BUILD_NUMBER" ] || [ -z "$WORKSPACE" ] || [ -z "$sourceBranch" ] || [ -z "$metaResinBranch" ] || [ -z "$supervisorTag" ]; then
-    echo "[ERROR] BUILD_NUMBER, WORKSPACE, sourceBranch, metaResinBranch and supervisorTag are required."
-    exit 1
+	echo "[ERROR] BUILD_NUMBER, WORKSPACE, sourceBranch, metaResinBranch and supervisorTag are required."
+	exit 1
 fi
 
 if [ "$buildFlavor" == "managed-dev" ]; then
@@ -83,19 +83,19 @@ fi
 
 # When supervisorTag is provided, you the appropiate barys argument
 if [ "$supervisorTag" != "__ignore__" ]; then
-    BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --supervisor-tag $supervisorTag"
+	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --supervisor-tag $supervisorTag"
 fi
 
 # Checkout meta-resin
 if [ "$metaResinBranch" == "__ignore__" ]; then
-    echo "[INFO] Using the default meta-resin revision (as configured in submodules)."
+	echo "[INFO] Using the default meta-resin revision (as configured in submodules)."
 else
-    echo "[INFO] Using special meta-resin revision from build params."
-    pushd $WORKSPACE/layers/meta-resin > /dev/null 2>&1
-    git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
-    git fetch --all
-    git checkout --force origin/$metaResinBranch
-    popd > /dev/null 2>&1
+	echo "[INFO] Using special meta-resin revision from build params."
+	pushd $WORKSPACE/layers/meta-resin > /dev/null 2>&1
+	git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
+	git fetch --all
+	git checkout --force origin/$metaResinBranch
+	popd > /dev/null 2>&1
 fi
 
 # Make sure shared directories are in place
