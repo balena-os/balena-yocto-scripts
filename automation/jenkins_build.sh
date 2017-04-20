@@ -12,7 +12,7 @@ cleanup() {
 	docker stop $BUILD_CONTAINER_NAME 2> /dev/null || true
 	docker rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
 
-	if [ "$1" == "fail" ]; then
+	if [ "$1" = "fail" ]; then
 		exit 1
 	fi
 }
@@ -36,17 +36,17 @@ deploy_build () {
 	test "$SLUG" = "edge" && return
 
 	cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$_deploy_dir"
-	if [ "${_compressed}" == 'true' ]; then
-		if [ "${_archive}" == 'true' ]; then
+	if [ "${_compressed}" = 'true' ]; then
+		if [ "${_archive}" = 'true' ]; then
 			cp -v "$YOCTO_BUILD_DEPLOY/$_deploy_artifact" "$_deploy_dir/image/$_deploy_artifact"
 			(cd "$_deploy_dir/image/$_deploy_artifact" && zip -r "../$_deploy_artifact.zip" .)
-			if [ "$_remove_compressed_file" == "true" ]; then
+			if [ "$_remove_compressed_file" = "true" ]; then
 				rm -rf $_deploy_dir/image/$_deploy_artifact
 			fi
 		else
 			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/resin.img"
 			(cd "$_deploy_dir/image" && zip resin.img.zip resin.img)
-			if [ "$_remove_compressed_file" == "true" ]; then
+			if [ "$_remove_compressed_file" = "true" ]; then
 				rm -rf $_deploy_dir/image/resin.img
 			fi
 		fi
@@ -72,11 +72,11 @@ if [ -z "$BUILD_NUMBER" ] || [ -z "$WORKSPACE" ] || [ -z "$sourceBranch" ] || [ 
 	exit 1
 fi
 
-if [ "$buildFlavor" == "managed-dev" ]; then
+if [ "$buildFlavor" = "managed-dev" ]; then
 	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --debug-image"
 	DEVELOPMENT_IMAGE=yes
 	RESIN_MANAGED_IMAGE=yes
-elif [ "$buildFlavor" == "managed-prod" ]; then
+elif [ "$buildFlavor" = "managed-prod" ]; then
 	DEVELOPMENT_IMAGE=no
 	RESIN_MANAGED_IMAGE=yes
 fi
@@ -87,7 +87,7 @@ if [ "$supervisorTag" != "__ignore__" ]; then
 fi
 
 # Checkout meta-resin
-if [ "$metaResinBranch" == "__ignore__" ]; then
+if [ "$metaResinBranch" = "__ignore__" ]; then
 	echo "[INFO] Using the default meta-resin revision (as configured in submodules)."
 else
 	echo "[INFO] Using special meta-resin revision from build params."
@@ -145,9 +145,9 @@ echo "[INFO] Starting creating jenkins artifacts..."
 deploy_build "$WORKSPACE/deploy-jenkins" "true"
 
 # Deploy
-if [ "$deploy" == "yes" ]; then
+if [ "$deploy" = "yes" ]; then
 	echo "[INFO] Starting deployment..."
-	if [ "$deployTo" == "production" ] && [ "$DEVELOPMENT_IMAGE" == "no" ] && [ "$RESIN_MANAGED_IMAGE" == "yes" ]; then
+	if [ "$deployTo" = "production" ] && [ "$DEVELOPMENT_IMAGE" = "no" ] && [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
 		echo "[INFO] Pushing resinhup package to dockerhub and registry.resinstaging.io."
 		DOCKER_REPO="resin/resinos"
 		RESINREG_REPO="registry.resinstaging.io/resin/resinos"
@@ -171,25 +171,25 @@ if [ "$deploy" == "yes" ]; then
 
 	# Deployment to s3
 	S3_VERSION_HOSTOS=$VERSION_HOSTOS
-	if [ "$DEVELOPMENT_IMAGE" == "yes" ]; then
+	if [ "$DEVELOPMENT_IMAGE" = "yes" ]; then
 		S3_VERSION_HOSTOS=$VERSION_HOSTOS.dev
 	fi
 	S3_DEPLOY_DIR="$WORKSPACE/deploy-s3"
 	S3_DEPLOY_IMAGES_DIR="$S3_DEPLOY_DIR/$SLUG/$S3_VERSION_HOSTOS"
 	deploy_build "$S3_DEPLOY_IMAGES_DIR" "false"
-	if [ "$deployTo" == "production" ]; then
+	if [ "$deployTo" = "production" ]; then
 		S3_ACCESS_KEY=${PRODUCTION_S3_ACCESS_KEY}
 		S3_SECRET_KEY=${PRODUCTION_S3_SECRET_KEY}
-		if [ "$RESIN_MANAGED_IMAGE" == "yes" ]; then
+		if [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
 			S3_BUCKET=resin-production-img-cloudformation/images
 		else
 			S3_BUCKET=resin-production-img-cloudformation/resinos
 		fi
 		S3_SYNC_OPTS="$S3_SYNC_OPTS --skip-existing"
-	elif [ "$deployTo" == "staging" ]; then
+	elif [ "$deployTo" = "staging" ]; then
 		S3_ACCESS_KEY=${STAGING_S3_ACCESS_KEY}
 		S3_SECRET_KEY=${STAGING_S3_SECRET_KEY}
-		if [ "$RESIN_MANAGED_IMAGE" == "yes" ]; then
+		if [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
 			S3_BUCKET=resin-staging-img/images
 		else
 			S3_BUCKET=resin-staging-img/resinos
