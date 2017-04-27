@@ -226,8 +226,8 @@ deploy_to_s3() {
 echo "${BUILD_VERSION}" > "/host/images/${SLUG}/latest"
 /usr/src/app/node_modules/.bin/coffee /usr/src/app/scripts/prepare.coffee
 if [ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ]; then
-	touch IGNORE
-	$S3_CMD put IGNORE s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
+	touch /host/images/${SLUG}/${BUILD_VERSION}/IGNORE
+	$S3_CMD put /host/images/${SLUG}/${BUILD_VERSION}/IGNORE s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
 	$S3_CMD $S3_SYNC_OPTS sync /host/images/${SLUG}/${BUILD_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
 	$S3_CMD rm s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/IGNORE
 	if [ "${DEVELOPMENT_IMAGE}" = "no" ]; then
