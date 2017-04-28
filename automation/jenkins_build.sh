@@ -5,52 +5,54 @@ set -ex
 BUILD_CONTAINER_NAME=yocto-build-$$
 
 cleanup() {
-    echo "[INFO] jenkins_build.sh: Cleanup."
+	echo "[INFO] $0: Cleanup."
 
-    # Stop docker container
-    echo "[INFO] jenkins_build.sh: Cleaning up yocto-build container."
-    docker stop $BUILD_CONTAINER_NAME 2> /dev/null || true
-    docker rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
+	# Stop docker container
+	echo "[INFO] $0: Cleaning up yocto-build container."
+	docker stop $BUILD_CONTAINER_NAME 2> /dev/null || true
+	docker rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
 
-    if [ "$1" == "fail" ]; then
-        exit 1
-    fi
+	if [ "$1" = "fail" ]; then
+		exit 1
+	fi
 }
 trap 'cleanup fail' SIGINT SIGTERM
 
 deploy_build () {
-	local DEPLOY_DIR="$1"
-	local REMOVE_COMPRESSED_FILES="$2"
+	local _deploy_dir="$1"
+	local _remove_compressed_file="$2"
 
-	local DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
-	local COMPRESSED=$(jq --raw-output '.yocto.compressed' $DEVICE_TYPE_JSON)
-	local ARCHIVE=$(jq --raw-output '.yocto.archive' $DEVICE_TYPE_JSON)
+	local _deploy_artifact=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
+	local _compressed=$(jq --raw-output '.yocto.compressed' $DEVICE_TYPE_JSON)
+	local _archive=$(jq --raw-output '.yocto.archive' $DEVICE_TYPE_JSON)
 
-	rm -rf "$DEPLOY_DIR"
-	mkdir -p "$DEPLOY_DIR/image"
+	rm -rf "$_deploy_dir"
+	mkdir -p "$_deploy_dir/image"
 
-	cp -v "$YOCTO_BUILD_DEPLOY/VERSION" "$DEPLOY_DIR"
-	cp -v "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS" "$DEPLOY_DIR"
-	cp -v "$DEVICE_TYPE_JSON" "$DEPLOY_DIR/device-type.json"
+	cp -v "$YOCTO_BUILD_DEPLOY/VERSION" "$_deploy_dir"
+	cp -v "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS" "$_deploy_dir"
+	cp -v "$DEVICE_TYPE_JSON" "$_deploy_dir/device-type.json"
 
-	if [ $SLUG != "edge" ]; then
-		cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$DEPLOY_DIR"
-		if [ "${COMPRESSED}" == 'true' ]; then
-			if [ "${ARCHIVE}" == 'true' ]; then
-				cp -v "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT" "$DEPLOY_DIR/image/$DEPLOY_ARTIFACT"
-				(cd "$DEPLOY_DIR/image/$DEPLOY_ARTIFACT" && zip -r "../$DEPLOY_ARTIFACT.zip" .)
-				if [ "$REMOVE_COMPRESSED_FILES" == "true" ]; then
-					rm -rf $DEPLOY_DIR/image/$DEPLOY_ARTIFACT
-				fi
-			else
-				cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT") "$DEPLOY_DIR/image/resin.img"
-				(cd "$DEPLOY_DIR/image" && zip resin.img.zip resin.img)
-				if [ "$REMOVE_COMPRESSED_FILES" == "true" ]; then
-					rm -rf $DEPLOY_DIR/image/resin.img
-				fi
-			fi
-		else
-			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$DEPLOY_ARTIFACT") "$DEPLOY_DIR/image/resin.img"
+	test "$SLUG" = "edge" && return
+
+	cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$_deploy_dir"
+	if [ "${_compressed}" != 'true' ]; then
+		# uncompressed, just copy and we're done
+		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/resin.img"
+		return
+	fi
+
+	if [ "${_archive}" = 'true' ]; then
+		cp -v "$YOCTO_BUILD_DEPLOY/$_deploy_artifact" "$_deploy_dir/image/$_deploy_artifact"
+		(cd "$_deploy_dir/image/$_deploy_artifact" && zip -r "../$_deploy_artifact.zip" .)
+		if [ "$_remove_compressed_file" = "true" ]; then
+			rm -rf $_deploy_dir/image/$_deploy_artifact
+		fi
+	else
+		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/resin.img"
+		(cd "$_deploy_dir/image" && zip resin.img.zip resin.img)
+		if [ "$_remove_compressed_file" = "true" ]; then
+			rm -rf $_deploy_dir/image/resin.img
 		fi
 	fi
 }
@@ -64,46 +66,46 @@ ENABLE_TESTS=${ENABLE_TESTS:=false}
 
 # Sanity checks
 if [ "$#" -ne 2 ]; then
-    echo "Usage: jenkins_build.sh <MACHINE> <JENKINS_PERSISTENT_WORKDIR>"
-    exit 1
+	echo "Usage: $0 <MACHINE> <JENKINS_PERSISTENT_WORKDIR>"
+	exit 1
 fi
 if [ -z "$BUILD_NUMBER" ] || [ -z "$WORKSPACE" ] || [ -z "$sourceBranch" ] || [ -z "$metaResinBranch" ] || [ -z "$supervisorTag" ]; then
-    echo "[ERROR] BUILD_NUMBER, WORKSPACE, sourceBranch, metaResinBranch and supervisorTag are required."
-    exit 1
+	echo "[ERROR] BUILD_NUMBER, WORKSPACE, sourceBranch, metaResinBranch and supervisorTag are required."
+	exit 1
 fi
 
-if [ "$buildFlavor" == "managed-dev" ]; then
+if [ "$buildFlavor" = "managed-dev" ]; then
 	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --resinio"
 	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --development-image"
 	DEVELOPMENT_IMAGE=yes
 	RESIN_MANAGED_IMAGE=yes
-elif [ "$buildFlavor" == "managed-prod" ]; then
+elif [ "$buildFlavor" = "managed-prod" ]; then
 	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --resinio"
 	DEVELOPMENT_IMAGE=no
 	RESIN_MANAGED_IMAGE=yes
-elif [ "$buildFlavor" == "unmanaged-dev" ]; then
+elif [ "$buildFlavor" = "unmanaged-dev" ]; then
 	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --development-image"
 	DEVELOPMENT_IMAGE=yes
 	RESIN_MANAGED_IMAGE=no
-elif [ "$buildFlavor" == "unmanaged-prod" ]; then
+elif [ "$buildFlavor" = "unmanaged-prod" ]; then
 	DEVELOPMENT_IMAGE=no
 	RESIN_MANAGED_IMAGE=no
 fi
 
 # When supervisorTag is provided, you the appropiate barys argument
 if [ "$supervisorTag" != "__ignore__" ]; then
-    BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --supervisor-tag $supervisorTag"
+	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --supervisor-tag $supervisorTag"
 fi
 
 # Checkout meta-resin
-if [ "$metaResinBranch" == "__ignore__" ]; then
-    echo "[INFO] Using the default meta-resin revision (as configured in submodules)."
+if [ "$metaResinBranch" = "__ignore__" ]; then
+	echo "[INFO] Using the default meta-resin revision (as configured in submodules)."
 else
-    echo "[INFO] Using special meta-resin revision from build params."
-    pushd $WORKSPACE/layers/meta-resin > /dev/null 2>&1
-    git fetch --all
-    git checkout --force origin/$metaResinBranch
-    popd > /dev/null 2>&1
+	echo "[INFO] Using special meta-resin revision from build params."
+	pushd $WORKSPACE/layers/meta-resin > /dev/null 2>&1
+	git fetch --all
+	git checkout --force origin/$metaResinBranch
+	popd > /dev/null 2>&1
 fi
 
 # Make sure shared directories are in place
@@ -132,11 +134,9 @@ docker run --rm \
         --rm-work
 
 
-if [ "$ENABLE_TESTS" = true ];
-then
+if [ "$ENABLE_TESTS" = true ]; then
 	# Run the test script in the device specific repository
-	if [ -f $WORKSPACE/tests/start.sh ];
-	then
+	if [ -f $WORKSPACE/tests/start.sh ]; then
 		echo "Custom test file exists - Beginning test"
 		/bin/bash $WORKSPACE/tests/start.sh
 	else
@@ -154,71 +154,75 @@ SLUG=$(jq --raw-output '.slug' $DEVICE_TYPE_JSON)
 echo "[INFO] Starting creating jenkins artifacts..."
 deploy_build "$WORKSPACE/deploy-jenkins" "true"
 
-# Deploy
-if [ "$deploy" == "yes" ]; then
-	echo "[INFO] Starting deployment..."
-	if [ "$deployTo" == "production" ] && [ "$DEVELOPMENT_IMAGE" == "no" ] && [ "$RESIN_MANAGED_IMAGE" == "yes" ]; then
-		echo "[INFO] Pushing resinhup package to dockerhub and registry.resinstaging.io."
-		DOCKER_REPO="resin/resinos"
-		RESINREG_REPO="registry.resinstaging.io/resin/resinos"
-		# Make sure the tags are valid
-		# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
-		DOCKER_TAG="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
-		RESINREG_TAG="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
-		RESINHUP_PATH=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.resinhup-tar)
-		if [ -f $RESINHUP_PATH ]; then
-			docker import $RESINHUP_PATH $DOCKER_REPO:$DOCKER_TAG
-			docker push $DOCKER_REPO:$DOCKER_TAG
-			docker rmi $DOCKER_REPO:$DOCKER_TAG # cleanup
-			docker import $RESINHUP_PATH $RESINREG_REPO:$RESINREG_TAG
-			docker push $RESINREG_REPO:$RESINREG_TAG
-			docker rmi $RESINREG_REPO:$RESINREG_TAG # cleanup
-		else
-			echo "[ERROR] The build didn't produce a resinhup package."
-			exit 1
-		fi
+deploy_resinhup_to_registries() {
+	local _docker_repo="resin/resinos"
+	local _resinreg_repo="registry.resinstaging.io/resin/resinos"
+	# Make sure the tags are valid
+	# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
+	local _docker_tag="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
+	local _resinreg_tag="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
+	local _resinhup_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.resinhup-tar)
+
+	echo "[INFO] Pushing resinhup package to dockerhub and registry.resinstaging.io."
+
+	if [ ! -f $_resinhup_path ]; then
+		echo "[ERROR] The build didn't produce a resinhup package."
+		exit 1
 	fi
 
-	# Deployment to s3
-	S3_VERSION_HOSTOS=$VERSION_HOSTOS
-	if [ "$DEVELOPMENT_IMAGE" == "yes" ]; then
-		S3_VERSION_HOSTOS=$VERSION_HOSTOS.dev
+	docker import $_resinhup_path $_docker_repo:$_docker_tag
+	docker push $_docker_repo:$_docker_tag
+	docker rmi $_docker_repo:$_docker_tag # cleanup
+
+	docker import $_resinhup_path $_resinreg_repo:$_resinreg_tag
+	docker push $_resinreg_repo:$_resinreg_tag
+	docker rmi $_resinreg_repo:$_resinreg_tag # cleanup
+}
+
+deploy_to_s3() {
+	local _s3_version_hostos=$VERSION_HOSTOS
+	if [ "$DEVELOPMENT_IMAGE" = "yes" ]; then
+		_s3_version_hostos=$_s3_version_hostos.dev
 	fi
-	S3_DEPLOY_DIR="$WORKSPACE/deploy-s3"
-	S3_DEPLOY_IMAGES_DIR="$S3_DEPLOY_DIR/$SLUG/$S3_VERSION_HOSTOS"
-	deploy_build "$S3_DEPLOY_IMAGES_DIR" "false"
-	if [ "$deployTo" == "production" ]; then
-		S3_ACCESS_KEY=${PRODUCTION_S3_ACCESS_KEY}
-		S3_SECRET_KEY=${PRODUCTION_S3_SECRET_KEY}
-		if [ "$RESIN_MANAGED_IMAGE" == "yes" ]; then
-			S3_BUCKET=resin-production-img-cloudformation/images
+	local _s3_deploy_dir="$WORKSPACE/deploy-s3"
+	local _s3_deploy_images_dir="$_s3_deploy_dir/$SLUG/$_s3_version_hostos"
+
+	deploy_build "$_s3_deploy_images_dir" "false"
+
+	local _s3_access_key _s3_secret_key _s3_bucket
+	if [ "$deployTo" = "production" ]; then
+		_s3_access_key=${PRODUCTION_S3_ACCESS_KEY}
+		_s3_secret_key=${PRODUCTION_S3_SECRET_KEY}
+		if [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
+			_s3_bucket=resin-production-img-cloudformation/images
 		else
-			S3_BUCKET=resin-production-img-cloudformation/resinos
+			_s3_bucket=resin-production-img-cloudformation/resinos
 		fi
 		S3_SYNC_OPTS="$S3_SYNC_OPTS --skip-existing"
-	elif [ "$deployTo" == "staging" ]; then
-		S3_ACCESS_KEY=${STAGING_S3_ACCESS_KEY}
-		S3_SECRET_KEY=${STAGING_S3_SECRET_KEY}
-		if [ "$RESIN_MANAGED_IMAGE" == "yes" ]; then
-			S3_BUCKET=resin-staging-img/images
+	elif [ "$deployTo" = "staging" ]; then
+		_s3_access_key=${STAGING_S3_ACCESS_KEY}
+		_s3_secret_key=${STAGING_S3_SECRET_KEY}
+		if [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
+			_s3_bucket=resin-staging-img/images
 		else
-			S3_BUCKET=resin-staging-img/resinos
+			_s3_bucket=resin-staging-img/resinos
 		fi
 	else
 		echo "[ERROR] Refusing to deploy to anything other than production or master."
 		exit 1
 	fi
-	S3_CMD="s3cmd --access_key=${S3_ACCESS_KEY} --secret_key=${S3_SECRET_KEY}"
-	S3_SYNC_OPTS="--recursive --acl-public"
+
+	local _s3_cmd="s3cmd --access_key=${_s3_access_key} --secret_key=${_s3_secret_key}"
+	local _s3_sync_opts="--recursive --acl-public"
 	docker run \
 		-e BASE_DIR=/host/images \
-		-e S3_CMD="$S3_CMD" \
-		-e S3_SYNC_OPTS="$S3_SYNC_OPTS" \
-		-e S3_BUCKET="$S3_BUCKET" \
+		-e S3_CMD="$_s3_cmd" \
+		-e S3_SYNC_OPTS="$_s3_sync_opts" \
+		-e S3_BUCKET="$_s3_bucket" \
 		-e SLUG="$SLUG" \
-		-e BUILD_VERSION="$S3_VERSION_HOSTOS" \
+		-e BUILD_VERSION="$_s3_version_hostos" \
 		-e DEVELOPMENT_IMAGE="$DEVELOPMENT_IMAGE" \
-		-v $S3_DEPLOY_DIR:/host/images resin/resin-img:master /bin/sh -x -e -c ' \
+		-v $_s3_deploy_dir:/host/images resin/resin-img:master /bin/sh -x -e -c ' \
 			echo "${BUILD_VERSION}" > "/host/images/${SLUG}/latest"
 			/usr/src/app/node_modules/.bin/coffee /usr/src/app/scripts/prepare.coffee
 			apt-get -y update
@@ -235,6 +239,17 @@ if [ "$deploy" == "yes" ]; then
 				exit 1
 			fi
 		'
+
+}
+
+# Deploy
+if [ "$deploy" = "yes" ]; then
+	echo "[INFO] Starting deployment..."
+	if [ "$deployTo" = "production" ] && [ "$DEVELOPMENT_IMAGE" = "no" ] && [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
+		deploy_resinhup_to_registries
+	fi
+
+	deploy_to_s3
 fi
 
 # Cleanup
