@@ -61,7 +61,6 @@ MACHINE=$1
 JENKINS_PERSISTENT_WORKDIR=$2
 JENKINS_DL_DIR=$JENKINS_PERSISTENT_WORKDIR/shared-downloads
 JENKINS_SSTATE_DIR=$JENKINS_PERSISTENT_WORKDIR/$MACHINE/sstate
-MAXBUILDS=2
 ENABLE_TESTS=${ENABLE_TESTS:=false}
 
 # Sanity checks
@@ -69,8 +68,8 @@ if [ "$#" -ne 2 ]; then
 	echo "Usage: $0 <MACHINE> <JENKINS_PERSISTENT_WORKDIR>"
 	exit 1
 fi
-if [ -z "$BUILD_NUMBER" ] || [ -z "$WORKSPACE" ] || [ -z "$sourceBranch" ] || [ -z "$metaResinBranch" ] || [ -z "$supervisorTag" ]; then
-	echo "[ERROR] BUILD_NUMBER, WORKSPACE, sourceBranch, metaResinBranch and supervisorTag are required."
+if [ -z "$WORKSPACE" ] || [ -z "$metaResinBranch" ] || [ -z "$supervisorTag" ]; then
+	echo "[ERROR] WORKSPACE, metaResinBranch and supervisorTag are required."
 	exit 1
 fi
 
