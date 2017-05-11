@@ -118,6 +118,8 @@ docker run --rm \
     -v $WORKSPACE:/yocto/resin-board \
     -v $JENKINS_DL_DIR:/yocto/shared-downloads \
     -v $JENKINS_SSTATE_DIR:/yocto/shared-sstate \
+    -v $SSH_AUTH_SOCK:/tmp/ssh-agent \
+    -e SSH_AUTH_SOCK=/tmp/ssh-agent \
     -e BUILDER_UID=$(id -u) \
     -e BUILDER_GID=$(id -g) \
     --name $BUILD_CONTAINER_NAME \
