@@ -95,7 +95,7 @@ else
 	pushd $WORKSPACE/layers/meta-resin > /dev/null 2>&1
 	git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
 	git fetch --all
-	git checkout --force origin/$metaResinBranch
+	git checkout --force $metaResinBranch
 	popd > /dev/null 2>&1
 fi
 
