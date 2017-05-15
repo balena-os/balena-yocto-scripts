@@ -103,7 +103,7 @@ else
 	echo "[INFO] Using special meta-resin revision from build params."
 	pushd $WORKSPACE/layers/meta-resin > /dev/null 2>&1
 	git fetch --all
-	git checkout --force origin/$metaResinBranch
+	git checkout --force $metaResinBranch
 	popd > /dev/null 2>&1
 fi
 
