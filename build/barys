@@ -401,6 +401,7 @@ if [ -n "$SHARED_SSTATE" ]; then
     sed -i "s#.*SSTATE_DIR ?=.*#SSTATE_DIR ?= \"$SHARED_SSTATE\"#g" conf/local.conf
 fi
 
+perl -i -pe 'BEGIN {$/ = undef}; s/^\n# Barys: Additional variables.*//sm' conf/local.conf
 echo -e "\n# Barys: Additional variables" >> conf/local.conf
 for pair in $ADDITIONAL_VARIABLES; do
     variable=$(echo "$pair" | awk -F= '{print $1}')
