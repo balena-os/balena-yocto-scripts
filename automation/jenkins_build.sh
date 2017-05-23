@@ -185,6 +185,8 @@ deploy_to_s3() {
 	local _s3_version_hostos=$VERSION_HOSTOS
 	if [ "$DEVELOPMENT_IMAGE" = "yes" ]; then
 		_s3_version_hostos=$_s3_version_hostos.dev
+	else
+		_s3_version_hostos=$_s3_version_hostos.prod
 	fi
 	local _s3_deploy_dir="$WORKSPACE/deploy-s3"
 	local _s3_deploy_images_dir="$_s3_deploy_dir/$SLUG/$_s3_version_hostos"
