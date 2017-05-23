@@ -7,6 +7,10 @@ DOCKER_TIMEOUT=20 # Wait 20 seconds for docker to start
 cleanup() {
     echo "[INFO] Running cleanup..."
 
+    echo "[INFO] Removing sstate-cache duplicates..."
+    sudo -H -u builder /yocto/resin-board/layers/poky/scripts/sstate-cache-management.sh \
+	--cache-dir=/yocto/shared-sstate --remove-duplicated --yes
+
     # Stop docker gracefully
     echo "[INFO] Stopping in container docker..."
     DOCKERPIDFILE=/var/run/docker.pid
