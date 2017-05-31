@@ -35,14 +35,14 @@ if ! `which jq > /dev/null 2>&1` || [ -z $CONF ] || [ ! -d $CONF ]; then
 fi
 
 echo -e "
-  _____           _         _       
- |  __ \         (_)       (_)      
- | |__) |___  ___ _ _ __    _  ___  
- |  _  // _ \/ __| | '_ \  | |/ _ \ 
- | | \ \  __/\__ \ | | | |_| | (_) |
- |_|  \_\___||___/_|_| |_(_)_|\___/ 
-                                    
- ---------------------------------- \n" > $CONF/$CONFNAME
+  _____           _        _____   ____  
+ |  __ \         (_)      /  _  \ / ___| 
+ | |__) |___  ___ _ _ __  | | | || (___  
+ |  _  // _ \/ __| | '_ \ | | | | \___ \ 
+ | | \ \  __/\__ \ | | | || |_| |  ___) |
+ |_|  \_\___||___/_|_| |_|\_____/ |____/ 
+                                         
+ ---------------------------------------- \n" > $CONF/$CONFNAME
 
 IMAGES=""
 BOARDS_COMMANDS=""
@@ -52,7 +52,7 @@ for json in "${@:2}"; do
     IMAGES="$IMAGES $IMAGE"
     NAME=`cat $json | jq  -r '.name'`
     MACHINE=`cat $json | jq  -r '.yocto.machine'`
-    BOARD_COMMAND=$(printf "%-35s : %s\n" "$NAME" "\$ MACHINE=$MACHINE bitbake $IMAGE")
+    BOARD_COMMAND=$(printf "%-40s : %s\n" "$NAME" "\$ MACHINE=$MACHINE bitbake $IMAGE")
     if [ -z "$BOARDS_COMMANDS" ]; then
         BOARDS_COMMANDS="$BOARD_COMMAND"
     else
@@ -64,7 +64,7 @@ done
 IMAGES=`echo $IMAGES | tr ' ' '\n' | sort -u`
 
 # Write conf file
-echo "Resin specific targets are:" >> $CONF/$CONFNAME
+echo "Resin specific images available:" >> $CONF/$CONFNAME
 for image in $IMAGES; do
     echo -e "\t$image" >> $CONF/$CONFNAME
 done
