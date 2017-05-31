@@ -43,7 +43,7 @@ deploy_build () {
 	fi
 
 	if [ "${_archive}" = 'true' ]; then
-		cp -rv "$YOCTO_BUILD_DEPLOY/$_deploy_artifact" "$_deploy_dir/image/"
+		cp -rv "$YOCTO_BUILD_DEPLOY/$_deploy_artifact/*" "$_deploy_dir/image/"
 		(cd "$_deploy_dir/image/$_deploy_artifact" && zip -r "../$_deploy_artifact.zip" .)
 		if [ "$_remove_compressed_file" = "true" ]; then
 			rm -rf $_deploy_dir/image/$_deploy_artifact
