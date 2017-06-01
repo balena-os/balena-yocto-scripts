@@ -164,6 +164,7 @@ deploy_resinhup_to_registries() {
 	local _docker_tag="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
 	local _resinreg_tag="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
 	local _resinhup_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.resinhup-tar)
+	local _dockerfile_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/Dockerfile.template)
 
 	echo "[INFO] Pushing resinhup package to dockerhub and registry.resinstaging.io."
 
@@ -172,12 +173,30 @@ deploy_resinhup_to_registries() {
 		exit 1
 	fi
 
-	docker import $_resinhup_path $_docker_repo:$_docker_tag
+	docker import $_resinhup_path $_docker_tag
+	if [ -f $_dockerfile_path ]; then
+		mkdir -p tmp_image_prepare
+		sed "s/#{VERSION}/${_docker_tag}/g" $_dockerfile_path >  tmp_image_prepare/Dockerfile
+		docker build -t $_docker_repo:$_docker_tag tmp_image_prepare
+		rm -rf tmp_image_prepare
+	else
+		docker tag $_docker_tag $_docker_repo:$_docker_tag
+	fi
 	docker push $_docker_repo:$_docker_tag
+	docker rmi $_docker_tag
 	docker rmi $_docker_repo:$_docker_tag # cleanup
 
-	docker import $_resinhup_path $_resinreg_repo:$_resinreg_tag
+	docker import $_resinhup_path $_resinreg_tag
+	if [ -f $_dockerfile_path ]; then
+		mkdir -p tmp_image_prepare
+		sed "s/#{VERSION}/${_resinreg_tag}/g" $_dockerfile_path >  tmp_image_prepare/Dockerfile
+		docker build -t $_resinreg_repo:$_resinreg_tag tmp_image_prepare
+		rm -rf tmp_image_prepare
+	else
+		docker tag $_resinreg_tag $_resinreg_repo:$_resinreg_tag
+	fi
 	docker push $_resinreg_repo:$_resinreg_tag
+	docker rmi $_resinreg_tag
 	docker rmi $_resinreg_repo:$_resinreg_tag # cleanup
 }
 
