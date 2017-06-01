@@ -182,21 +182,13 @@ deploy_resinhup_to_registries() {
 	else
 		docker tag $_docker_tag $_docker_repo:$_docker_tag
 	fi
-	docker push $_docker_repo:$_docker_tag
 	docker rmi $_docker_tag
-	docker rmi $_docker_repo:$_docker_tag # cleanup
 
-	docker import $_resinhup_path $_resinreg_tag
-	if [ -f $_dockerfile_path ]; then
-		mkdir -p tmp_image_prepare
-		sed "s/#{VERSION}/${_resinreg_tag}/g" $_dockerfile_path >  tmp_image_prepare/Dockerfile
-		docker build -t $_resinreg_repo:$_resinreg_tag tmp_image_prepare
-		rm -rf tmp_image_prepare
-	else
-		docker tag $_resinreg_tag $_resinreg_repo:$_resinreg_tag
-	fi
+	docker tag $_docker_repo:$_docker_tag $_resinreg_repo:$_resinreg_tag
+	docker push $_docker_repo:$_docker_tag
 	docker push $_resinreg_repo:$_resinreg_tag
-	docker rmi $_resinreg_tag
+
+	docker rmi $_docker_repo:$_docker_tag # cleanup
 	docker rmi $_resinreg_repo:$_resinreg_tag # cleanup
 }
 
