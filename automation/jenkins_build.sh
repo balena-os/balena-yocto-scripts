@@ -244,8 +244,7 @@ if [ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ]; then
 		$S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/
 	fi
 else
-	echo "Deployment already done for ${SLUG} at version ${BUILD_VERSION}"
-	exit 1
+	echo "WARNING: Deployment already done for ${SLUG} at version ${BUILD_VERSION}"
 fi
 EOSU
 		'
