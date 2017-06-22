@@ -73,11 +73,7 @@ if [ -z "$WORKSPACE" ] || [ -z "$metaResinBranch" ] || [ -z "$supervisorTag" ]; 
 	exit 1
 fi
 
-if [ "$buildFlavor" = "managed-dev" ]; then
-	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --debug-image"
-	DEVELOPMENT_IMAGE=yes
-	RESIN_MANAGED_IMAGE=yes
-elif [ "$buildFlavor" = "managed-prod" ]; then
+if [ "$buildFlavor" = "managed-prod" ]; then
 	DEVELOPMENT_IMAGE=no
 	RESIN_MANAGED_IMAGE=yes
 fi
@@ -174,11 +170,6 @@ deploy_resinhup_to_registries() {
 
 deploy_to_s3() {
 	local _s3_version_hostos=$VERSION_HOSTOS
-	if [ "$DEVELOPMENT_IMAGE" = "yes" ]; then
-		_s3_version_hostos=$_s3_version_hostos.dev
-	else
-		_s3_version_hostos=$_s3_version_hostos.prod
-	fi
 	local _s3_deploy_dir="$WORKSPACE/deploy-s3"
 	local _s3_deploy_images_dir="$_s3_deploy_dir/$SLUG/$_s3_version_hostos"
 
@@ -190,8 +181,6 @@ deploy_to_s3() {
 		_s3_secret_key=${PRODUCTION_S3_SECRET_KEY}
 		if [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
 			_s3_bucket=resin-production-img-cloudformation/images
-		else
-			_s3_bucket=resin-production-img-cloudformation/resinos
 		fi
 		S3_SYNC_OPTS="$S3_SYNC_OPTS --skip-existing"
 	elif [ "$deployTo" = "staging" ]; then
@@ -199,8 +188,6 @@ deploy_to_s3() {
 		_s3_secret_key=${STAGING_S3_SECRET_KEY}
 		if [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
 			_s3_bucket=resin-staging-img/images
-		else
-			_s3_bucket=resin-staging-img/resinos
 		fi
 	else
 		echo "[ERROR] Refusing to deploy to anything other than production or master."
