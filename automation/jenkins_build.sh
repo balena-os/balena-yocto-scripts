@@ -35,7 +35,7 @@ deploy_build () {
 
 	test "$SLUG" = "edge" && return
 
-	cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.bz2" "$_deploy_dir"
+	cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$_deploy_dir"
 	if [ "${_compressed}" != 'true' ]; then
 		# uncompressed, just copy and we're done
 		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/resin.img"
