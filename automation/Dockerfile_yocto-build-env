@@ -14,7 +14,7 @@ ENV NODE_VERSION node_4.x
 ENV DISTRO vivid
 RUN echo "deb https://deb.nodesource.com/$NODE_VERSION $DISTRO main" | tee /etc/apt/sources.list.d/nodesource.list &&\
   echo "deb-src https://deb.nodesource.com/$NODE_VERSION $DISTRO main" | tee -a /etc/apt/sources.list.d/nodesource.list
-RUN apt-get update && apt-get install -y jq nodejs sudo && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y jq nodejs npm sudo && rm -rf /var/lib/apt/lists/*
 
 # Install docker
 # https://github.com/docker/docker/blob/master/project/PACKAGERS.md#runtime-dependencies
