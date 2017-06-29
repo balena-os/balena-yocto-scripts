@@ -1,7 +1,7 @@
-FROM ubuntu:15.04
+FROM ubuntu:16.04
 
 # Install the following utilities (required by poky)
-RUN apt-get update && apt-get install -y build-essential chrpath curl diffstat gcc-multilib gawk git-core libsdl1.2-dev texinfo unzip wget xterm cpio file python3 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y build-essential chrpath curl diffstat gcc-multilib gawk git-core libsdl1.2-dev locales texinfo unzip wget xterm cpio file python3 && rm -rf /var/lib/apt/lists/*
 
 # Set the locale to UTF-8 for bulding with poky morty
 RUN locale-gen en_US.UTF-8
@@ -10,11 +10,11 @@ ENV LANG en_US.UTF-8
 # Additional host packages required by resin
 RUN apt-get update && apt-get install -y apt-transport-https && rm -rf /var/lib/apt/lists/*
 RUN curl --silent https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
-ENV NODE_VERSION node_4.x
-ENV DISTRO vivid
+ENV NODE_VERSION node_8.x
+ENV DISTRO xenial
 RUN echo "deb https://deb.nodesource.com/$NODE_VERSION $DISTRO main" | tee /etc/apt/sources.list.d/nodesource.list &&\
   echo "deb-src https://deb.nodesource.com/$NODE_VERSION $DISTRO main" | tee -a /etc/apt/sources.list.d/nodesource.list
-RUN apt-get update && apt-get install -y jq nodejs npm sudo && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y jq nodejs sudo && rm -rf /var/lib/apt/lists/*
 
 # Install docker
 # https://github.com/docker/docker/blob/master/project/PACKAGERS.md#runtime-dependencies
