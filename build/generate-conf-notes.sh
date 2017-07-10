@@ -48,10 +48,10 @@ IMAGES=""
 BOARDS_COMMANDS=""
 
 for json in "${@:2}"; do
-    IMAGE=`cat $json | jq  -r '.yocto.image | select( . != null)'`
+    IMAGE=`jq -r '.yocto.image | select( . != null)' $json`
     IMAGES="$IMAGES $IMAGE"
-    NAME=`cat $json | jq  -r '.name'`
-    MACHINE=`cat $json | jq  -r '.yocto.machine'`
+    NAME=`jq -r '.name' $json`
+    MACHINE=`jq -r '.yocto.machine' $json`
     BOARD_COMMAND=$(printf "%-40s : %s\n" "$NAME" "\$ MACHINE=$MACHINE bitbake $IMAGE")
     if [ -z "$BOARDS_COMMANDS" ]; then
         BOARDS_COMMANDS="$BOARD_COMMAND"
