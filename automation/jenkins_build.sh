@@ -23,6 +23,7 @@ deploy_build () {
 	local _remove_compressed_file="$2"
 
 	local _deploy_artifact=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
+	local _deploy_flasher_artifact=$(jq --raw-output '.yocto.deployFlasherArtifact // empty' $DEVICE_TYPE_JSON)
 	local _compressed=$(jq --raw-output '.yocto.compressed' $DEVICE_TYPE_JSON)
 	local _archive=$(jq --raw-output '.yocto.archive' $DEVICE_TYPE_JSON)
 
@@ -39,20 +40,32 @@ deploy_build () {
 	if [ "${_compressed}" != 'true' ]; then
 		# uncompressed, just copy and we're done
 		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/resin.img"
+		if [ -n "$_deploy_flasher_artifact" ]; then
+			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_flasher_artifact") "$_deploy_dir/image/resin-flasher.img"
+		fi
 		return
 	fi
 
 	if [ "${_archive}" = 'true' ]; then
 		cp -rv "$YOCTO_BUILD_DEPLOY"/"$_deploy_artifact"/* "$_deploy_dir"/image/
 		(cd "$_deploy_dir/image/" && zip -r "../$_deploy_artifact.zip" .)
+		if [ -n "$_deploy_flasher_artifact" ]; then
+		    cp -rv "$YOCTO_BUILD_DEPLOY"/"$_deploy_flasher_artifact"/* "$_deploy_dir"/image/
+		    (cd "$_deploy_dir/image/" && zip -r "../$_deploy_flasher_artifact.zip" .)
+		fi
 		if [ "$_remove_compressed_file" = "true" ]; then
 			rm -rf $_deploy_dir/image
 		fi
 	else
 		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/resin.img"
 		(cd "$_deploy_dir/image" && zip resin.img.zip resin.img)
+		if [ -n "$_deploy_flasher_artifact" ]; then
+			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_flasher_artifact") "$_deploy_dir/image/resin-flasher.img"
+			(cd "$_deploy_dir/image" && zip resin-flasher.img.zip resin-flasher.img)
+		fi
 		if [ "$_remove_compressed_file" = "true" ]; then
 			rm -rf $_deploy_dir/image/resin.img
+			rm -rf $_deploy_dir/image/resin-flasher.img
 		fi
 	fi
 }
