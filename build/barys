@@ -444,11 +444,11 @@ else
   fi
   for machine in $ITERATOR_MACHINES; do
       for json in ${DEVICE_TYPES_JSONS}; do
-        MACHINE_IN_JSON=`cat $json | jq  -r '.yocto.machine'`
+        MACHINE_IN_JSON=`jq -r '.yocto.machine' $json`
         if [[ "$machine" != "${MACHINE_IN_JSON}" ]]; then
           continue
         fi
-        IMAGE=`cat $json | jq  -r '.yocto | select(.machine == '\"${machine}\"').image'`
+        IMAGE=`jq -r '.yocto | select(.machine == '\"${machine}\"').image' $json`
         if [ -z "$IMAGE" ] || [ "z$IMAGE" == "znull" ]; then
           log ERROR "No target image defined for $machine."
         fi
@@ -466,12 +466,12 @@ else
 
   for machine in $ITERATOR_MACHINES; do
     for json in ${DEVICE_TYPES_JSONS}; do
-        MACHINE_IN_JSON=`cat $json | jq  -r '.yocto.machine'`
+        MACHINE_IN_JSON=`jq -r '.yocto.machine' $json`
         if [[ "$machine" != "${MACHINE_IN_JSON}" ]]; then
           continue
         fi
-        IMAGE=`cat $json | jq  -r '.yocto | select(.machine == '\"${machine}\"').image'`
-        FSTYPE=`cat $json | jq  -r '.yocto | select(.machine == '\"${machine}\"').fstype'`
+        IMAGE=`jq -r '.yocto | select(.machine == '\"${machine}\"').image' $json`
+        FSTYPE=`jq -r '.yocto | select(.machine == '\"${machine}\"').fstype' $json`
         if [ -z "$IMAGE" ] || [ -z "$FSTYPE" ] || [ "z$IMAGE" == "znull" ] || [ "z$FSTYPE" == "znull" ]; then
           log ERROR "No target image and/or fstype defined for $machine."
       fi
