@@ -99,10 +99,14 @@ function help {
     echo -e "\t\t Default: no."
 
     echo -e "\t-n | --dry-run"
-    echo -e "\t\t Don't run bitbake bun only configure build as requested."
+    echo -e "\t\t Don't run bitbake but only configure build as requested."
     echo -e "\t\t Machine is ignored and will need to be modified accordingly"
     echo -e "\t\t in local.conf file or using MACHINE=yyy in front of bitbake"
-    echo -e "\t\t commands"
+    echo -e "\t\t commands."
+    echo -e "\t\t Be aware that with this flag the tool will only create and"
+    echo -e "\t\t configure the build directory. You will need to 'source' the"
+    echo -e "\t\t oe-init-build-env script from the poky submodule before being"
+    echo -e "\t\t able to run bitbake commands."
     echo -e "\t\t Default: no."
 
     echo -e "\t--rm-work"
