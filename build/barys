@@ -28,6 +28,7 @@ SHARED_SSTATE=
 DRY_RUN=no
 LOG=no
 RM_WORK=
+BUILD_HISTORY=no
 LOGFILE=`pwd`/`basename "$0"`.log
 MACHINES=
 BITBAKEARGS=
@@ -111,6 +112,10 @@ function help {
 
     echo -e "\t--rm-work"
     echo -e "\t\t Inherit rm_work in local.conf."
+    echo -e "\t\t Default: no."
+
+    echo -e "\t--build-history"
+    echo -e "\t\t Enable build history."
     echo -e "\t\t Default: no."
 
     echo -e "\t-i | --interactive"
@@ -255,6 +260,9 @@ while [[ $# -ge 1 ]]; do
         --rm-work)
             RM_WORK=yes
             ;;
+        --build-history)
+            BUILD_HISTORY=yes
+            ;;
         --resinio)
             RESINIO_CONFIGURATION=yes
             ;;
@@ -338,6 +346,11 @@ while [[ $# -ge 1 ]]; do
                 [Yy]* ) RM_WORK=yes;;
             esac
 
+            read -p "Enable build history? yes/[no] " yn
+            case $yn in
+                [Yy]* ) BUILD_HISTORY=yes;;
+            esac
+
             read -p "Dry run? yes/[no] " yn
             case $yn in
                 [Yy]* ) DRY_RUN=yes;;
@@ -373,6 +386,7 @@ if [ "z$LOG" == "zyes" ]; then
     echo "Development image? $DEVELOPMENT_IMAGE" >> $LOGFILE
     echo "Forced supervisor image tag: $SUPERVISOR_TAG" >> $LOGFILE
     echo "Inherit rm_work? $RM_WORK" >> $LOGFILE
+    echo "Enable build history? $BUILD_HISTORY" >> $LOGFILE
     echo "================"`basename "$0"`" HEADER STOP=====================" >> $LOGFILE
 fi
 
@@ -428,6 +442,10 @@ fi
 
 perl -i -pe 'BEGIN {$/ = undef}; s/^\n# Barys: Additional variables.*//sm' conf/local.conf
 echo -e "\n# Barys: Additional variables" >> conf/local.conf
+if [ "x$BUILD_HISTORY" == "xyes" ]; then
+    echo 'INHERIT += "buildhistory"' >> conf/local.conf
+    echo 'BUILDHISTORY_COMMIT = "1"' >>conf/local.conf
+fi
 for pair in $ADDITIONAL_VARIABLES; do
     variable=$(echo "$pair" | awk -F= '{print $1}')
     value=$(echo "$pair" | awk -F= '{print $2}')
