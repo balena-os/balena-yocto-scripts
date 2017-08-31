@@ -4,6 +4,29 @@ set -ex
 
 BUILD_CONTAINER_NAME=yocto-build-$$
 
+print_help() {
+	echo -e "Script options:\n\
+	\t\t -h | --help\n
+	\t\t -m | --machine\n\
+	\t\t\t (mandatory) Machine to build for. This is a mandatory argument\n
+	\t\t --shared-dir\n\
+	\t\t\t (mandatory) Directory where to store shared downloads and shared sstate.\n
+	\t\t -b | --build-flavor\n\
+	\t\t\t (mandatory) The build flavor. Can be one of the following: managed-dev, managed-prod, unmanaged-dev, unmanaged-prod\n
+	\t\t --meta-resin-branch\n\
+	\t\t\t (optional) The meta-resin branch to checkout before building.\n\
+\t\t\t\t Default value is __ignore__ which means it builds the meta-resin revision as configured in the git submodule.\n
+	\t\t --supervisor-tag\n\
+	\t\t\t (optional) The resin supervisor tag specifying which supervisor version is to be included in the build.\n\
+\t\t\t\t Default value is __ignore__ which means use the supervisor version already included in the meta-resin submodule.\n
+	\t\t --preserve-build\n\
+	\t\t\t (optional) Do not delete existing build directory.\n\
+\t\t\t\t Default is to delete the existing build directory.\n
+	\t\t --preserve-container\n\
+	\t\t\t (optional) Do not delete the yocto build docker container when it exits.\n\
+\t\t\t\t Default is to delete the container where the yocto build is taking place when this container exits.\n"
+}
+
 cleanup() {
 	echo "[INFO] $0: Cleanup."
 
@@ -57,19 +80,78 @@ deploy_build () {
 	fi
 }
 
-MACHINE=$1
-JENKINS_PERSISTENT_WORKDIR=$2
+rootdir="$( cd "$( dirname "$0" )" && pwd )/../../"
+WORKSPACE=${WORKSPACE:-$rootdir}
+ENABLE_TESTS=${ENABLE_TESTS:=false}
+BARYS_ARGUMENTS_VAR="--remove-build"
+REMOVE_CONTAINER="--rm"
+
+# process script arguments
+args_number="$#"
+while [[ $# -ge 1 ]]; do
+	arg=$1
+	case $arg in
+		-h|--help)
+			print_help
+			exit 0
+			;;
+		-m|--machine)
+			if [ -z "$2" ]; then
+				echo "-m|--machine argument needs a machine name"
+				exit 1
+			fi
+			MACHINE="$2"
+			;;
+		--shared-dir)
+			if [ -z "$2" ]; then
+				echo "--shared-dir needs directory name where to store shared downloads and sstate data"
+				exit 1
+			fi
+			JENKINS_PERSISTENT_WORKDIR="$2"
+			;;
+		-b|--build-flavor)
+			if [ -z "$2" ]; then
+				echo "-b|--build-flavor argument needs a build type"
+				exit 1
+			fi
+			buildFlavor="${buildFlavor:-$2}"
+			;;
+		--meta-resin-branch)
+			if [ -z "$2" ]; then
+				echo "--meta-resin-branch argument needs a meta-resin branch name (if this option is not used, the default value is __ignore__)"
+				exit 1
+			fi
+			metaResinBranch="${metaResinBranch:-$2}"
+			;;
+		--supervisor-tag)
+			if [ -z "$2" ]; then
+				echo "--supervisor-tag argument needs a resin supervisor tag name (if this option is not used, the default value is __ignore__)"
+				exit 1
+			fi
+			supervisorTag="${supervisorTag:-$2}"
+			;;
+		--preserve-build)
+			BARYS_ARGUMENTS_VAR=""
+			;;
+		--preserve-container)
+			REMOVE_CONTAINER=""
+			;;
+	esac
+	shift
+done
+
 JENKINS_DL_DIR=$JENKINS_PERSISTENT_WORKDIR/shared-downloads
 JENKINS_SSTATE_DIR=$JENKINS_PERSISTENT_WORKDIR/$MACHINE/sstate
-ENABLE_TESTS=${ENABLE_TESTS:=false}
+metaResinBranch=${metaResinBranch:-__ignore__}
+supervisorTag=${supervisorTag:-__ignore__}
 
 # Sanity checks
-if [ "$#" -ne 2 ]; then
-	echo "Usage: $0 <MACHINE> <JENKINS_PERSISTENT_WORKDIR>"
-	exit 1
-fi
-if [ -z "$WORKSPACE" ] || [ -z "$metaResinBranch" ] || [ -z "$supervisorTag" ]; then
-	echo "[ERROR] WORKSPACE, metaResinBranch and supervisorTag are required."
+if [ -z "$MACHINE" ] || [ -z "$JENKINS_PERSISTENT_WORKDIR" ] || [ -z "$buildFlavor" ]; then
+	echo -e "\n[ERROR] You are missing one of these arguments:\n
+\t -m <MACHINE>\n
+\t --shared-dir <PERSISTENT_WORKDIR>\n
+\t --build-flavor <BUILD_FLAVOR_TYPE>\n\n
+Run with -h or --help for a complete list of arguments.\n"
 	exit 1
 fi
 
@@ -102,7 +184,7 @@ mkdir -p $JENKINS_SSTATE_DIR
 # Run build
 docker stop $BUILD_CONTAINER_NAME 2> /dev/null || true
 docker rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
-docker run --rm \
+docker run ${REMOVE_CONTAINER} \
     -v $WORKSPACE:/yocto/resin-board \
     -v $JENKINS_DL_DIR:/yocto/shared-downloads \
     -v $JENKINS_SSTATE_DIR:/yocto/shared-sstate \
@@ -115,7 +197,6 @@ docker run --rm \
     resin/yocto-build-env \
     /prepare-and-start.sh \
         --log \
-        --remove-build \
         --machine "$MACHINE" \
         ${BARYS_ARGUMENTS_VAR} \
         --shared-downloads /yocto/shared-downloads \
