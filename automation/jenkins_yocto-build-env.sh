@@ -3,16 +3,12 @@
 set -ev
 
 DOCKERFILE=Dockerfile_yocto-build-env
+REVISION=$(git rev-parse --short HEAD)
 
 # Get the absolute script location
 pushd `dirname $0` > /dev/null 2>&1
 SCRIPTPATH=`pwd`
 popd > /dev/null 2>&1
-
-if [ -z "${REVISION}" ]; then
-    echo "[ERROR] No revision specified."
-    exit 1
-fi
 
 if [ -z "${JOB_NAME}" ]; then
     echo "[ERROR] No job name specified."
