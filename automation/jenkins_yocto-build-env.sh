@@ -19,7 +19,7 @@ fi
 docker build --pull --no-cache --tag resin/${JOB_NAME}:${REVISION} -f ${SCRIPTPATH}/${DOCKERFILE} ${SCRIPTPATH}
 
 # Tag
-docker tag -f resin/${JOB_NAME}:${REVISION} resin/${JOB_NAME}:latest
+docker tag resin/${JOB_NAME}:${REVISION} resin/${JOB_NAME}:latest
 
 # Push
 docker push resin/${JOB_NAME}:${REVISION}
