@@ -174,9 +174,8 @@ deploy_resinhup_to_registries() {
 	local _resinreg_repo="registry.resinstaging.io/resin/resinos"
 	# Make sure the tags are valid
 	# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
-	local _docker_tag="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
-	local _resinreg_tag="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
-	local _resinhup_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.resinhup-tar)
+	local _tag="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
+	local _resinhup_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.docker)
 
 	echo "[INFO] Pushing resinhup package to dockerhub and registry.resinstaging.io."
 
@@ -185,13 +184,14 @@ deploy_resinhup_to_registries() {
 		exit 1
 	fi
 
-	docker import $_resinhup_path $_docker_repo:$_docker_tag
-	docker push $_docker_repo:$_docker_tag
-	docker rmi $_docker_repo:$_docker_tag # cleanup
+	local _hostapp_image=$(docker load --quiet -i "$_resinhup_path" | cut -d: -f1 --complement | tr -d ' ')
+	docker tag "$_hostapp_image" "$_docker_repo:$_tag"
+	docker push $_docker_repo:$_tag
 
-	docker import $_resinhup_path $_resinreg_repo:$_resinreg_tag
-	docker push $_resinreg_repo:$_resinreg_tag
-	docker rmi $_resinreg_repo:$_resinreg_tag # cleanup
+	docker tag "$_hostapp_image" "$_resinreg_repo:$_tag"
+	docker push $_resinreg_repo:$_tag
+
+	docker rmi -f "$_hostapp_image"
 }
 
 deploy_to_s3() {
