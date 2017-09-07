@@ -210,6 +210,7 @@ mkdir -p $JENKINS_SSTATE_DIR
 # Run build
 docker stop $BUILD_CONTAINER_NAME 2> /dev/null || true
 docker rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
+docker pull resin/yocto-build-env
 docker run ${REMOVE_CONTAINER} \
     -v $WORKSPACE:/yocto/resin-board \
     -v $JENKINS_DL_DIR:/yocto/shared-downloads \
