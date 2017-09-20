@@ -56,6 +56,7 @@ deploy_build () {
 	cp -v "$YOCTO_BUILD_DEPLOY/VERSION" "$_deploy_dir"
 	cp -v "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS" "$_deploy_dir"
 	cp -v "$DEVICE_TYPE_JSON" "$_deploy_dir/device-type.json"
+	cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/resin-image-$MACHINE.docker") "$_deploy_dir/resin-image.docker"
 
 	test "$SLUG" = "edge" && return
 
@@ -252,14 +253,18 @@ echo "[INFO] Starting creating jenkins artifacts..."
 deploy_build "$WORKSPACE/deploy-jenkins" "true"
 
 deploy_resinhup_to_registries() {
-	local _docker_repo="resin/resinos"
-	local _resinreg_repo="registry.resinstaging.io/resin/resinos"
+	local _docker_repo
+	if [ "deployTo" = "production" ]; then
+		_docker_repo="resin/resinos"
+	else
+		_docker_repo="resin/resinos-staging"
+	fi
 	# Make sure the tags are valid
 	# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
 	local _tag="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
 	local _resinhup_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.docker)
 
-	echo "[INFO] Pushing resinhup package to dockerhub and registry.resinstaging.io."
+	echo "[INFO] Pushing resinhup package to dockerhub $_docker_repo:$_tag..."
 
 	if [ ! -f $_resinhup_path ]; then
 		echo "[ERROR] The build didn't produce a resinhup package."
@@ -269,10 +274,6 @@ deploy_resinhup_to_registries() {
 	local _hostapp_image=$(docker load --quiet -i "$_resinhup_path" | cut -d: -f1 --complement | tr -d ' ')
 	docker tag "$_hostapp_image" "$_docker_repo:$_tag"
 	docker push $_docker_repo:$_tag
-
-	docker tag "$_hostapp_image" "$_resinreg_repo:$_tag"
-	docker push $_resinreg_repo:$_tag
-
 	docker rmi -f "$_hostapp_image"
 }
 
@@ -352,7 +353,7 @@ EOSU
 # Deploy
 if [ "$deploy" = "yes" ]; then
 	echo "[INFO] Starting deployment..."
-	if [ "$deployTo" = "production" ] && [ "$DEVELOPMENT_IMAGE" = "no" ] && [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
+	if [ "$DEVELOPMENT_IMAGE" = "no" ] && [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
 		deploy_resinhup_to_registries
 	fi
 
