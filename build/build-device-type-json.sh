@@ -17,7 +17,7 @@ function quit {
     exit 1
 }
 
-npm install --production --silent >/dev/null || quit "ERROR - Please install the 'npm' package before running this script."
+npm install --production --quiet || quit "ERROR - Please make sure the 'npm' package is installed and working before running this script."
 
 which nodejs >/dev/null 2>&1 && NODE=nodejs || NODE=node
 
