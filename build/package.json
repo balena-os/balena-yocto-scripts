@@ -11,7 +11,7 @@
     "url": "https://github.com/resin-os/resin-yocto-scripts"
   },
   "author": "Resin.io <hello@resin.io>",
-  "license": "Unlicensed",
+  "license": "Apache-2.0",
   "dependencies": {
     "@resin.io/device-types": "^10.1.0",
     "coffee-script": "~1.10.0"
