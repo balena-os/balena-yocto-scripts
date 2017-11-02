@@ -254,7 +254,7 @@ deploy_build "$WORKSPACE/deploy-jenkins" "true"
 
 deploy_resinhup_to_registries() {
 	local _docker_repo
-	if [ "deployTo" = "production" ]; then
+	if [ "$deployTo" = "production" ]; then
 		_docker_repo="resin/resinos"
 	else
 		_docker_repo="resin/resinos-staging"
