@@ -256,8 +256,11 @@ deploy_resinhup_to_registries() {
 	local _docker_repo
 	if [ "$deployTo" = "production" ]; then
 		_docker_repo="resin/resinos"
-	else
+	elif [ "$deployTo" = "staging" ]; then
 		_docker_repo="resin/resinos-staging"
+	else
+		echo "Ignore deploy to dockerhub for non production/staging builds."
+		return
 	fi
 	# Make sure the tags are valid
 	# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
@@ -307,6 +310,10 @@ deploy_to_s3() {
 		else
 			_s3_bucket=resin-staging-img/resinos
 		fi
+	elif [ "$deployTo" = "multistaging" ]; then
+		_s3_access_key=${MULTISTAGING_S3_ACCESS_KEY}
+		_s3_secret_key=${MULTISTAGING_S3_SECRET_KEY}
+		_s3_bucket=resin-multi-img-cloudformation/images
 	else
 		echo "[ERROR] Refusing to deploy to anything other than production or master."
 		exit 1
@@ -325,6 +332,7 @@ deploy_to_s3() {
 		-e DEVELOPMENT_IMAGE="$DEVELOPMENT_IMAGE" \
 		-e DEPLOYER_UID=$(id -u) \
 		-e DEPLOYER_GID=$(id -g) \
+		-e deployTo="$deployTo" \
 		-v $_s3_deploy_dir:/host/images resin/resin-img:master /bin/sh -x -e -c ' \
 			apt-get -y update
 			apt-get install -y s3cmd
@@ -334,7 +342,7 @@ deploy_to_s3() {
 			su deployer<<EOSU
 echo "${BUILD_VERSION}" > "/host/images/${SLUG}/latest"
 /usr/src/app/node_modules/.bin/coffee /usr/src/app/scripts/prepare.coffee
-if [ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ] || [ -n "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/IGNORE)" ]; then
+if [ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ] || [ -n "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/IGNORE)" ] || [ "$deployTo" = "multistaging" ]; then
 	touch /host/images/${SLUG}/${BUILD_VERSION}/IGNORE
 	$S3_CMD rm -rf s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}
 	$S3_CMD put /host/images/${SLUG}/${BUILD_VERSION}/IGNORE s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
