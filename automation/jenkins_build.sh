@@ -335,7 +335,8 @@ deploy_to_s3() {
 		-e deployTo="$deployTo" \
 		-v $_s3_deploy_dir:/host/images resin/resin-img:master /bin/sh -x -e -c ' \
 			apt-get -y update
-			apt-get install -y s3cmd
+			apt-get install -y python-pip
+			pip install s3cmd
 			echo "Creating and setting deployer user $DEPLOYER_UID:$DEPLOYER_GID."
 			groupadd -g $DEPLOYER_GID deployer
 			useradd -m -u $DEPLOYER_UID -g $DEPLOYER_GID deployer
