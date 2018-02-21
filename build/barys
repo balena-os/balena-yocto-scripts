@@ -494,10 +494,11 @@ else
         IMAGE=`jq -r '.yocto | select(.machine == '\"${machine}\"').image' $json`
         FSTYPE=`jq -r '.yocto | select(.machine == '\"${machine}\"').fstype' $json`
         if [ -z "$IMAGE" ] || [ -z "$FSTYPE" ] || [ "z$IMAGE" == "znull" ] || [ "z$FSTYPE" == "znull" ]; then
-          log ERROR "No target image and/or fstype defined for $machine."
-      fi
-        log "If build for $machine succeeded, final image should have been generated here:"
-        log "   $BUILD_DIR/tmp/deploy/images/$machine/$IMAGE-$machine.$FSTYPE"
+          log WARN "No target image and/or fstype defined for $machine. This is normal for generic builds which don't generate raw images."
+        else
+            log "If build for $machine succeeded, final image should have been generated here:"
+            log "   $BUILD_DIR/tmp/deploy/images/$machine/$IMAGE-$machine.$FSTYPE"
+        fi
     done
   done
 fi
