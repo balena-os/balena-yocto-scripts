@@ -270,7 +270,7 @@ while [[ $# -ge 1 ]]; do
             if [ -z "$2" ]; then
                 log ERROR "\"$1\" argument needs a value."
             fi
-            if echo "$2" | grep -vq '^[A-Za-z0-9_]*='; then
+            if echo "$2" | grep -vq '^[A-Za-z0-9_-]*='; then
                 log ERROR "\"$2\" has the wrong argument format for \"$1\". Read help."
             fi
             ADDITIONAL_VARIABLES="$ADDITIONAL_VARIABLES $2"
