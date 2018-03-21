@@ -60,6 +60,11 @@ deploy_build () {
 
 	test "$SLUG" = "edge" && return
 
+	if [ -z "$_deploy_artifact" ] && [ -z "$_deploy_flasher_artifact" ]; then
+		echo "[WARN] No deploy artifacts defined."
+		return
+	fi
+
 	cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$_deploy_dir"
 	if [ "${_compressed}" != 'true' ]; then
 		# uncompressed, just copy and we're done
@@ -333,7 +338,11 @@ deploy_to_s3() {
 			useradd -m -u $DEPLOYER_UID -g $DEPLOYER_GID deployer
 			su deployer<<EOSU
 echo "${BUILD_VERSION}" > "/host/images/${SLUG}/latest"
-/usr/src/app/node_modules/.bin/coffee /usr/src/app/scripts/prepare.coffee
+if [ -f "/host/images/resin.img" ] || [ -f "/host/images/resin.img.zip" ]; then
+	/usr/src/app/node_modules/.bin/coffee /usr/src/app/scripts/prepare.coffee
+else
+	echo "WARNING: No raw images found so image maker prepare step was skipped."
+fi
 if [ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ] || [ -n "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/IGNORE)" ]; then
 	touch /host/images/${SLUG}/${BUILD_VERSION}/IGNORE
 	$S3_CMD rm -rf s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}
