@@ -60,8 +60,8 @@ deploy_build () {
 
 	test "$SLUG" = "edge" && return
 
-	if [ -z "$_deploy_artifact" ] && [ -z "$_deploy_flasher_artifact" ]; then
-		echo "[WARN] No deploy artifacts defined."
+	if [ "$_deploy_artifact" = "docker-image" ]; then
+		echo "[WARN] No artifacts to deploy. The images will be pushed to docker registry."
 		return
 	fi
 
