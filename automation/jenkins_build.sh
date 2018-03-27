@@ -104,6 +104,8 @@ WORKSPACE=${WORKSPACE:-$rootdir}
 ENABLE_TESTS=${ENABLE_TESTS:=false}
 BARYS_ARGUMENTS_VAR="--remove-build"
 REMOVE_CONTAINER="--rm"
+DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
+
 
 # process script arguments
 args_number="$#"
@@ -326,6 +328,7 @@ deploy_to_s3() {
 		-e S3_SYNC_OPTS="$_s3_sync_opts" \
 		-e S3_BUCKET="$_s3_bucket" \
 		-e SLUG="$SLUG" \
+		-e DEPLOY_ARTIFACT="$DEPLOY_ARTIFACT" \
 		-e BUILD_VERSION="$_s3_version_hostos" \
 		-e DEVELOPMENT_IMAGE="$DEVELOPMENT_IMAGE" \
 		-e DEPLOYER_UID=$(id -u) \
@@ -338,10 +341,10 @@ deploy_to_s3() {
 			useradd -m -u $DEPLOYER_UID -g $DEPLOYER_GID deployer
 			su deployer<<EOSU
 echo "${BUILD_VERSION}" > "/host/images/${SLUG}/latest"
-if [ -f "/host/images/resin.img" ] || [ -f "/host/images/resin.img.zip" ]; then
-	/usr/src/app/node_modules/.bin/coffee /usr/src/app/scripts/prepare.coffee
+if [ "$DEPLOY_ARTIFACT" = "docker-image" ]; then
+	echo "WARNING: No raw image prepare step for docker images only artifacts."
 else
-	echo "WARNING: No raw images found so image maker prepare step was skipped."
+	/usr/src/app/node_modules/.bin/coffee /usr/src/app/scripts/prepare.coffee
 fi
 if [ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ] || [ -n "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/IGNORE)" ]; then
 	touch /host/images/${SLUG}/${BUILD_VERSION}/IGNORE
