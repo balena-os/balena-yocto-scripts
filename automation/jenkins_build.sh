@@ -53,9 +53,14 @@ deploy_build () {
 	rm -rf "$_deploy_dir"
 	mkdir -p "$_deploy_dir/image"
 
+	cp -v "$DEVICE_TYPE_JSON" "$_deploy_dir/device-type.json"
+	if [ "$DEVICE_STATE" = "DISCONTINUED" ]; then
+	       echo "$SLUG is discontinued so only device-type.json will be deployed as build artifact."
+	       return
+	fi
+
 	cp -v "$YOCTO_BUILD_DEPLOY/VERSION" "$_deploy_dir"
 	cp -v "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS" "$_deploy_dir"
-	cp -v "$DEVICE_TYPE_JSON" "$_deploy_dir/device-type.json"
 	cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/resin-image-$MACHINE.docker") "$_deploy_dir/resin-image.docker"
 
 	test "$SLUG" = "edge" && return
@@ -104,8 +109,6 @@ WORKSPACE=${WORKSPACE:-$rootdir}
 ENABLE_TESTS=${ENABLE_TESTS:=false}
 BARYS_ARGUMENTS_VAR="--remove-build"
 REMOVE_CONTAINER="--rm"
-DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
-
 
 # process script arguments
 args_number="$#"
@@ -236,8 +239,8 @@ docker run ${REMOVE_CONTAINER} \
         ${BARYS_ARGUMENTS_VAR} \
         --shared-downloads /yocto/shared-downloads \
         --shared-sstate /yocto/shared-sstate \
+        --skip-discontinued \
         --rm-work
-
 
 if [ "$ENABLE_TESTS" = true ]; then
 	# Run the test script in the device specific repository
@@ -251,9 +254,15 @@ fi
 
 # Artifacts
 YOCTO_BUILD_DEPLOY="$WORKSPACE/build/tmp/deploy/images/$MACHINE"
-VERSION_HOSTOS=$(cat "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS")
 DEVICE_TYPE_JSON="$WORKSPACE/$MACHINE.json"
 SLUG=$(jq --raw-output '.slug' $DEVICE_TYPE_JSON)
+DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
+DEVICE_STATE=$(jq --raw-output '.state' "$DEVICE_TYPE_JSON")
+if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
+	VERSION_HOSTOS=$(cat "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS")
+else
+	VERSION_HOSTOS=$(cat "$WORKSPACE/VERSION")
+fi
 
 # Jenkins artifacts
 echo "[INFO] Starting creating jenkins artifacts..."
@@ -333,6 +342,7 @@ deploy_to_s3() {
 		-e DEVELOPMENT_IMAGE="$DEVELOPMENT_IMAGE" \
 		-e DEPLOYER_UID=$(id -u) \
 		-e DEPLOYER_GID=$(id -g) \
+		-e DEVICE_STATE="$DEVICE_STATE" \
 		-v $_s3_deploy_dir:/host/images resin/resin-img:master /bin/sh -x -e -c ' \
 			apt-get -y update
 			apt-get install -y s3cmd
@@ -341,8 +351,8 @@ deploy_to_s3() {
 			useradd -m -u $DEPLOYER_UID -g $DEPLOYER_GID deployer
 			su deployer<<EOSU
 echo "${BUILD_VERSION}" > "/host/images/${SLUG}/latest"
-if [ "$DEPLOY_ARTIFACT" = "docker-image" ]; then
-	echo "WARNING: No raw image prepare step for docker images only artifacts."
+if [ "$DEPLOY_ARTIFACT" = "docker-image" ] || [ "$DEVICE_STATE" = "DISCONTINUED" ]; then
+	echo "WARNING: No raw image prepare step for docker images only artifacts or discontinued device types."
 else
 	/usr/src/app/node_modules/.bin/coffee /usr/src/app/scripts/prepare.coffee
 fi
@@ -366,7 +376,7 @@ EOSU
 # Deploy
 if [ "$deploy" = "yes" ]; then
 	echo "[INFO] Starting deployment..."
-	if [ "$DEVELOPMENT_IMAGE" = "no" ] && [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
+	if [ "$DEVELOPMENT_IMAGE" = "no" ] && [ "$RESIN_MANAGED_IMAGE" = "yes" ] && [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
 		deploy_resinhup_to_registries
 	fi
 
