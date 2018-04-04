@@ -33,6 +33,7 @@ LOGFILE=`pwd`/`basename "$0"`.log
 MACHINES=
 BITBAKEARGS=
 EXIT_CODE=0
+SKIP_DISCONTINUED=no
 
 function help {
     echo
@@ -117,6 +118,9 @@ function help {
     echo -e "\t--build-history"
     echo -e "\t\t Enable build history."
     echo -e "\t\t Default: no."
+
+    echo -e "\t--skip-discontinued"
+    echo -e "\t\t Don't build device types that are discontinued."
 
     echo -e "\t-i | --interactive"
     echo -e "\t\t Run tool in interactive mode."
@@ -275,6 +279,9 @@ while [[ $# -ge 1 ]]; do
             fi
             ADDITIONAL_VARIABLES="$ADDITIONAL_VARIABLES $2"
             shift
+            ;;
+        --skip-discontinued)
+            SKIP_DISCONTINUED=yes
             ;;
         -i|--interactive)
             read -p "Select machines. Space separated or empty for all: " m
@@ -472,6 +479,10 @@ else
         IMAGE=`jq -r '.yocto | select(.machine == '\"${machine}\"').image' $json`
         if [ -z "$IMAGE" ] || [ "z$IMAGE" == "znull" ]; then
           log ERROR "No target image defined for $machine."
+        fi
+        if [ "$SKIP_DISCONTINUED" = "yes" ] && [ "$(jq -r '.state' "$json")" = "DISCONTINUED" ]; then
+            log WARN "Skip discontinued requested: build for $machine skipped."
+            continue
         fi
         log "Run build for $machine: MACHINE=$machine bitbake $IMAGE $BITBAKEARGS"
         log "This might take a while ..."
