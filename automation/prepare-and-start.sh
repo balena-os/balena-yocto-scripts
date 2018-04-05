@@ -67,6 +67,12 @@ until docker info >/dev/null 2>&1; do
 done
 echo "[INFO] Docker was initialized."
 
+sudo -H -u builder git config --global user.name "Resin Builder"
+sudo -H -u builder git config --global user.email "buildy@builder.com"
+echo "[INFO] The configured git credentials for user builder are:"
+sudo -H -u builder git config --get user.name
+sudo -H -u builder git config --get user.email
+
 # Start barys with all the arguments requested
 echo "[INFO] Running build as builder user..."
 sudo -H -u builder /yocto/resin-board/resin-yocto-scripts/build/barys $@ &
