@@ -63,6 +63,10 @@ function help {
     echo -e "\t\t Set images to include development tweaks."
     echo -e "\t\t Default: no."
 
+    echo -e "\t--bitbake-target"
+    echo -e "\t\t Force a specific bitbake target."
+    echo -e "\t\t Default: image specified in the device type json."
+
     echo -e "\t-a | --additional-variable"
     echo -e "\t\t Inject additional local.conf variables."
     echo -e "\t\t The format of the arguments need to be VARIABLE=VALUE ."
@@ -221,6 +225,13 @@ while [[ $# -ge 1 ]]; do
             ;;
         -d|--development-image)
             DEVELOPMENT_IMAGE=yes
+            ;;
+        --bitbake-target)
+            if [ -z "$2" ]; then
+                log ERROR "\"$1\" argument needs a value."
+            fi
+            BITBAKE_TARGET="$2"
+            shift
             ;;
         --supervisor-tag)
             if [ -z "$2" ]; then
@@ -476,7 +487,11 @@ else
         if [[ "$machine" != "${MACHINE_IN_JSON}" ]]; then
           continue
         fi
-        IMAGE=`jq -r '.yocto | select(.machine == '\"${machine}\"').image' $json`
+        if [ -z "$BITBAKE_TARGET" ]; then
+            IMAGE=`jq -r '.yocto | select(.machine == '\"${machine}\"').image' $json`
+        else
+            IMAGE="$BITBAKE_TARGET"
+        fi
         if [ -z "$IMAGE" ] || [ "z$IMAGE" == "znull" ]; then
           log ERROR "No target image defined for $machine."
         fi
@@ -502,6 +517,7 @@ else
         if [[ "$machine" != "${MACHINE_IN_JSON}" ]]; then
           continue
         fi
+        [ -n "$BITBAKE_TARGET" ] && continue
         IMAGE=`jq -r '.yocto | select(.machine == '\"${machine}\"').image' $json`
         FSTYPE=`jq -r '.yocto | select(.machine == '\"${machine}\"').fstype' $json`
         if [ -z "$IMAGE" ] || [ -z "$FSTYPE" ] || [ "z$IMAGE" == "znull" ] || [ "z$FSTYPE" == "znull" ]; then
