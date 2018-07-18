@@ -1,3 +1,4 @@
+- Unify managed/unmanaged images as per 2.14.0 resinOS changes
 - Rename RESIN_SDIMG_COMPRESSION to RESIN_RAW_IMG_COMPRESSION to follow resinOS
 - Implement --resinio and make ResinOS default build configuration
 - Add support for injecting random local.conf variables
