@@ -286,6 +286,7 @@ deploy_resinhup_to_registries() {
 }
 
 deploy_to_s3() {
+	local _s3_bucket=$1
 	local _s3_version_hostos=$VERSION_HOSTOS
 	if [ "$DEVELOPMENT_IMAGE" = "yes" ]; then
 		_s3_version_hostos=$_s3_version_hostos.dev
@@ -297,16 +298,14 @@ deploy_to_s3() {
 
 	deploy_build "$_s3_deploy_images_dir" "false"
 
-	local _s3_access_key _s3_secret_key _s3_bucket
+	local _s3_access_key _s3_secret_key
 	if [ "$deployTo" = "production" ]; then
 		_s3_access_key=${PRODUCTION_S3_ACCESS_KEY}
 		_s3_secret_key=${PRODUCTION_S3_SECRET_KEY}
-		_s3_bucket=resin-production-img-cloudformation/images
 		S3_SYNC_OPTS="$S3_SYNC_OPTS --skip-existing"
 	elif [ "$deployTo" = "staging" ]; then
 		_s3_access_key=${STAGING_S3_ACCESS_KEY}
 		_s3_secret_key=${STAGING_S3_SECRET_KEY}
-		_s3_bucket=resin-staging-img/images
 	else
 		echo "[ERROR] Refusing to deploy to anything other than production or master."
 		exit 1
@@ -364,7 +363,16 @@ if [ "$deploy" = "yes" ]; then
 		deploy_resinhup_to_registries
 	fi
 
-	deploy_to_s3
+	if [ "$deployTo" = "production" ]; then
+		S3_BUCKET_RESINIO=resin-production-img-cloudformation/images
+		S3_BUCKET_RESINOS=resin-production-img-cloudformation/resinos
+	elif [ "$deployTo" = "staging" ]; then
+		S3_BUCKET_RESINIO=resin-staging-img/images
+		S3_BUCKET_RESINOS=resin-staging-img/resinos
+	fi
+
+	deploy_to_s3 "$S3_BUCKET_RESINIO"
+	deploy_to_s3 "$S3_BUCKET_RESINOS"
 fi
 
 # Cleanup
