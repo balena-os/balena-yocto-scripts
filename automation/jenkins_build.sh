@@ -179,22 +179,14 @@ Run with -h or --help for a complete list of arguments.\n"
 	exit 1
 fi
 
-if [ "$buildFlavor" = "managed-dev" ]; then
-	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --resinio"
+if [ "$buildFlavor" = "dev" ]; then
 	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --development-image"
 	DEVELOPMENT_IMAGE=yes
-	RESIN_MANAGED_IMAGE=yes
-elif [ "$buildFlavor" = "managed-prod" ]; then
-	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --resinio"
+elif [ "$buildFlavor" = "prod" ]; then
 	DEVELOPMENT_IMAGE=no
-	RESIN_MANAGED_IMAGE=yes
-elif [ "$buildFlavor" = "unmanaged-dev" ]; then
-	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --development-image"
-	DEVELOPMENT_IMAGE=yes
-	RESIN_MANAGED_IMAGE=no
-elif [ "$buildFlavor" = "unmanaged-prod" ]; then
-	DEVELOPMENT_IMAGE=no
-	RESIN_MANAGED_IMAGE=no
+else
+	echo "[ERROR] No such build flavor: $buildFlavor."
+	exit 1
 fi
 
 # When supervisorTag is provided, you the appropiate barys argument
@@ -309,20 +301,12 @@ deploy_to_s3() {
 	if [ "$deployTo" = "production" ]; then
 		_s3_access_key=${PRODUCTION_S3_ACCESS_KEY}
 		_s3_secret_key=${PRODUCTION_S3_SECRET_KEY}
-		if [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
-			_s3_bucket=resin-production-img-cloudformation/images
-		else
-			_s3_bucket=resin-production-img-cloudformation/resinos
-		fi
+		_s3_bucket=resin-production-img-cloudformation/images
 		S3_SYNC_OPTS="$S3_SYNC_OPTS --skip-existing"
 	elif [ "$deployTo" = "staging" ]; then
 		_s3_access_key=${STAGING_S3_ACCESS_KEY}
 		_s3_secret_key=${STAGING_S3_SECRET_KEY}
-		if [ "$RESIN_MANAGED_IMAGE" = "yes" ]; then
-			_s3_bucket=resin-staging-img/images
-		else
-			_s3_bucket=resin-staging-img/resinos
-		fi
+		_s3_bucket=resin-staging-img/images
 	else
 		echo "[ERROR] Refusing to deploy to anything other than production or master."
 		exit 1
@@ -376,7 +360,7 @@ EOSU
 # Deploy
 if [ "$deploy" = "yes" ]; then
 	echo "[INFO] Starting deployment..."
-	if [ "$DEVELOPMENT_IMAGE" = "no" ] && [ "$RESIN_MANAGED_IMAGE" = "yes" ] && [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
+	if [ "$DEVELOPMENT_IMAGE" = "no" ] && [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
 		deploy_resinhup_to_registries
 	fi
 
