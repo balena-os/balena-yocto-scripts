@@ -337,7 +337,7 @@ echo "${BUILD_VERSION}" > "/host/images/${SLUG}/latest"
 if [ "$DEPLOY_ARTIFACT" = "docker-image" ] || [ "$DEVICE_STATE" = "DISCONTINUED" ]; then
 	echo "WARNING: No raw image prepare step for docker images only artifacts or discontinued device types."
 else
-	/usr/src/app/node_modules/.bin/coffee /usr/src/app/scripts/prepare.coffee
+	/usr/src/app/node_modules/.bin/ts-node /usr/src/app/scripts/prepare.ts
 fi
 if [ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ] || [ -n "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/IGNORE)" ]; then
 	touch /host/images/${SLUG}/${BUILD_VERSION}/IGNORE
