@@ -73,7 +73,7 @@ deploy_build () {
 	cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$_deploy_dir"
 	if [ "${_compressed}" != 'true' ]; then
 		# uncompressed, just copy and we're done
-		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/resin.img"
+		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/balena.img"
 		if [ -n "$_deploy_flasher_artifact" ]; then
 			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_flasher_artifact") "$_deploy_dir/image/resin-flasher.img"
 		fi
@@ -91,14 +91,14 @@ deploy_build () {
 			rm -rf $_deploy_dir/image
 		fi
 	else
-		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/resin.img"
-		(cd "$_deploy_dir/image" && zip resin.img.zip resin.img)
+		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/balena.img"
+		(cd "$_deploy_dir/image" && zip balena.img.zip balena.img)
 		if [ -n "$_deploy_flasher_artifact" ]; then
 			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_flasher_artifact") "$_deploy_dir/image/resin-flasher.img"
 			(cd "$_deploy_dir/image" && zip resin-flasher.img.zip resin-flasher.img)
 		fi
 		if [ "$_remove_compressed_file" = "true" ]; then
-			rm -rf $_deploy_dir/image/resin.img
+			rm -rf $_deploy_dir/image/balena.img
 			rm -rf $_deploy_dir/image/resin-flasher.img
 		fi
 	fi
