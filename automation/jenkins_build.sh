@@ -333,6 +333,7 @@ deploy_to_s3() {
 			groupadd -g $DEPLOYER_GID deployer
 			useradd -m -u $DEPLOYER_UID -g $DEPLOYER_GID deployer
 			su deployer<<EOSU
+set -ex
 echo "${BUILD_VERSION}" > "/host/images/${SLUG}/latest"
 if [ "$DEPLOY_ARTIFACT" = "docker-image" ] || [ "$DEVICE_STATE" = "DISCONTINUED" ]; then
 	echo "WARNING: No raw image prepare step for docker images only artifacts or discontinued device types."
