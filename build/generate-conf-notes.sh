@@ -19,7 +19,7 @@ CONF=$CONF/samples
 
 if [ $# -lt 2 ]; then
     echo -e 'Usage:\n'
-    echo -e "./generate-conf-notes.sh ./path/to/meta-resin-<target>/conf/ <json1> <json2> ...\n"
+    echo -e "./generate-conf-notes.sh ./path/to/meta-balena-<target>/conf/ <json1> <json2> ...\n"
     exit 0
 fi
 
