@@ -188,7 +188,7 @@ if [ -z "${DEVICE_TYPES_JSONS}" ]; then
 fi
 
 # Get the list of the supported machines out of all the available machine json files
-# (we may have multiple json files describing different machines based on the same resin layers; i.e. imx6 fsl based machines)
+# (we may have multiple json files describing different machines based on the same balena layers; i.e. imx6 fsl based machines)
 for json in ${DEVICE_TYPES_JSONS}; do
     SUPPORTED_MACHINES="${SUPPORTED_MACHINES} `jq -r "[.yocto.machine] | sort | .[] | select(. != null)" ${json} 2>/dev/null`" || log ERROR "Please install the 'jq' package before running this script."
 done
@@ -407,7 +407,7 @@ if [ "x$REMOVEBUILD" == "xyes" ]; then
     rm -rf $SCRIPTPATH/../../$BUILD_DIR
 fi
 
-RESIN_MACHINE_LAYER=$(ls ${SCRIPTPATH}/../../layers/ | grep meta-resin-)
+RESIN_MACHINE_LAYER=$(ls ${SCRIPTPATH}/../../layers/ | grep meta-balena-)
 
 # Configure build
 
@@ -450,7 +450,7 @@ for pair in $ADDITIONAL_VARIABLES; do
     echo "$variable=\"$value\"" >> conf/local.conf
 done
 
-log "Resin build initialized in $BUILD_DIR."
+log "BalenaOS build initialized in directory: $BUILD_DIR."
 
 # Start builds
 if [ "$DRY_RUN" == "yes" ]; then
