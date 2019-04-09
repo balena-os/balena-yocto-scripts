@@ -13,12 +13,12 @@ print_help() {
 	\t\t\t (mandatory) Directory where to store shared downloads and shared sstate.\n
 	\t\t -b | --build-flavor\n\
 	\t\t\t (mandatory) The build flavor. Can be one of the following: managed-dev, managed-prod, unmanaged-dev, unmanaged-prod\n
-	\t\t --meta-resin-branch\n\
-	\t\t\t (optional) The meta-resin branch to checkout before building.\n\
-\t\t\t\t Default value is __ignore__ which means it builds the meta-resin revision as configured in the git submodule.\n
+	\t\t --meta-balena-branch\n\
+	\t\t\t (optional) The meta-balena branch to checkout before building.\n\
+\t\t\t\t Default value is __ignore__ which means it builds the meta-balena revision as configured in the git submodule.\n
 	\t\t --supervisor-tag\n\
 	\t\t\t (optional) The resin supervisor tag specifying which supervisor version is to be included in the build.\n\
-\t\t\t\t Default value is __ignore__ which means use the supervisor version already included in the meta-resin submodule.\n
+\t\t\t\t Default value is __ignore__ which means use the supervisor version already included in the meta-balena submodule.\n
 	\t\t --preserve-build\n\
 	\t\t\t (optional) Do not delete existing build directory.\n\
 \t\t\t\t Default is to delete the existing build directory.\n
@@ -141,9 +141,9 @@ while [[ $# -ge 1 ]]; do
 			fi
 			buildFlavor="${buildFlavor:-$2}"
 			;;
-		--meta-resin-branch)
+		--meta-balena-branch)
 			if [ -z "$2" ]; then
-				echo "--meta-resin-branch argument needs a meta-resin branch name (if this option is not used, the default value is __ignore__)"
+				echo "--meta-balena-branch argument needs a meta-balena branch name (if this option is not used, the default value is __ignore__)"
 				exit 1
 			fi
 			metaResinBranch="${metaResinBranch:-$2}"
@@ -195,12 +195,12 @@ if [ "$supervisorTag" != "__ignore__" ]; then
 	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --supervisor-tag $supervisorTag"
 fi
 
-# Checkout meta-resin
+# Checkout meta-balena
 if [ "$metaResinBranch" = "__ignore__" ]; then
-	echo "[INFO] Using the default meta-resin revision (as configured in submodules)."
+	echo "[INFO] Using the default meta-balena revision (as configured in submodules)."
 else
-	echo "[INFO] Using special meta-resin revision from build params."
-	pushd $WORKSPACE/layers/meta-resin > /dev/null 2>&1
+	echo "[INFO] Using special meta-balena revision from build params."
+	pushd $WORKSPACE/layers/meta-balena > /dev/null 2>&1
 	git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
 	git fetch --all
 	git checkout --force $metaResinBranch
