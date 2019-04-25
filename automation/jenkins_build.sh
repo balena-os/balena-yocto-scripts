@@ -46,6 +46,7 @@ deploy_build () {
 	local _remove_compressed_file="$2"
 
 	local _deploy_artifact=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
+	local _image=$(jq --raw-output '.yocto.image' $DEVICE_TYPE_JSON)
 	local _deploy_flasher_artifact=$(jq --raw-output '.yocto.deployFlasherArtifact // empty' $DEVICE_TYPE_JSON)
 	local _compressed=$(jq --raw-output '.yocto.compressed' $DEVICE_TYPE_JSON)
 	local _archive=$(jq --raw-output '.yocto.archive' $DEVICE_TYPE_JSON)
@@ -61,6 +62,7 @@ deploy_build () {
 
 	cp -v "$YOCTO_BUILD_DEPLOY/VERSION" "$_deploy_dir"
 	cp -v "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS" "$_deploy_dir"
+	cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_image-$MACHINE.manifest") "$_deploy_dir/$_image-$MACHINE.manifest"
 	cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/resin-image-$MACHINE.docker") "$_deploy_dir/resin-image.docker"
 
 	test "$SLUG" = "edge" && return
