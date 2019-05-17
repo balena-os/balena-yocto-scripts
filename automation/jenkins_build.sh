@@ -265,14 +265,18 @@ deploy_build "$WORKSPACE/deploy-jenkins" "true"
 
 deploy_resinhup_to_registries() {
 	local _docker_repo
+	local _variant = ""
 	if [ "$deployTo" = "production" ]; then
 		_docker_repo="resin/resinos"
 	else
 		_docker_repo="resin/resinos-staging"
 	fi
+	if [ "$DEVELOPMENT_IMAGE" = "yes" ]; then
+		_variant=".dev"
+	fi
 	# Make sure the tags are valid
 	# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
-	local _tag="$(echo $VERSION_HOSTOS-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
+	local _tag="$(echo $VERSION_HOSTOS$_variant-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
 	local _resinhup_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.docker)
 
 	echo "[INFO] Pushing resinhup package to dockerhub $_docker_repo:$_tag..."
@@ -363,7 +367,7 @@ EOSU
 # Deploy
 if [ "$deploy" = "yes" ]; then
 	echo "[INFO] Starting deployment..."
-	if [ "$DEVELOPMENT_IMAGE" = "no" ] && [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
+	if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
 		deploy_resinhup_to_registries
 	fi
 
