@@ -30,6 +30,13 @@ VOLUME /var/lib/docker
 RUN wget -q -O /usr/bin/docker https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_VERSION} && chmod +x /usr/bin/docker \
     && echo "${DOCKER_SHA256}" /usr/bin/docker | sha256sum -c -
 
+# Install balena-cli
+ENV BALENA_CLI_VERSION 10.17.1
+RUN curl -sSL https://github.com/balena-io/balena-cli/releases/download/v$BALENA_CLI_VERSION/balena-cli-v$BALENA_CLI_VERSION-linux-x64.zip > balena-cli.zip && \
+  unzip balena-cli.zip && \
+  mv balena-cli/* /usr/bin && \
+  rm -rf balena-cli.zip balena-cli
+
 COPY prepare-and-start.sh /
 
 WORKDIR /yocto/resin-board
