@@ -74,7 +74,7 @@ deploy_build () {
 
 	cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$_deploy_dir" || true
 	cp -v "$YOCTO_BUILD_DEPLOY/kernel_source.tar.gz" "$_deploy_dir" || true
-	cp -v "$MACHINE.svg" "$_deploy_dir"
+	cp -v "$MACHINE.svg" "$_deploy_dir/logo.svg"
 	if [ "${_compressed}" != 'true' ]; then
 		# uncompressed, just copy and we're done
 		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/balena.img"
