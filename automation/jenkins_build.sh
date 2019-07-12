@@ -319,7 +319,7 @@ deploy_to_s3() {
 		exit 1
 	fi
 
-	local _s3_cmd="s3cmd --access_key=${_s3_access_key} --secret_key=${_s3_secret_key}"
+	local _s3_cmd="s4cmd --access_key=${_s3_access_key} --secret_key=${_s3_secret_key}"
 	local _s3_sync_opts="--recursive --acl-public"
 	docker pull resin/resin-img:master
 	docker run --rm -t \
@@ -336,7 +336,7 @@ deploy_to_s3() {
 		-e DEVICE_STATE="$DEVICE_STATE" \
 		-v $_s3_deploy_dir:/host/images resin/resin-img:master /bin/sh -x -e -c ' \
 			apt-get -y update
-			apt-get install -y s3cmd
+			apt-get install -y s4cmd
 			echo "Creating and setting deployer user $DEPLOYER_UID:$DEPLOYER_GID."
 			groupadd -g $DEPLOYER_GID deployer
 			useradd -m -u $DEPLOYER_UID -g $DEPLOYER_GID deployer
