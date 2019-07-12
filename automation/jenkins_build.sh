@@ -319,7 +319,7 @@ deploy_to_s3() {
 		exit 1
 	fi
 
-	local _s3_cmd="s4cmd --access_key=${_s3_access_key} --secret_key=${_s3_secret_key}"
+	local _s3_cmd="s4cmd --access-key=${_s3_access_key} --secret-key=${_s3_secret_key}"
 	local _s3_sync_opts="--recursive --acl-public"
 	docker pull resin/resin-img:master
 	docker run --rm -t \
