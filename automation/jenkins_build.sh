@@ -350,13 +350,13 @@ else
 fi
 if [ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ] || [ -n "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/IGNORE)" ]; then
 	touch /host/images/${SLUG}/${BUILD_VERSION}/IGNORE
-	$S3_CMD rm -rf s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}
+	$S3_CMD del -rf s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}
 	$S3_CMD put /host/images/${SLUG}/${BUILD_VERSION}/IGNORE s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
 	$S3_CMD $S3_SYNC_OPTS sync /host/images/${SLUG}/${BUILD_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
 	if [ "${DEVELOPMENT_IMAGE}" = "no" ]; then
 		$S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/ --acl-public
 	fi
-	$S3_CMD rm s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/IGNORE
+	$S3_CMD del s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/IGNORE
 else
 	echo "WARNING: Deployment already done for ${SLUG} at version ${BUILD_VERSION}"
 fi
