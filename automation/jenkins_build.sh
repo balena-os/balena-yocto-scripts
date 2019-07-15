@@ -310,7 +310,6 @@ deploy_to_s3() {
 	if [ "$deployTo" = "production" ]; then
 		_s3_access_key=${PRODUCTION_S3_ACCESS_KEY}
 		_s3_secret_key=${PRODUCTION_S3_SECRET_KEY}
-		S3_SYNC_OPTS="$S3_SYNC_OPTS --skip-existing"
 	elif [ "$deployTo" = "staging" ]; then
 		_s3_access_key=${STAGING_S3_ACCESS_KEY}
 		_s3_secret_key=${STAGING_S3_SECRET_KEY}
@@ -320,7 +319,7 @@ deploy_to_s3() {
 	fi
 
 	local _s3_cmd="s4cmd --access-key=${_s3_access_key} --secret-key=${_s3_secret_key}"
-	local _s3_sync_opts="--recursive --acl-public"
+	local _s3_sync_opts="--recursive --API-ACL=public-read"
 	docker pull resin/resin-img:master
 	docker run --rm -t \
 		-e BASE_DIR=/host/images \
@@ -354,7 +353,7 @@ if [ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ] || [ -n "$
 	$S3_CMD put /host/images/${SLUG}/${BUILD_VERSION}/IGNORE s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
 	$S3_CMD $S3_SYNC_OPTS sync /host/images/${SLUG}/${BUILD_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
 	if [ "${DEVELOPMENT_IMAGE}" = "no" ]; then
-		$S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/ --acl-public
+		$S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/ --API-ACL=public-read
 	fi
 	$S3_CMD del s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/IGNORE
 else
