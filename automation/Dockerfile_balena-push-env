@@ -1,13 +1,6 @@
 FROM ubuntu:16.04
 
-# Install the following utilities (required by poky)
-RUN apt-get update && apt-get install -y build-essential chrpath curl diffstat gcc-multilib gawk git-core locales \
-                                         texinfo unzip wget xterm cpio file python python3 openssh-client iputils-ping iproute2 \
-                                         && rm -rf /var/lib/apt/lists/*
-
-# Set the locale to UTF-8 for bulding with poky morty
-RUN locale-gen en_US.UTF-8
-ENV LANG en_US.UTF-8
+RUN apt-get update && apt-get install -y build-essential curl unzip
 
 # Additional host packages required by resin
 RUN apt-get update && apt-get install -y apt-transport-https && rm -rf /var/lib/apt/lists/*
@@ -18,17 +11,17 @@ RUN echo "deb https://deb.nodesource.com/$NODE_VERSION $DISTRO main" | tee /etc/
   echo "deb-src https://deb.nodesource.com/$NODE_VERSION $DISTRO main" | tee -a /etc/apt/sources.list.d/nodesource.list
 RUN apt-get update && apt-get install -y jq nodejs sudo && rm -rf /var/lib/apt/lists/*
 
-# Additional host packages required by various BSP layers
-RUN apt-get update && apt-get install -y dos2unix && rm -rf /var/lib/apt/lists/*
 
 # Install docker
 # https://github.com/docker/docker/blob/master/project/PACKAGERS.md#runtime-dependencies
 RUN apt-get update && apt-get install -y iptables procps e2fsprogs xfsprogs xz-utils git kmod && rm -rf /var/lib/apt/lists/*
-ENV DOCKER_VERSION 1.10.1
-ENV DOCKER_SHA256 de4057057acd259ec38b5244a40d806993e2ca219e9869ace133fad0e09cedf2
+ENV DOCKER_VERSION 19.03.1
+
 VOLUME /var/lib/docker
-RUN wget -q -O /usr/bin/docker https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_VERSION} && chmod +x /usr/bin/docker \
-    && echo "${DOCKER_SHA256}" /usr/bin/docker | sha256sum -c -
+RUN curl -sSL https://download.docker.com/linux/static/edge/x86_64/docker-${DOCKER_VERSION}.tgz \
+  | tar zx \
+  && chmod +x /docker/* \
+  && mv /docker/* /usr/local/bin/
 
 # Install balena-cli
 ENV BALENA_CLI_VERSION 11.13.1
@@ -38,6 +31,5 @@ RUN curl -sSL https://github.com/balena-io/balena-cli/releases/download/v$BALENA
   rm -rf balena-cli.zip balena-cli
 
 COPY manage-docker.sh /
-COPY prepare-and-start.sh /
-
+COPY start-docker-and-push.sh /
 WORKDIR /yocto/resin-board
