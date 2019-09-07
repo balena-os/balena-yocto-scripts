@@ -238,16 +238,6 @@ docker run ${REMOVE_CONTAINER} \
         --skip-discontinued \
         --rm-work
 
-if [ "$ENABLE_TESTS" = true ]; then
-	# Run the test script in the device specific repository
-	if [ -f $WORKSPACE/tests/start.sh ]; then
-		echo "Custom test file exists - Beginning test"
-		/bin/bash $WORKSPACE/tests/start.sh
-	else
-		echo "No custom test file exists - Continuing ahead"
-	fi
-fi
-
 # Artifacts
 YOCTO_BUILD_DEPLOY="$WORKSPACE/build/tmp/deploy/images/$MACHINE"
 DEVICE_TYPE_JSON="$WORKSPACE/$MACHINE.json"
@@ -258,6 +248,20 @@ if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
 	VERSION_HOSTOS=$(cat "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS")
 else
 	VERSION_HOSTOS=$(cat "$WORKSPACE/VERSION")
+fi
+
+if [ "$ENABLE_TESTS" = true ]; then
+  if [ -f $WORKSPACE/leviathan/client/index.js ]; then
+    pushd $WORKSPACE/leviathan/client
+    npm run-script start-es5 -- \
+      -s ../suites/${SUITE} \
+      -i ${YOCTO_BUILD_DEPLOY}/$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON) \
+      -c ../config.json \
+      -u ${WORKER_URL}
+    popd
+  else
+    echo "Cannot find testing framerwork. Skipping tests."
+  fi
 fi
 
 # Jenkins artifacts
