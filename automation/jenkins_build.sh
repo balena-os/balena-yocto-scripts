@@ -73,6 +73,7 @@ deploy_build () {
 	fi
 
 	cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$_deploy_dir" || true
+	cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers_src.tar.gz" "$_deploy_dir" || true
 	cp -v "$YOCTO_BUILD_DEPLOY/kernel_source.tar.gz" "$_deploy_dir" || true
 	cp -v "$MACHINE.svg" "$_deploy_dir/logo.svg"
 	if [ "${_compressed}" != 'true' ]; then
