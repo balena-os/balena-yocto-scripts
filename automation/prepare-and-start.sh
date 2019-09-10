@@ -75,7 +75,11 @@ sudo -H -u builder git config --get user.email
 
 # Start barys with all the arguments requested
 echo "[INFO] Running build as builder user..."
-sudo -H -u builder /yocto/resin-board/balena-yocto-scripts/build/barys $@ &
+if [ -d /yocto/resin-board/balena-yocto-scripts ]; then
+    sudo -H -u builder /yocto/resin-board/balena-yocto-scripts/build/barys $@ &
+else
+    sudo -H -u builder /yocto/resin-board/resin-yocto-scripts/build/barys $@ &
+fi
 barys_pid=$!
 wait $barys_pid || true
 
