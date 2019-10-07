@@ -264,7 +264,7 @@ fi
 echo "[INFO] Starting creating jenkins artifacts..."
 deploy_build "$WORKSPACE/deploy-jenkins" "true"
 
-deploy_resinhup_to_registries() {
+deploy_images () {
 	local _docker_repo
 	local _variant=""
 	if [ "$deployTo" = "production" ]; then
@@ -278,19 +278,37 @@ deploy_resinhup_to_registries() {
 	# Make sure the tags are valid
 	# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
 	local _tag="$(echo $VERSION_HOSTOS$_variant-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
-	local _resinhup_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.docker)
+	local _exported_image_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.docker)
 
-	echo "[INFO] Pushing resinhup package to dockerhub $_docker_repo:$_tag..."
+	echo "[INFO] Pushing image to dockerhub $_docker_repo:$_tag..."
 
-	if [ ! -f $_resinhup_path ]; then
-		echo "[ERROR] The build didn't produce a resinhup package."
+	if [ ! -f $_exported_image_path ]; then
+		echo "[ERROR] The build didn't produce a valid image."
 		exit 1
 	fi
 
-	local _hostapp_image=$(docker load --quiet -i "$_resinhup_path" | cut -d: -f1 --complement | tr -d ' ')
+	local _hostapp_image=$(docker load --quiet -i "$_exported_image_path" | cut -d: -f1 --complement | tr -d ' ')
 	docker tag "$_hostapp_image" "$_docker_repo:$_tag"
+
 	docker push $_docker_repo:$_tag
+	deploy_to_balena $_exported_image_path
+
 	docker rmi -f "$_hostapp_image"
+}
+
+deploy_to_balena() {
+	local _exported_image_path=$1
+	docker run --rm -t \
+		-e BASE_DIR=/host \
+		-e BALENAOS_STAGING_TOKEN=$BALENAOS_STAGING_TOKEN \
+		-e BALENAOS_PRODUCTION_TOKEN=$BALENAOS_PRODUCTION_TOKEN \
+		-e SLUG=$SLUG \
+		-e DEVELOPMENT_IMAGE=$DEVELOPMENT_IMAGE \
+		-e DEPLOY_TO=$deployTo \
+		-e VERSION_HOSTOS=$VERSION_HOSTOS \
+		-v $_exported_image_path:/host/resin-image.docker \
+		--privileged \
+		resin/balena-push-env /start-docker-and-push.sh
 }
 
 deploy_to_s3() {
@@ -365,10 +383,11 @@ EOSU
 }
 
 # Deploy
+
 if [ "$deploy" = "yes" ]; then
 	echo "[INFO] Starting deployment..."
 	if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
-		deploy_resinhup_to_registries
+		deploy_images
 	fi
 
 	if [ "$deployTo" = "production" ]; then
