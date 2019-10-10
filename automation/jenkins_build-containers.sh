@@ -18,13 +18,14 @@ fi
 
 for DOCKERFILE in "${DOCKERFILES[@]}"
 do
+  REPO_NAME=${DOCKERFILE#"Dockerfile_"}
   # Build
-  docker build --pull --no-cache --tag resin/${JOB_NAME}:${REVISION} -f ${SCRIPTPATH}/${DOCKERFILE} ${SCRIPTPATH}
+  docker build --pull --no-cache --tag resin/${REPO_NAME}:${REVISION} -f ${SCRIPTPATH}/${DOCKERFILE} ${SCRIPTPATH}
 
   # Tag
-  docker tag resin/${JOB_NAME}:${REVISION} resin/${JOB_NAME}:latest
+  docker tag resin/${REPO_NAME}:${REVISION} resin/${REPO_NAME}:latest
 
   # Push
-  docker push resin/${JOB_NAME}:${REVISION}
-  docker push resin/${JOB_NAME}:latest
+  docker push resin/${REPO_NAME}:${REVISION}
+  docker push resin/${REPO_NAME}:latest
 done
