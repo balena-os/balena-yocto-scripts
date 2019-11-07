@@ -268,6 +268,16 @@ else
 	VERSION_HOSTOS=$(cat "$WORKSPACE/VERSION")
 fi
 
+# Attempt to read ESR line if its set to __ignore__
+if [ "$esrLine" == "__ignore__" ]; then
+	if [ -f "$WORKSPACE/repo.yml" ]; then
+		line=$(yq r repo.yml esr.line)
+		if [ "$line" != "null"]; then
+			esrLine=$line
+		fi
+	fi
+fi
+
 # Jenkins artifacts
 echo "[INFO] Starting creating jenkins artifacts..."
 deploy_build "$WORKSPACE/deploy-jenkins" "true"

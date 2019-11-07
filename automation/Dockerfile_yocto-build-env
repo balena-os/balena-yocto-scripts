@@ -30,6 +30,10 @@ VOLUME /var/lib/docker
 RUN wget -q -O /usr/bin/docker https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_VERSION} && chmod +x /usr/bin/docker \
     && echo "${DOCKER_SHA256}" /usr/bin/docker | sha256sum -c -
 
+# Install packages for jenkins build
+RUN apt-get update && apt-get install software-properties-common -y
+RUN add-apt-repository ppa:rmescandon/yq && apt update && apt install yq -y
+
 COPY manage-docker.sh /
 COPY prepare-and-start.sh /
 
