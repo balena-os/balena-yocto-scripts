@@ -5,7 +5,7 @@
 # --------------------------
 #
 # HARD ASSUMPTIONS
-# * This script is in a repository which should be a submodule of a resin-<board>
+# * This script is in a repository which should be a submodule of a balena-<board>
 #   repository
 # * Build will be created two directories behind the one where this script resides.
 # * Script ran as normal user.
