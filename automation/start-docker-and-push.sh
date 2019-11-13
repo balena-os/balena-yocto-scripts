@@ -20,21 +20,13 @@ else
 	balena login --token $BALENAOS_PRODUCTION_TOKEN
 fi
 
-case $ESR_LINE in
-	next|current|sunset)
-		SLUG="${SLUG}-esr"
-		;;
-	__ignore__)
-		;;
-	*)
-		echo "Invalid ESR line"
-		exit 1
-		;;
-esac
-
 echo "[INFO] Pushing $_local_image to balenaos/$SLUG"
+_app_suffix=""
+if [ "$ESR" = "true" ]; then
+	_app_suffix="-esr"
+fi
 
-_releaseID=$(balena deploy "balenaos/$SLUG" "$_local_image" | sed -n 's/.*Release: //p')
+_releaseID=$(balena deploy "balenaos/$SLUG$_app_suffix" "$_local_image" | sed -n 's/.*Release: //p')
 if [ "$DEVELOPMENT_IMAGE" = "yes" ]; then
 	_variant="development"
 else
@@ -43,10 +35,6 @@ fi
 
 balena tag set version $VERSION_HOSTOS --release $_releaseID
 balena tag set variant $_variant --release $_releaseID
-balena tag set status "Untested" --release $_releaseID
-if [ "$ESR_LINE" != "__ignore__" ]; then
-	balena tag set "ESR-line" $ESR_LINE --release $_releaseID
-fi
 
 cleanup
 exit 0

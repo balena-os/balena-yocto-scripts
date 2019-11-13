@@ -24,7 +24,10 @@ print_help() {
 \t\t\t\t Default is to delete the existing build directory.\n
 	\t\t --preserve-container\n\
 	\t\t\t (optional) Do not delete the yocto build docker container when it exits.\n\
-\t\t\t\t Default is to delete the container where the yocto build is taking place when this container exits.\n"
+\t\t\t\t Default is to delete the container where the yocto build is taking place when this container exits.\n
+	\t\t --esr\n\
+	\t\t\t (optional) Is this an ESR build\n\
+\t\t\t\t Defaults to false.\n"
 }
 
 cleanup() {
@@ -111,6 +114,7 @@ deploy_build () {
 rootdir="$( cd "$( dirname "$0" )" && pwd )/../../"
 WORKSPACE=${WORKSPACE:-$rootdir}
 ENABLE_TESTS=${ENABLE_TESTS:=false}
+ESR=${ESR:-false}
 BARYS_ARGUMENTS_VAR="--remove-build"
 REMOVE_CONTAINER="--rm"
 
@@ -158,12 +162,8 @@ while [[ $# -ge 1 ]]; do
 			fi
 			supervisorTag="${supervisorTag:-$2}"
 			;;
-		--esr-line)
-			if [ -z "$2" ]; then
-				echo "--esr-line argument can take a value between: next, current, sunset, the default value is __ignore__)"
-				exit 1
-			fi
-			esrLine="${esrLine:-$2}"
+		--esr)
+			ESR="true"
 			;;
 		--preserve-build)
 			BARYS_ARGUMENTS_VAR=""
@@ -179,7 +179,6 @@ JENKINS_DL_DIR=$JENKINS_PERSISTENT_WORKDIR/shared-downloads
 JENKINS_SSTATE_DIR=$JENKINS_PERSISTENT_WORKDIR/$MACHINE/sstate
 metaResinBranch=${metaResinBranch:-__ignore__}
 supervisorTag=${supervisorTag:-__ignore__}
-esrLine=${esrLine:-__ignore__}
 
 # Sanity checks
 if [ -z "$MACHINE" ] || [ -z "$JENKINS_PERSISTENT_WORKDIR" ] || [ -z "$buildFlavor" ]; then
@@ -315,7 +314,7 @@ deploy_to_balena() {
 		-e DEVELOPMENT_IMAGE=$DEVELOPMENT_IMAGE \
 		-e DEPLOY_TO=$deployTo \
 		-e VERSION_HOSTOS=$VERSION_HOSTOS \
-		-e ESR_LINE=$esrLine \
+		-e ESR=$ESR \
 		-v $_exported_image_path:/host/resin-image.docker \
 		--privileged \
 		resin/balena-push-env /start-docker-and-push.sh
@@ -403,7 +402,7 @@ if [ "$deploy" = "yes" ]; then
 	if [ "$deployTo" = "production" ]; then
 		S3_BUCKET_PREFIX="resin-production-img-cloudformation"
 
-		if [ "${ESR_LINE}" !=  "__ignore__" ]; then
+		if [ "${ESR}" =  "true" ]; then
 			S3_BUCKET_SUFFIX_RESINIO="esr-images"
 			S3_BUCKET_SUFFIX_RESINOS="esr-resinos"
 		else
@@ -416,7 +415,7 @@ if [ "$deploy" = "yes" ]; then
 	elif [ "$deployTo" = "staging" ]; then
 		S3_BUCKET_PREFIX="resin-staging-img"
 
-		if [ "${ESR_LINE}" !=  "__ignore__" ]; then
+		if [ "${ESR}" =  "true" ]; then
 			S3_BUCKET_SUFFIX_RESINIO="esr-images"
 			S3_BUCKET_SUFFIX_RESINOS="esr-resinos"
 		else
