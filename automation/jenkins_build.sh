@@ -158,13 +158,6 @@ while [[ $# -ge 1 ]]; do
 			fi
 			supervisorTag="${supervisorTag:-$2}"
 			;;
-		--esr-line)
-			if [ -z "$2" ]; then
-				echo "--esr-line argument can take a value between: next, current, sunset, the default value is __ignore__)"
-				exit 1
-			fi
-			esrLine="${esrLine:-$2}"
-			;;
 		--preserve-build)
 			BARYS_ARGUMENTS_VAR=""
 			;;
@@ -179,7 +172,6 @@ JENKINS_DL_DIR=$JENKINS_PERSISTENT_WORKDIR/shared-downloads
 JENKINS_SSTATE_DIR=$JENKINS_PERSISTENT_WORKDIR/$MACHINE/sstate
 metaResinBranch=${metaResinBranch:-__ignore__}
 supervisorTag=${supervisorTag:-__ignore__}
-esrLine=${esrLine:-__ignore__}
 
 # Sanity checks
 if [ -z "$MACHINE" ] || [ -z "$JENKINS_PERSISTENT_WORKDIR" ] || [ -z "$buildFlavor" ]; then
@@ -315,7 +307,6 @@ deploy_to_balena() {
 		-e DEVELOPMENT_IMAGE=$DEVELOPMENT_IMAGE \
 		-e DEPLOY_TO=$deployTo \
 		-e VERSION_HOSTOS=$VERSION_HOSTOS \
-		-e ESR_LINE=$esrLine \
 		-v $_exported_image_path:/host/resin-image.docker \
 		--privileged \
 		resin/balena-push-env /start-docker-and-push.sh
