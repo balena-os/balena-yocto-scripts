@@ -261,6 +261,7 @@ DEVICE_TYPE_JSON="$WORKSPACE/$MACHINE.json"
 SLUG=$(jq --raw-output '.slug' $DEVICE_TYPE_JSON)
 DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
 DEVICE_STATE=$(jq --raw-output '.state' "$DEVICE_TYPE_JSON")
+META_BALENA_VERSION=$(cat layers/meta-balena/meta-balena-common/conf/distro/include/balena-os.inc | grep -m 1 DISTRO_VERSION | cut -d ' ' -f3)
 if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
 	VERSION_HOSTOS=$(cat "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS")
 else
@@ -315,6 +316,7 @@ deploy_to_balena() {
 		-e DEPLOY_TO=$deployTo \
 		-e VERSION_HOSTOS=$VERSION_HOSTOS \
 		-e ESR=$ESR \
+		-e META_BALENA_VERSION=$META_BALENA_VERSION \
 		-v $_exported_image_path:/host/resin-image.docker \
 		--privileged \
 		resin/balena-push-env /start-docker-and-push.sh
