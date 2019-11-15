@@ -12,7 +12,7 @@ wait_docker
 
 _local_image=$(docker load -i /host/resin-image.docker | cut -d: -f1 --complement | tr -d " " )
 
-echo "[INFO] Logging into $deployTo as balenaos"
+echo "[INFO] Logging into $DEPLOY_TO as balenaos"
 if [ "$DEPLOY_TO" = "staging" ]; then
 	export BALENARC_BALENA_URL=balena-staging.com
 	balena login --token $BALENAOS_STAGING_TOKEN
@@ -20,12 +20,12 @@ else
 	balena login --token $BALENAOS_PRODUCTION_TOKEN
 fi
 
-echo "[INFO] Pushing $_local_image to balenaos/$SLUG"
 _app_suffix=""
 if [ "$ESR" = "true" ]; then
 	_app_suffix="-esr"
 fi
-
+echo "Is this an ESR version? ${ESR}"
+echo "[INFO] Pushing $_local_image to balenaos/$SLUG$_app_suffix"
 _releaseID=$(balena deploy "balenaos/$SLUG$_app_suffix" "$_local_image" | sed -n 's/.*Release: //p')
 if [ "$DEVELOPMENT_IMAGE" = "yes" ]; then
 	_variant="development"
@@ -35,6 +35,9 @@ fi
 
 balena tag set version $VERSION_HOSTOS --release $_releaseID
 balena tag set variant $_variant --release $_releaseID
+if [ "$ESR" = "true" ]; then
+	balena tag set meta-balena-base $META_BALENA_VERSION --release $_releaseID
+fi
 
 cleanup
 exit 0
