@@ -319,7 +319,7 @@ deploy_to_balena() {
 		-e META_BALENA_VERSION=$META_BALENA_VERSION \
 		-v $_exported_image_path:/host/resin-image.docker \
 		--privileged \
-		resin/balena-push-env /start-docker-and-push.sh
+		resin/balena-push-env /balena-push-os-version.sh
 }
 
 deploy_to_s3() {
