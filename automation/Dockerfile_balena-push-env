@@ -31,5 +31,5 @@ RUN curl -sSL https://github.com/balena-io/balena-cli/releases/download/v$BALENA
   rm -rf balena-cli.zip balena-cli
 
 COPY manage-docker.sh /
-COPY start-docker-and-push.sh /
+COPY balena-push-os-version.sh /
 WORKDIR /yocto/resin-board
