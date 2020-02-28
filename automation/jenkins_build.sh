@@ -13,6 +13,8 @@ print_help() {
 	\t\t\t (mandatory) Directory where to store shared downloads and shared sstate.\n
 	\t\t -b | --build-flavor\n\
 	\t\t\t (mandatory) The build flavor. Can be one of the following: managed-dev, managed-prod, unmanaged-dev, unmanaged-prod\n
+	\t\t -a | --additional-variable\n\
+	\t\t\t (optional) Inject additional local.conf variables. The format of the arguments needs to be VARIABLE=VALUE.\n\
 	\t\t --meta-balena-branch\n\
 	\t\t\t (optional) The meta-balena branch to checkout before building.\n\
 \t\t\t\t Default value is __ignore__ which means it builds the meta-balena revision as configured in the git submodule.\n
@@ -140,6 +142,19 @@ while [[ $# -ge 1 ]]; do
 				exit 1
 			fi
 			JENKINS_PERSISTENT_WORKDIR="$2"
+			shift
+			;;
+		-a|--additional-variable)
+			if [ -z "$2" ]; then
+				echo "\"$1\" needs an argument in the format VARIABLE=VALUE"
+				exit 1
+			fi
+			if echo "$2" | grep -vq '^[A-Za-z0-9_-]*='; then
+				echo "\"$2\" has the wrong argument format for \"$1\". Read help."
+				exit 1
+			fi
+			BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR $2"
+			shift
 			;;
 		-b|--build-flavor)
 			if [ -z "$2" ]; then
@@ -166,7 +181,7 @@ while [[ $# -ge 1 ]]; do
 			ESR="true"
 			;;
 		--preserve-build)
-			BARYS_ARGUMENTS_VAR=""
+			BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR//--remove-build/}
 			;;
 		--preserve-container)
 			REMOVE_CONTAINER=""
