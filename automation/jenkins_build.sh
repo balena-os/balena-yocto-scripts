@@ -153,7 +153,7 @@ while [[ $# -ge 1 ]]; do
 				echo "\"$2\" has the wrong argument format for \"$1\". Read help."
 				exit 1
 			fi
-			BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR $2"
+			BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR $1 $2"
 			shift
 			;;
 		-b|--build-flavor)
