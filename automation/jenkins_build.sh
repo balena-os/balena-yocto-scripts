@@ -421,31 +421,24 @@ if [ "$deploy" = "yes" ]; then
 		S3_BUCKET_PREFIX="resin-production-img-cloudformation"
 
 		if [ "${ESR}" =  "true" ]; then
-			S3_BUCKET_SUFFIX_RESINIO="esr-images"
-			S3_BUCKET_SUFFIX_RESINOS="esr-resinos"
+			S3_BUCKET_SUFFIX="esr-images"
 		else
-			S3_BUCKET_SUFFIX_RESINIO="images"
-			S3_BUCKET_SUFFIX_RESINOS="resinos"
+			S3_BUCKET_SUFFIX="images"
 		fi
-		S3_BUCKET_RESINIO="${S3_BUCKET_PREFIX}/${S3_BUCKET_SUFFIX_RESINIO}"
-		S3_BUCKET_RESINOS="${S3_BUCKET_PREFIX}/${S3_BUCKET_SUFFIX_RESINOS}"
+		S3_BUCKET="${S3_BUCKET_PREFIX}/${S3_BUCKET_SUFFIX}"
 
 	elif [ "$deployTo" = "staging" ]; then
 		S3_BUCKET_PREFIX="resin-staging-img"
 
 		if [ "${ESR}" =  "true" ]; then
-			S3_BUCKET_SUFFIX_RESINIO="esr-images"
-			S3_BUCKET_SUFFIX_RESINOS="esr-resinos"
+			S3_BUCKET_SUFFIX="esr-images"
 		else
-			S3_BUCKET_SUFFIX_RESINIO="images"
-			S3_BUCKET_SUFFIX_RESINOS="resinos"
+			S3_BUCKET_SUFFIX="images"
 		fi
-		S3_BUCKET_RESINIO="${S3_BUCKET_PREFIX}/${S3_BUCKET_SUFFIX_RESINIO}"
-		S3_BUCKET_RESINOS="${S3_BUCKET_PREFIX}/${S3_BUCKET_SUFFIX_RESINOS}"
+		S3_BUCKET="${S3_BUCKET_PREFIX}/${S3_BUCKET_SUFFIX}"
 	fi
 
 	deploy_to_s3 "$S3_BUCKET_RESINIO"
-	deploy_to_s3 "$S3_BUCKET_RESINOS"
 fi
 
 # Cleanup
