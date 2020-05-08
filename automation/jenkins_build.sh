@@ -276,6 +276,7 @@ DEVICE_TYPE_JSON="$WORKSPACE/$MACHINE.json"
 SLUG=$(jq --raw-output '.slug' $DEVICE_TYPE_JSON)
 DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
 DEVICE_STATE=$(jq --raw-output '.state' "$DEVICE_TYPE_JSON")
+PRIVATE_DT=$(jq 'if .private==false then false else true end' $DEVICE_TYPE_JSON)
 META_BALENA_VERSION=$(cat layers/meta-balena/meta-balena-common/conf/distro/include/balena-os.inc | grep -m 1 DISTRO_VERSION | cut -d ' ' -f3)
 if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
 	VERSION_HOSTOS=$(cat "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS")
@@ -362,8 +363,13 @@ deploy_to_s3() {
 		exit 1
 	fi
 
+	local _s3_policy="private"
+	if [ "${PRIVATE_DT}" = "false" ]; then
+		_s3_policy="public-read"
+	fi
+
 	local _s3_cmd="s4cmd --access-key=${_s3_access_key} --secret-key=${_s3_secret_key}"
-	local _s3_sync_opts="--recursive --API-ACL=public-read"
+	local _s3_sync_opts="--recursive --API-ACL=${_s3_policy}"
 	docker pull resin/resin-img:master
 	docker run --rm -t \
 		-e BASE_DIR=/host/images \
@@ -413,7 +419,7 @@ EOSU
 
 if [ "$deploy" = "yes" ]; then
 	echo "[INFO] Starting deployment..."
-	if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
+	if [ "$DEVICE_STATE" != "DISCONTINUED" ] && [ "$PRIVATE_DT" = "false" ]; then
 		deploy_images
 	fi
 
