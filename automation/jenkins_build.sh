@@ -314,7 +314,11 @@ deploy_images () {
 	local _hostapp_image=$(docker load --quiet -i "$_exported_image_path" | cut -d: -f1 --complement | tr -d ' ')
 	docker tag "$_hostapp_image" "$_docker_repo:$_tag"
 
-	docker push $_docker_repo:$_tag
+	# We only push to dockerhub if it is a public image.
+	if [ "$PRIVATE_DT" = "false" ]; then
+		docker push $_docker_repo:$_tag
+	fi
+	# Every image is deployed to balena
 	deploy_to_balena $_exported_image_path
 
 	docker rmi -f "$_hostapp_image"
@@ -419,7 +423,7 @@ EOSU
 
 if [ "$deploy" = "yes" ]; then
 	echo "[INFO] Starting deployment..."
-	if [ "$DEVICE_STATE" != "DISCONTINUED" ] && [ "$PRIVATE_DT" = "false" ]; then
+	if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
 		deploy_images
 	fi
 
@@ -444,7 +448,7 @@ if [ "$deploy" = "yes" ]; then
 		S3_BUCKET="${S3_BUCKET_PREFIX}/${S3_BUCKET_SUFFIX}"
 	fi
 
-	deploy_to_s3 "$S3_BUCKET_RESINIO"
+	deploy_to_s3 "$S3_BUCKET"
 fi
 
 # Cleanup
