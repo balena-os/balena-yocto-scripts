@@ -423,9 +423,6 @@ EOSU
 
 if [ "$deploy" = "yes" ]; then
 	echo "[INFO] Starting deployment..."
-	if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
-		deploy_images
-	fi
 
 	if [ "$deployTo" = "production" ]; then
 		S3_BUCKET_PREFIX="resin-production-img-cloudformation"
@@ -449,6 +446,11 @@ if [ "$deploy" = "yes" ]; then
 	fi
 
 	deploy_to_s3 "$S3_BUCKET"
+
+	if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
+		deploy_images
+	fi
+
 fi
 
 # Cleanup
