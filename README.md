@@ -1,12 +1,12 @@
-# Yocto tools for using with Resin
+# Yocto tools for using with Balena
 
-This repository provides helper scripts and tools for building Resin OS.
+This repository provides helper scripts and tools for building Balena OS.
 
 ## Contributing
 
 ### Issues
 
-For issues we use an aggregated github repository available [here](https://github.com/resin-os/resinos/issues). When you create issue make sure you select the right labels.
+For issues we use an aggregated github repository available [here](https://github.com/balena-os/balena-os/issues). When you create issue make sure you select the right labels.
 
 ### Pull requests
 
