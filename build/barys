@@ -226,7 +226,7 @@ while [[ $# -ge 1 ]]; do
             if [ -z "$2" ]; then
                 log ERROR "\"$1\" argument needs a value."
             fi
-            BITBAKE_TARGET="$2"
+            BITBAKE_TARGET="${BITBAKE_TARGET} $2"
             shift
             ;;
         --supervisor-tag)
