@@ -10,7 +10,7 @@ echo "[INFO] Starting docker."
 dockerd --data-root /scratch/docker > /var/log/docker.log &
 wait_docker
 
-_local_image=$(docker load -i /host/resin-image.docker | cut -d: -f1 --complement | tr -d " " )
+_local_image=$(docker load -i /host/appimage.docker | cut -d: -f1 --complement | tr -d " " )
 BALENAOS_ACCOUNT="balena_os"
 
 echo "[INFO] Logging into $DEPLOY_TO as ${BALENAOS_ACCOUNT}"
@@ -27,14 +27,15 @@ if [ "$ESR" = "true" ]; then
 fi
 
 echo "Is this an ESR version? ${ESR}"
-echo "[INFO] Pushing $_local_image to ${BALENAOS_ACCOUNT}/$SLUG$_app_suffix"
-_releaseID=$(balena deploy "${BALENAOS_ACCOUNT}/$SLUG$_app_suffix" "$_local_image" | sed -n 's/.*Release: //p')
+echo "[INFO] Pushing $_local_image to ${BALENAOS_ACCOUNT}/$APPNAME$_app_suffix"
+_releaseID=$(balena deploy "${BALENAOS_ACCOUNT}/$APPNAME$_app_suffix" "$_local_image" | sed -n 's/.*Release: //p')
 if [ "$DEVELOPMENT_IMAGE" = "yes" ]; then
 	_variant="development"
 else
 	_variant="production"
 fi
 
+echo "[INFO] Tagging release ${_releaseID} with version ${VERSION_HOSTOS} and variant ${_variant}"
 balena tag set version $VERSION_HOSTOS --release $_releaseID
 balena tag set variant $_variant --release $_releaseID
 if [ "$ESR" = "true" ]; then
