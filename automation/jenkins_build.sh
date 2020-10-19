@@ -348,13 +348,13 @@ deploy_to_balena() {
 		-e BASE_DIR=/host \
 		-e BALENAOS_STAGING_TOKEN=$BALENAOS_STAGING_TOKEN \
 		-e BALENAOS_PRODUCTION_TOKEN=$BALENAOS_PRODUCTION_TOKEN \
-		-e SLUG=$SLUG \
+		-e APPNAME=$SLUG \
 		-e DEVELOPMENT_IMAGE=$DEVELOPMENT_IMAGE \
 		-e DEPLOY_TO=$deployTo \
 		-e VERSION_HOSTOS=$VERSION_HOSTOS \
 		-e ESR=$ESR \
 		-e META_BALENA_VERSION=$META_BALENA_VERSION \
-		-v $_exported_image_path:/host/resin-image.docker \
+		-v $_exported_image_path:/host/appimage.docker \
 		--privileged \
 		resin/balena-push-env /balena-push-os-version.sh
 }
