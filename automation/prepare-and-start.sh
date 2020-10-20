@@ -25,6 +25,18 @@ echo "[INFO] Starting docker."
 docker daemon 2> /dev/null &
 wait_docker
 
+# Authenticate with Balena registry if required
+if [ -n "${HOSTEXT_IMAGES}" ]; then
+	BALENAOS_ACCOUNT="balena_os"
+	echo "[INFO] Logging into $DEPLOY_TO as ${BALENAOS_ACCOUNT}"
+	if [ "$DEPLOY_TO" = "staging" ]; then
+		export BALENARC_BALENA_URL=balena-staging.com
+		balena login --token $BALENAOS_STAGING_TOKEN
+	else
+		balena login --token $BALENAOS_PRODUCTION_TOKEN
+	fi
+fi
+
 sudo -H -u builder git config --global user.name "Resin Builder"
 sudo -H -u builder git config --global user.email "buildy@builder.com"
 echo "[INFO] The configured git credentials for user builder are:"
