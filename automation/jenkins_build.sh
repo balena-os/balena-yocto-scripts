@@ -256,6 +256,9 @@ docker run ${REMOVE_CONTAINER} \
     -e SSH_AUTH_SOCK=/tmp/ssh-agent \
     -e BUILDER_UID=$(id -u) \
     -e BUILDER_GID=$(id -g) \
+    -e BALENAOS_STAGING_TOKEN=$BALENAOS_STAGING_TOKEN \
+    -e BALENAOS_PRODUCTION_TOKEN=$BALENAOS_PRODUCTION_TOKEN \
+    -e DEVELOPMENT_IMAGE=$DEVELOPMENT_IMAGE \
     --name $BUILD_CONTAINER_NAME \
     --privileged \
     resin/yocto-build-env \
