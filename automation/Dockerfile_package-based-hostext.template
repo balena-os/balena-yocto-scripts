@@ -1,0 +1,35 @@
+ARG NAMESPACE="resin"
+FROM ${NAMESPACE}/balena-push-env:latest
+
+RUN apt-get update && apt-get install -y git make automake gcc libtool libtool-bin pkg-config libarchive-dev libcurl4-openssl-dev libssl-dev libgpgme11-dev && rm -rf /var/lib/apt/lists/*
+
+RUN git clone git://git.yoctoproject.org/opkg opkg
+RUN cd ./opkg && ./autogen.sh && ./configure --enable-libsolv  && make && make install
+
+RUN LD_LIBRARY_PATH=/usr/local/lib && ldconfig
+
+RUN mkdir -p /var/lib/opkg /etc/opkg/
+RUN echo 'dest hostapp /hostapp\n\
+option info_dir /var/lib/opkg/info\n\
+option lists_dir /var/lib/opkg/lists\n\
+option status_file /var/lib/opkg/status'\
+> /etc/opkg/opkg.conf
+
+RUN echo 'ARG NAMESPACE=resin\n\
+FROM ${NAMESPACE}/%%BALENA_MACHINE_NAME%%-package-based-hostext:latest AS builder\n\
+ARG PACKAGES="space separated list of packages to force install without dependencies"\n\
+ARG ARCH_LIST="space separated list of packages architectures"\n\
+ARG FEED_URL="file:/ipk"\n\
+COPY feed /\n\
+RUN priority=1; for arch in $ARCH_LIST; do echo "arch $arch $priority" >> /etc/opkg/opkg.conf; priority=$(expr $priority + 5); echo "src/gz balena-$arch $FEED_URL/$arch" >> /etc/opkg/opkg.conf; done\n\
+RUN mkdir /hostapp\n\
+RUN opkg -f /etc/opkg/opkg.conf update && opkg -f /etc/opkg/opkg.conf --nodeps --dest=hostapp install ${PACKAGES} || true\n\
+RUN rm -rf /hostapp/var/lib/opkg\n\
+FROM scratch\n\
+LABEL io.balena.features.host-extension=1\n\
+COPY --from=builder /hostapp /'\
+> /Dockerfile.template
+
+# Copy local feed folder only if present
+COPY balena-hostapp-extension.sh /
+WORKDIR /
