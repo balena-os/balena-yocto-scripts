@@ -20,13 +20,16 @@ function quit {
 npm install --production --quiet || quit "ERROR - Please make sure the 'npm' package is installed and working before running this script."
 
 which nodejs >/dev/null 2>&1 && NODE=nodejs || NODE=node
+if [ ! -x "$(command -v $NODE)" ]; then
+    quit "ERROR - Please install the 'nodejs' package before running this script."
+fi
 
 cd $rootdir
 rm -f *.json
 
 for filename in *.coffee; do
     slug="${filename%.*}"
-{ NODE_PATH=$mydir/node_modules $NODE > "$slug".json 2>/dev/null << EOF
+{ NODE_PATH=$mydir/node_modules $NODE > "$slug".json << EOF
     require('coffee-script/register');
     var dt = require('@resin.io/device-types');
     var manifest = require('./${filename}');
@@ -34,7 +37,7 @@ for filename in *.coffee; do
     var builtManifest = dt.buildManifest(manifest, slug);
     console.log(JSON.stringify(builtManifest, null, '\t'));
 EOF
-} || quit "ERROR - Please install the 'nodejs' package before running this script."
+}
 
 if [ ! -s "$slug".json ]; then
     quit "ERROR - Please check your nodejs installation. The '$NODE' binary did not generate a proper .json."
