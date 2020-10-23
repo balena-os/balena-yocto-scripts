@@ -56,7 +56,7 @@ deploy_build () {
 	local _compressed=$(jq --raw-output '.yocto.compressed' $DEVICE_TYPE_JSON)
 	local _archive=$(jq --raw-output '.yocto.archive' $DEVICE_TYPE_JSON)
 
-	rm -rf "$_deploy_dir"
+	[ -z ${PRESERVE_BUILD} ] && rm -rf "$_deploy_dir"
 	mkdir -p "$_deploy_dir/image"
 
 	cp -v "$DEVICE_TYPE_JSON" "$_deploy_dir/device-type.json"
@@ -188,6 +188,7 @@ while [[ $# -ge 1 ]]; do
 			ESR="true"
 			;;
 		--preserve-build)
+			PRESERVE_BUILD=1
 			BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR//--remove-build/}
 			;;
 		--preserve-container)
