@@ -64,8 +64,11 @@ function help {
     echo -e "\t\t Default: no."
 
     echo -e "\t--bitbake-target"
-    echo -e "\t\t Force a specific bitbake target."
+    echo -e "\t\t Specify bitbake targets."
     echo -e "\t\t Default: image specified in the device type json."
+
+    echo -e "\t--bitbake-args"
+    echo -e "\t\t Extra bitbake arguments"
 
     echo -e "\t-a | --additional-variable"
     echo -e "\t\t Inject additional local.conf variables."
@@ -216,6 +219,22 @@ while [[ $# -ge 1 ]]; do
         -k|--continue)
             BITBAKEARGS="$BITBAKEARGS -k"
             ;;
+        --bitbake-args)
+            if [ -z "$2" ]; then
+                log ERROR "\"$1\" argument needs a value."
+            fi
+            BITBAKEARGS="$BITBAKEARGS $2"
+	    _cnt=1
+	    for k in $(eval "echo {3..$#}"); do
+		    case ${!k} in
+			    -*|--*) break;;
+			    *) BITBAKEARGS="${BITBAKEARGS} ${!k}"
+                               ((_cnt=_cnt+1))
+			       ;;
+		    esac
+	    done
+	    shift $_cnt
+            ;;
         -c|--compress)
             COMPRESS=yes
             ;;
@@ -227,7 +246,16 @@ while [[ $# -ge 1 ]]; do
                 log ERROR "\"$1\" argument needs a value."
             fi
             BITBAKE_TARGET="${BITBAKE_TARGET} $2"
-            shift
+	    _cnt=1
+	    for k in $(eval "echo {3..$#}"); do
+		    case ${!k} in
+			    -*|--*) break;;
+			    *) BITBAKE_TARGET="${BITBAKE_TARGET} ${!k}"
+                               ((_cnt=_cnt+1))
+			       ;;
+		    esac
+	    done
+	    shift $_cnt
             ;;
         --supervisor-tag)
             if [ -z "$2" ]; then
