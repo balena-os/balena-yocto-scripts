@@ -67,6 +67,10 @@ function help {
     echo -e "\t\t Force a specific bitbake target."
     echo -e "\t\t Default: image specified in the device type json."
 
+    echo -e "\t--extension"
+    echo -e "\t\t Build a hostapp extension by name."
+    echo -e "\t\t Default: No preloaded hostapp extension."
+
     echo -e "\t-a | --additional-variable"
     echo -e "\t\t Inject additional local.conf variables."
     echo -e "\t\t The format of the arguments need to be VARIABLE=VALUE ."
@@ -229,6 +233,13 @@ while [[ $# -ge 1 ]]; do
             BITBAKE_TARGET="${BITBAKE_TARGET} $2"
             shift
             ;;
+        -e|--extension)
+            if [ -z "$2" ]; then
+                log ERROR "\"$1\" argument needs a value."
+            fi
+            HOSTEXT_IMAGES="${HOSTEXT_IMAGES} $2"
+            shift
+            ;;
         --supervisor-tag)
             if [ -z "$2" ]; then
                 log ERROR "\"$1\" argument needs a value."
@@ -389,6 +400,7 @@ if [ "z$LOG" == "zyes" ]; then
     echo "Script called as: $0 $SCRIPT_ARGUMENTS" >> $LOGFILE
     echo "Selected machines: $MACHINES" >> $LOGFILE
     echo "Selected bitbake arguments: $BITBAKEARGS" >> $LOGFILE
+    echo "Hostapp extensions: $HOSTEXT_IMAGES" >> $LOGFILE
     echo "Build directory name: $BUILD_DIR" >> $LOGFILE
     echo "Remove build directory? $REMOVEBUILD" >> $LOGFILE
     echo "Compressed image? $COMPRESS" >> $LOGFILE
@@ -470,9 +482,33 @@ else
         if [[ "$machine" != "${MACHINE_IN_JSON}" ]]; then
           continue
         fi
+	for extension in ${HOSTEXT_IMAGES}; do
+              extensions_json="$SCRIPTPATH/../../balenaos-extensions/${extension#"${machine}"-}.json"
+              if [ -z "${extensions_json}" ]; then
+		      log ERROR "Extensions definition file not found"
+		      continue
+              fi
+	      APPNAME=$(jq --raw-output '.name' "${extensions_json}")
+	      if [ -z "${APPNAME}" ]; then
+		      log ERROR "Extension name not defined"
+		      continue
+	      fi
+	      if [ "${APPNAME}" != "${extension#"${machine}-"}" ]; then
+		      log ERROR "Mismatch: Looking for "${extension#"${machine}-"}" but found ${APPNAME} in extensinos definition file"
+		      continue
+              fi
+	      PACKAGES=$(jq --raw-output '.contents.packages[]' "${extensions_json}" | tr "\n" " ")
+	      for pkg in ${PACKAGES}; do
+		      BITBAKE_TARGET="${BITBAKE_TARGET} ${pkg}"
+	      done
+	done
         if [ -z "$BITBAKE_TARGET" ]; then
             IMAGE=`jq -r '.yocto | select(.machine == '\"${machine}\"').image' $json`
         else
+	    # Required packages for hostapp extensions - package-index must be last
+	    if [ -n "${HOSTEXT_IMAGES}" ]; then
+		    BITBAKE_TARGET="${BITBAKE_TARGET} os-release package-index"
+	    fi
             IMAGE="$BITBAKE_TARGET"
         fi
         if [ -z "$IMAGE" ] || [ "z$IMAGE" == "znull" ]; then
