@@ -276,13 +276,30 @@ DEVICE_TYPE_JSON="$WORKSPACE/$MACHINE.json"
 SLUG=$(jq --raw-output '.slug' $DEVICE_TYPE_JSON)
 DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
 DEVICE_STATE=$(jq --raw-output '.state' "$DEVICE_TYPE_JSON")
-PRIVATE_DT=$(jq 'if .private==false then false else true end' $DEVICE_TYPE_JSON)
 META_BALENA_VERSION=$(cat layers/meta-balena/meta-balena-common/conf/distro/include/balena-os.inc | grep -m 1 DISTRO_VERSION | cut -d ' ' -f3)
 if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
 	VERSION_HOSTOS=$(cat "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS")
 else
 	VERSION_HOSTOS=$(cat "$WORKSPACE/VERSION")
 fi
+
+API_TOKEN=$BALENAOS_STAGING_TOKEN
+API_ENDPOINT="https://api.balena-staging.com"
+if [ "$deployTo" = "production" ]; then
+	API_TOKEN=$BALENAOS_PRODUCTION_TOKEN
+	API_ENDPOINT="https://api.balena-cloud.com"
+fi
+
+API_DEVICE_TYPE=$(curl -H "Authorization: Bearer ${API_TOKEN}" --silent --retry 5 \
+"${API_ENDPOINT}/v6/device_type?\$filter=slug%20eq%20%27${SLUG}%27&\$select=slug,is_private" | jq -r '.d[0]')
+
+if [ "$API_DEVICE_TYPE" = "null" ]; then 
+	echo "Device type could not be found in the API, exiting";
+	exit 1;
+fi;
+
+PRIVATE_DT=$(echo $API_DEVICE_TYPE | jq '.is_private')
+PRIVATE_DT=${PRIVATE_DT:-true}
 
 # Jenkins artifacts
 echo "[INFO] Starting creating jenkins artifacts..."
