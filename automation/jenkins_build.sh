@@ -12,7 +12,7 @@ print_help() {
 	\t\t --shared-dir\n\
 	\t\t\t (mandatory) Directory where to store shared downloads and shared sstate.\n
 	\t\t -b | --build-flavor\n\
-	\t\t\t (mandatory) The build flavor. Can be one of the following: managed-dev, managed-prod, unmanaged-dev, unmanaged-prod\n
+	\t\t\t (mandatory) The build flavor. (prod | dev)\n
 	\t\t -a | --additional-variable\n\
 	\t\t\t (optional) Inject additional local.conf variables. The format of the arguments needs to be VARIABLE=VALUE.\n\
 	\t\t --meta-balena-branch\n\
