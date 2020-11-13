@@ -47,6 +47,9 @@ cleanup() {
 }
 trap 'cleanup fail' SIGINT SIGTERM
 
+script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+source "${script_dir}/balena-lib.sh"
+
 deploy_build () {
 	local _deploy_dir="$1"
 	local _remove_compressed_file="$2"
@@ -241,7 +244,9 @@ mkdir -p $JENKINS_SSTATE_DIR
 # Run build
 docker stop $BUILD_CONTAINER_NAME 2> /dev/null || true
 docker rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
-docker pull ${NAMESPACE}/yocto-build-env
+if ! docker_pull_helper_image "Dockerfile_yocto-build-env"; then
+	exit 1
+fi
 docker run ${REMOVE_CONTAINER} \
     -v $WORKSPACE:/yocto/resin-board \
     -v $JENKINS_DL_DIR:/yocto/shared-downloads \
@@ -348,7 +353,9 @@ deploy_images () {
 
 deploy_to_balena() {
 	local _exported_image_path=$1
-	docker pull ${NAMESPACE}/balena-push-env
+	if ! docker_pull_helper_image "Dockerfile_balena-push-env"; then
+		exit 1
+	fi
 	docker run --rm -t \
 		-e BASE_DIR=/host \
 		-e BALENAOS_STAGING_TOKEN=$BALENAOS_STAGING_TOKEN \
