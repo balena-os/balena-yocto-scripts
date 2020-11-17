@@ -193,6 +193,4 @@ if [ "$deploy" = "yes" ]; then
 
 fi
 
-# Cleanup
-# Keep this after writing all artifacts
-rm -rf $WORKSPACE/build
+# Do the cleanup in a post-build step
