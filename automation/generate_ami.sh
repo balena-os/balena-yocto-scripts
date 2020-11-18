@@ -12,7 +12,7 @@ AMI_EBS_VOLUME_SIZE=${AMI_EBS_VOLUME_SIZE:-8}
 AMI_EBS_VOLUME_TYPE=${AMI_EBS_VOLUME_TYPE:-gp2}
 
 BALENA_PRELOAD_APP=${BALENA_PRELOAD_APP:-balena-os-config-preload-amd64}
-IMPORT_SNAPSHOT_TIMEOUT_MINS=${IMPORT_SNAPSHOT_TIMEOUT_MINS:-10}
+IMPORT_SNAPSHOT_TIMEOUT_MINS=${IMPORT_SNAPSHOT_TIMEOUT_MINS:-15}
 BOOT_PARTITION=""
 
 ensure_all_env_variables_are_set() {
@@ -38,7 +38,7 @@ ensure_all_env_variables_are_set() {
 mount_cleanup() {
     [[ -n "$BOOT_PARTITION" ]]              && \
         echo "* Unmounting boot partition"  && \
-        sudo umount $BOOT_PARTITION         && \
+        umount $BOOT_PARTITION              && \
         rmdir $BOOT_PARTITION               && \
         BOOT_PARTITION=""
 }
@@ -56,7 +56,7 @@ mount_boot_partition() {
     sector_size=$(fdisk -l "$img" | sed -n "s|Sector\ssize.*:\s\([0-9]\+\)\s.*$|\1|p")
     partition_offset=$(fdisk -l "$img" | sed -n "s|${img}[0-9]\s\+\*\s\+\([0-9]\+\)\s\+.*$|\1|p")
     boot_partition_mountpoint=$(mktemp -d)
-    sudo mount -o loop,offset=$((sector_size * partition_offset)) "$img" "$boot_partition_mountpoint"
+    mount -o loop,offset=$((sector_size * partition_offset)) "$img" "$boot_partition_mountpoint"
 
     echo "* Boot partition mounted on $boot_partition_mountpoint"
     eval $__retvalue="'$boot_partition_mountpoint'"
@@ -79,8 +79,8 @@ add_ssh_key_to_boot_partition() {
 
     echo "* Adding the preload public key"
     cp ${BOOT_PARTITION}/config.json /tmp/.config.json
-    cat /tmp/.config.json | jq --arg keys "${public_key}" '. + {os: {sshKeys: [$keys]}}' | jq -r . > /tmp/.config.json.2
-    sudo sh -c "cat /tmp/.config.json.2 > ${BOOT_PARTITION}/config.json"
+    jq --arg keys "${public_key}" '. + {os: {sshKeys: [$keys]}}' ${BOOT_PARTITION}/config.json > /tmp/.config.json
+    mv /tmp/.config.json ${BOOT_PARTITION}/config.json
     mount_cleanup
 }
 
@@ -167,6 +167,8 @@ create_aws_ami() {
 }
 
 ## MAIN
+
+[[ $(id -u) != 0 ]] && echo "ERROR: This script should be run as root" && exit 1
 
 ensure_all_env_variables_are_set
 
