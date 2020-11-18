@@ -1,5 +1,14 @@
 #/bin/bash
 
+
+# Publish to staging by default
+S3_ACCESS_KEY=${STAGING_S3_ACCESS_KEY}
+S3_SECRET_KEY=${STAGING_S3_SECRET_KEY}
+S3_REGION=${STAGING_S3_REGION:-us-east-1}
+BALENA_PRELOAD_SSH_PUBKEY=${PRELOAD_SSH_PUBKEY_STAGING}
+BALENACLI_TOKEN=${BALENAOS_STAGING_TOKEN}
+BALENA_ENV="balena-staging.com"
+
 if [ "$deployTo" = "production" ]; then
     S3_ACCESS_KEY=${PRODUCTION_S3_ACCESS_KEY}
     S3_SECRET_KEY=${PRODUCTION_S3_SECRET_KEY}
@@ -7,13 +16,6 @@ if [ "$deployTo" = "production" ]; then
     BALENA_PRELOAD_SSH_PUBKEY=${PRELOAD_SSH_PUBKEY_PRODUCTION}
     BALENACLI_TOKEN=${BALENAOS_PRODUCTION_TOKEN}
     BALENA_ENV="balena-cloud.com"
-elif [ "$deployTo" = "staging" ]; then
-    S3_ACCESS_KEY=${STAGING_S3_ACCESS_KEY}
-    S3_SECRET_KEY=${STAGING_S3_SECRET_KEY}
-    S3_REGION=${STAGING_S3_REGION:-us-east-1}
-    BALENA_PRELOAD_SSH_PUBKEY=${PRELOAD_SSH_PUBKEY_STAGING}
-    BALENACLI_TOKEN=${BALENAOS_STAGING_TOKEN}
-    BALENA_ENV="balena-staging.com"
 fi
 
 MACHINE=${JOB_NAME#yocto-}
@@ -27,9 +29,7 @@ VERSION=$(cat ${YOCTO_IMAGES_PATH}/VERSION_HOSTOS)
 
 # AMI name format: balenaOS-VERSION-VARIANT-DEVICE_TYPE
 AMI_NAME="balenaOS-${VERSION}-${buildFlavor}-${MACHINE}"
-S3_REGION=us-east-1
 
-set -x
 # AWS_SESSION_TOKEN only needed if MFA is enabled for the account
 docker run -it --rm                                                     \
     --privileged                                                        \
