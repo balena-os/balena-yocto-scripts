@@ -88,7 +88,13 @@ deploy_build () {
 		# uncompressed, just copy and we're done
 		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/balena.img"
 		if [ -n "$_deploy_flasher_artifact" ]; then
+			cp -v "$_deploy_dir/image/balena.img" "$_deploy_dir/image/balena-raw.img"
 			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_flasher_artifact") "$_deploy_dir/image/balena-flasher.img"
+		elif [ "$_image" = "resin-image-flasher" ]; then
+			# backwards compatibility - deployFlasherArtifact is not set and deployArtifact contains flasher
+			cp -v "$_deploy_dir/image/balena.img" "$_deploy_dir/image/balena-flasher.img"
+		else
+			cp -v "$_deploy_dir/image/balena.img" "$_deploy_dir/image/balena-raw.img"
 		fi
 		return
 	fi
@@ -107,11 +113,21 @@ deploy_build () {
 		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/balena.img"
 		(cd "$_deploy_dir/image" && zip balena.img.zip balena.img)
 		if [ -n "$_deploy_flasher_artifact" ]; then
+			cp -v "$_deploy_dir/image/balena.img" "$_deploy_dir/image/balena-raw.img"
+			(cd "$_deploy_dir/image" && zip balena-raw.img.zip balena-raw.img)
 			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_flasher_artifact") "$_deploy_dir/image/balena-flasher.img"
 			(cd "$_deploy_dir/image" && zip balena-flasher.img.zip balena-flasher.img)
+		elif [ "$_image" = "resin-image-flasher" ]; then
+			# backwards compatibility - deployFlasherArtifact is not set and deployArtifact contains flasher
+			cp -v "$_deploy_dir/image/balena.img" "$_deploy_dir/image/balena-flasher.img"
+			(cd "$_deploy_dir/image" && zip balena-flasher.img.zip balena-flasher.img)
+		else
+			cp -v "$_deploy_dir/image/balena.img" "$_deploy_dir/image/balena-raw.img"
+			(cd "$_deploy_dir/image" && zip balena-raw.img.zip balena-raw.img)
 		fi
 		if [ "$_remove_compressed_file" = "true" ]; then
 			rm -rf $_deploy_dir/image/balena.img
+			rm -rf $_deploy_dir/image/balena-raw.img
 			rm -rf $_deploy_dir/image/balena-flasher.img
 		fi
 	fi
