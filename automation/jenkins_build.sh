@@ -111,6 +111,12 @@ deploy_build () {
 			rm -rf $_deploy_dir/image/resin-flasher.img
 		fi
 	fi
+
+	if [ -d "${WORKSPACE}/layers/meta-balena/tests" ]
+	then
+		# copy all leviathan/testbot tests from meta-balena to the deploy dir
+		cp -av "${WORKSPACE}/layers/meta-balena/tests" "$_deploy_dir/tests"
+	fi
 }
 
 rootdir="$( cd "$( dirname "$0" )" && pwd )/../../"
