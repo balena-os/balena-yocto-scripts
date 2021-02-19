@@ -55,7 +55,7 @@ function help {
     echo -e "\t\t\t stopping"
 
     echo -e "\t-c | --compress"
-    echo -e "\t\t Run build with compress variable (RESIN_SDIMG_COMPRESSION)"
+    echo -e "\t\t Run build with compress variable (BALENA_SDIMG_COMPRESSION)"
     echo -e "\t\t using $COMPRESS_TOOL."
     echo -e "\t\t Default: no."
 
@@ -407,13 +407,13 @@ if [ "x$REMOVEBUILD" == "xyes" ]; then
     rm -rf $SCRIPTPATH/../../$BUILD_DIR
 fi
 
-RESIN_MACHINE_LAYER=$(ls ${SCRIPTPATH}/../../layers/ | grep meta-balena-)
+BALENA_MACHINE_LAYER=$(ls ${SCRIPTPATH}/../../layers/ | grep meta-balena-)
 
 # Configure build
 
-$SCRIPTPATH/generate-conf-notes.sh $SCRIPTPATH/../../layers/${RESIN_MACHINE_LAYER}/conf/ ${DEVICE_TYPES_JSONS}
+$SCRIPTPATH/generate-conf-notes.sh $SCRIPTPATH/../../layers/${BALENA_MACHINE_LAYER}/conf/ ${DEVICE_TYPES_JSONS}
 
-export TEMPLATECONF=${SCRIPTPATH}/../../layers/${RESIN_MACHINE_LAYER}/conf/samples
+export TEMPLATECONF=${SCRIPTPATH}/../../layers/${BALENA_MACHINE_LAYER}/conf/samples
 source ${SCRIPTPATH}/../../layers/poky/oe-init-build-env ${SCRIPTPATH}/../../${BUILD_DIR}
 if [ "x$DEVELOPMENT_IMAGE" == "xyes" ]; then
     sed -i "s/.*DEVELOPMENT_IMAGE =.*/DEVELOPMENT_IMAGE = \"1\"/g" conf/local.conf
@@ -423,7 +423,7 @@ else
     sed -i "s/.*RESINHUP ?=.*/RESINHUP ?= \"yes\"/g" conf/local.conf
 fi
 if [ "x$COMPRESS" == "xyes" ]; then
-    sed -i "s/.*RESIN_RAW_IMG_COMPRESSION ?=.*/RESIN_RAW_IMG_COMPRESSION ?= \"${COMPRESS_TOOL}\"/g" conf/local.conf
+    sed -i "s/.*BALENA_RAW_IMG_COMPRESSION ?=.*/BALENA_RAW_IMG_COMPRESSION ?= \"${COMPRESS_TOOL}\"/g" conf/local.conf
 fi
 if [ "x$RM_WORK" == "xyes" ]; then
     sed -i "s/.*INHERIT += \"rm_work\".*/INHERIT += \"rm_work\"/g" conf/local.conf
