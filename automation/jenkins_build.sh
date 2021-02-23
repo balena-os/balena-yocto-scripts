@@ -114,8 +114,9 @@ deploy_build () {
 
 	if [ -d "${WORKSPACE}/layers/meta-balena/tests" ]
 	then
-		# copy all leviathan/testbot tests from meta-balena to the deploy dir
-		cp -av "${WORKSPACE}/layers/meta-balena/tests" "$_deploy_dir/tests"
+		# package all leviathan/testbot tests from meta-balena to the deploy dir
+		# make sure they are compressed so a flattened unzip of artifacts does not fail
+		tar -czvf "$_deploy_dir/tests.tar.gz" "${WORKSPACE}/layers/meta-balena/tests"
 	fi
 }
 
