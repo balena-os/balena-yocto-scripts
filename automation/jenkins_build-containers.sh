@@ -4,7 +4,8 @@ set -ev
 
 DOCKERFILES=( Dockerfile_yocto-build-env Dockerfile_balena-push-env )
 
-REVISION=$(git rev-parse --short HEAD)
+script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+REVISION=$(cd "${script_dir}" && git rev-parse --short HEAD)
 NAMESPACE=${NAMESPACE:-resin}
 
 # Get the absolute script location
