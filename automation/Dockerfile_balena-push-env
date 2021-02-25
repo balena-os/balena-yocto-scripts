@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y build-essential curl unzip
 RUN apt-get update && apt-get install -y apt-transport-https && rm -rf /var/lib/apt/lists/*
 RUN curl --silent https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
 ENV NODE_VERSION node_8.x
-ENV DISTRO xenial
+ENV DISTRO bionic
 RUN echo "deb https://deb.nodesource.com/$NODE_VERSION $DISTRO main" | tee /etc/apt/sources.list.d/nodesource.list &&\
   echo "deb-src https://deb.nodesource.com/$NODE_VERSION $DISTRO main" | tee -a /etc/apt/sources.list.d/nodesource.list
 RUN apt-get update && apt-get install -y jq nodejs sudo && rm -rf /var/lib/apt/lists/*
