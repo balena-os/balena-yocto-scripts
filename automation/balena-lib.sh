@@ -10,6 +10,7 @@ docker_pull_helper_image() {
 	local _dockerfile_name="$1"
 	local _image_name=""
 	local _image_prefix=""
+	local _retvalue="$2"
 	_image_name="${_dockerfile_name%".template"}"
 	_image_name="${_image_name#"Dockerfile_"}"
 	case ${_dockerfile_name} in
@@ -27,4 +28,5 @@ docker_pull_helper_image() {
 		docker login -u "${DOCKERHUB_USER}" -p "${DOCKERHUB_PWD}"
 		JOB_NAME="${JOB_NAME}" DOCKERFILES="${_dockerfile_name}" "${script_dir}/jenkins_build-containers.sh"
 	fi
+	eval "$_retvalue"='${BALENA_YOCTO_SCRIPTS_REVISION}'
 }
