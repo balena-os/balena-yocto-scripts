@@ -3,6 +3,7 @@
 set -ex
 
 BUILD_CONTAINER_NAME=yocto-build-$$
+NAMESPACE=${NAMESPACE:-resin}
 
 print_help() {
 	echo -e "Script options:\n\
@@ -12,7 +13,7 @@ print_help() {
 	\t\t --shared-dir\n\
 	\t\t\t (mandatory) Directory where to store shared downloads and shared sstate.\n
 	\t\t -b | --build-flavor\n\
-	\t\t\t (mandatory) The build flavor. Can be one of the following: managed-dev, managed-prod, unmanaged-dev, unmanaged-prod\n
+	\t\t\t (mandatory) The build flavor. (prod | dev)\n
 	\t\t -a | --additional-variable\n\
 	\t\t\t (optional) Inject additional local.conf variables. The format of the arguments needs to be VARIABLE=VALUE.\n\
 	\t\t --meta-balena-branch\n\
@@ -56,7 +57,7 @@ deploy_build () {
 	local _compressed=$(jq --raw-output '.yocto.compressed' $DEVICE_TYPE_JSON)
 	local _archive=$(jq --raw-output '.yocto.archive' $DEVICE_TYPE_JSON)
 
-	rm -rf "$_deploy_dir"
+	[ -z ${PRESERVE_BUILD} ] && rm -rf "$_deploy_dir"
 	mkdir -p "$_deploy_dir/image"
 
 	cp -v "$DEVICE_TYPE_JSON" "$_deploy_dir/device-type.json"
@@ -188,6 +189,7 @@ while [[ $# -ge 1 ]]; do
 			ESR="true"
 			;;
 		--preserve-build)
+			PRESERVE_BUILD=1
 			BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR//--remove-build/}
 			;;
 		--preserve-container)
@@ -246,7 +248,7 @@ mkdir -p $JENKINS_SSTATE_DIR
 # Run build
 docker stop $BUILD_CONTAINER_NAME 2> /dev/null || true
 docker rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
-docker pull resin/yocto-build-env
+docker pull ${NAMESPACE}/yocto-build-env
 docker run ${REMOVE_CONTAINER} \
     -v $WORKSPACE:/yocto/resin-board \
     -v $JENKINS_DL_DIR:/yocto/shared-downloads \
@@ -255,9 +257,12 @@ docker run ${REMOVE_CONTAINER} \
     -e SSH_AUTH_SOCK=/tmp/ssh-agent \
     -e BUILDER_UID=$(id -u) \
     -e BUILDER_GID=$(id -g) \
+    -e BALENAOS_STAGING_TOKEN=$BALENAOS_STAGING_TOKEN \
+    -e BALENAOS_PRODUCTION_TOKEN=$BALENAOS_PRODUCTION_TOKEN \
+    -e DEVELOPMENT_IMAGE=$DEVELOPMENT_IMAGE \
     --name $BUILD_CONTAINER_NAME \
     --privileged \
-    resin/yocto-build-env \
+    ${NAMESPACE}/yocto-build-env \
     /prepare-and-start.sh \
         --log \
         --machine "$MACHINE" \
@@ -316,9 +321,9 @@ deploy_images () {
 	local _docker_repo
 	local _variant=""
 	if [ "$deployTo" = "production" ]; then
-		_docker_repo="resin/resinos"
+		_docker_repo="${NAMESPACE}/resinos"
 	else
-		_docker_repo="resin/resinos-staging"
+		_docker_repo="${NAMESPACE}/resinos-staging"
 	fi
 	if [ "$DEVELOPMENT_IMAGE" = "yes" ]; then
 		_variant=".dev"
@@ -350,20 +355,20 @@ deploy_images () {
 
 deploy_to_balena() {
 	local _exported_image_path=$1
-	docker pull resin/balena-push-env
+	docker pull ${NAMESPACE}/balena-push-env
 	docker run --rm -t \
 		-e BASE_DIR=/host \
 		-e BALENAOS_STAGING_TOKEN=$BALENAOS_STAGING_TOKEN \
 		-e BALENAOS_PRODUCTION_TOKEN=$BALENAOS_PRODUCTION_TOKEN \
-		-e SLUG=$SLUG \
+		-e APPNAME=$SLUG \
 		-e DEVELOPMENT_IMAGE=$DEVELOPMENT_IMAGE \
 		-e DEPLOY_TO=$deployTo \
 		-e VERSION_HOSTOS=$VERSION_HOSTOS \
 		-e ESR=$ESR \
 		-e META_BALENA_VERSION=$META_BALENA_VERSION \
-		-v $_exported_image_path:/host/resin-image.docker \
+		-v $_exported_image_path:/host/appimage.docker \
 		--privileged \
-		resin/balena-push-env /balena-push-os-version.sh
+		${NAMESPACE}/balena-push-env /balena-push-os-version.sh
 }
 
 deploy_to_s3() {
@@ -398,7 +403,7 @@ deploy_to_s3() {
 
 	local _s3_cmd="s4cmd --access-key=${_s3_access_key} --secret-key=${_s3_secret_key}"
 	local _s3_sync_opts="--recursive --API-ACL=${_s3_policy}"
-	docker pull resin/resin-img:master
+	docker pull ${NAMESPACE}/resin-img:master
 	docker run --rm -t \
 		-e BASE_DIR=/host/images \
 		-e S3_CMD="$_s3_cmd" \
@@ -411,7 +416,7 @@ deploy_to_s3() {
 		-e DEPLOYER_UID=$(id -u) \
 		-e DEPLOYER_GID=$(id -g) \
 		-e DEVICE_STATE="$DEVICE_STATE" \
-		-v $_s3_deploy_dir:/host/images resin/resin-img:master /bin/sh -x -e -c ' \
+		-v $_s3_deploy_dir:/host/images ${NAMESPACE}/resin-img:master /bin/sh -x -e -c ' \
 			apt-get -y update
 			apt-get install -y s4cmd
 			echo "Creating and setting deployer user $DEPLOYER_UID:$DEPLOYER_GID."

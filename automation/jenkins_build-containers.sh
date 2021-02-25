@@ -5,6 +5,7 @@ set -ev
 DOCKERFILES=( Dockerfile_yocto-build-env Dockerfile_balena-push-env )
 
 REVISION=$(git rev-parse --short HEAD)
+NAMESPACE=${NAMESPACE:-resin}
 
 # Get the absolute script location
 pushd `dirname $0` > /dev/null 2>&1
@@ -20,12 +21,12 @@ for DOCKERFILE in "${DOCKERFILES[@]}"
 do
   REPO_NAME=${DOCKERFILE#"Dockerfile_"}
   # Build
-  docker build --pull --no-cache --tag resin/${REPO_NAME}:${REVISION} -f ${SCRIPTPATH}/${DOCKERFILE} ${SCRIPTPATH}
+  docker build --pull --no-cache --tag ${NAMESPACE}/${REPO_NAME}:${REVISION} -f ${SCRIPTPATH}/${DOCKERFILE} ${SCRIPTPATH}
 
   # Tag
-  docker tag resin/${REPO_NAME}:${REVISION} resin/${REPO_NAME}:latest
+  docker tag ${NAMESPACE}/${REPO_NAME}:${REVISION} ${NAMESPACE}/${REPO_NAME}:latest
 
   # Push
-  docker push resin/${REPO_NAME}:${REVISION}
-  docker push resin/${REPO_NAME}:latest
+  docker push ${NAMESPACE}/${REPO_NAME}:${REVISION}
+  docker push ${NAMESPACE}/${REPO_NAME}:latest
 done
