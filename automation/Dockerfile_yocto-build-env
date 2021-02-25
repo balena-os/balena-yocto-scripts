@@ -1,8 +1,12 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
+
+ARG DEBIAN_FRONTEND=noninteractive
 
 # Install the following utilities (required by poky)
 RUN apt-get update && apt-get install -y build-essential chrpath curl diffstat gcc-multilib gawk git-core locales \
                                          texinfo unzip wget xterm cpio file python python3 openssh-client iputils-ping iproute2 \
+                                         python3-pip python3-pexpect python3-git python3-jinja2 python3-subunit \
+                                         gawk socat xz-utils libegl1-mesa libsdl1.2-dev pylint3 mesa-common-dev debianutils \
                                          && rm -rf /var/lib/apt/lists/*
 
 # Set the locale to UTF-8 for bulding with poky morty
@@ -13,7 +17,7 @@ ENV LANG en_US.UTF-8
 RUN apt-get update && apt-get install -y apt-transport-https && rm -rf /var/lib/apt/lists/*
 RUN curl --silent https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
 ENV NODE_VERSION node_8.x
-ENV DISTRO xenial
+ENV DISTRO bionic
 RUN echo "deb https://deb.nodesource.com/$NODE_VERSION $DISTRO main" | tee /etc/apt/sources.list.d/nodesource.list &&\
   echo "deb-src https://deb.nodesource.com/$NODE_VERSION $DISTRO main" | tee -a /etc/apt/sources.list.d/nodesource.list
 RUN apt-get update && apt-get install -y jq nodejs sudo && rm -rf /var/lib/apt/lists/*
@@ -29,6 +33,13 @@ ENV DOCKER_SHA256 de4057057acd259ec38b5244a40d806993e2ca219e9869ace133fad0e09ced
 VOLUME /var/lib/docker
 RUN wget -q -O /usr/bin/docker https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_VERSION} && chmod +x /usr/bin/docker \
     && echo "${DOCKER_SHA256}" /usr/bin/docker | sha256sum -c -
+
+# Install balena-cli
+ENV BALENA_CLI_VERSION 11.35.4
+RUN curl -sSL https://github.com/balena-io/balena-cli/releases/download/v$BALENA_CLI_VERSION/balena-cli-v$BALENA_CLI_VERSION-linux-x64-standalone.zip > balena-cli.zip && \
+  unzip balena-cli.zip && \
+  mv balena-cli/* /usr/bin && \
+  rm -rf balena-cli.zip balena-cli
 
 COPY manage-docker.sh /
 COPY prepare-and-start.sh /

@@ -251,7 +251,7 @@ mkdir -p $JENKINS_SSTATE_DIR
 # Run build
 docker stop $BUILD_CONTAINER_NAME 2> /dev/null || true
 docker rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
-if ! docker_pull_helper_image "Dockerfile_yocto-build-env"; then
+if ! docker_pull_helper_image "Dockerfile_yocto-build-env" balena_yocto_scripts_revision; then
 	exit 1
 fi
 docker run ${REMOVE_CONTAINER} \
@@ -267,7 +267,7 @@ docker run ${REMOVE_CONTAINER} \
     -e DEVELOPMENT_IMAGE=$DEVELOPMENT_IMAGE \
     --name $BUILD_CONTAINER_NAME \
     --privileged \
-    ${NAMESPACE}/yocto-build-env \
+    ${NAMESPACE}/yocto-build-env:"${balena_yocto_scripts_revision}" \
     /prepare-and-start.sh \
         --log \
         --machine "$MACHINE" \
@@ -360,7 +360,7 @@ deploy_images () {
 
 deploy_to_balena() {
 	local _exported_image_path=$1
-	if ! docker_pull_helper_image "Dockerfile_balena-push-env"; then
+	if ! docker_pull_helper_image "Dockerfile_balena-push-env" balena_yocto_scripts_revision; then
 		exit 1
 	fi
 	docker run --rm -t \
@@ -375,7 +375,7 @@ deploy_to_balena() {
 		-e META_BALENA_VERSION=$META_BALENA_VERSION \
 		-v $_exported_image_path:/host/appimage.docker \
 		--privileged \
-		${NAMESPACE}/balena-push-env /balena-push-os-version.sh
+		${NAMESPACE}/balena-push-env:${balena_yocto_scripts_revision} /balena-push-os-version.sh
 }
 
 deploy_to_s3() {
