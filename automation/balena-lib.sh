@@ -22,7 +22,7 @@ docker_pull_helper_image() {
 
 	if ! docker pull "${NAMESPACE}"/"${_image_prefix}""${_image_name}":"${BALENA_YOCTO_SCRIPTS_REVISION}"; then
 		DOCKERHUB_USER="${DOCKERHUB_USER:-"balenadevices"}"
-		DOCKERHUB_PWD=${DOCKERHUB_PWD:-"balenadevicesDockerhubPassword"}
+		DOCKERHUB_PWD=${DOCKERHUB_PWD:-"${balenadevicesDockerhubPassword}"}
 		echo "Login to docker as ${DOCKERHUB_USER}"
 		docker login -u "${DOCKERHUB_USER}" -p "${DOCKERHUB_PWD}"
 		JOB_NAME="${JOB_NAME}" DOCKERFILES="${_dockerfile_name}" "${script_dir}/jenkins_build-containers.sh"
