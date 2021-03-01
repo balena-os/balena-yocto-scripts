@@ -2,21 +2,22 @@
 
 set -ev
 
-DOCKERFILES=( Dockerfile_yocto-build-env Dockerfile_balena-push-env )
+[ -z "${DOCKERFILES}" ] && DOCKERFILES=( Dockerfile_yocto-block-build-env Dockerfile_yocto-build-env Dockerfile_balena-push-env )
 
-script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-REVISION=$(cd "${script_dir}" && git rev-parse --short HEAD)
+SCRIPTPATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+REVISION=$(cd "${SCRIPTPATH}" && git rev-parse --short HEAD)
 NAMESPACE=${NAMESPACE:-resin}
 
-# Get the absolute script location
-pushd `dirname $0` > /dev/null 2>&1
-SCRIPTPATH=`pwd`
-popd > /dev/null 2>&1
+DOCKERHUB_USER="${DOCKERHUB_USER:-"balenadevices"}"
+DOCKERHUB_PWD=${DOCKERHUB_PWD:-"${balenadevicesDockerhubPassword}"}
 
 if [ -z "${JOB_NAME}" ]; then
     echo "[ERROR] No job name specified."
     exit 1
 fi
+
+echo "Login to docker as ${DOCKERHUB_USER}"
+docker login -u "${DOCKERHUB_USER}" -p "${DOCKERHUB_PWD}"
 
 for DOCKERFILE in "${DOCKERFILES[@]}"
 do
