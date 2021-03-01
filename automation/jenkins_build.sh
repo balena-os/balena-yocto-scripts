@@ -120,7 +120,7 @@ deploy_build () {
 	then
 		# package all leviathan/testbot tests from meta-balena to the deploy dir
 		# make sure they are compressed so a flattened unzip of artifacts does not fail
-		(cd "${WORKSPACE}/layers/meta-balena/tests" tar -czvf "$_deploy_dir/tests.tar.gz" .)
+		(cd "${WORKSPACE}/layers/meta-balena/tests" && tar -czvf "$_deploy_dir/tests.tar.gz" .)
 	fi
 }
 
