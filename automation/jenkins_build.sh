@@ -72,7 +72,7 @@ deploy_build () {
 	cp -v "$YOCTO_BUILD_DEPLOY/VERSION" "$_deploy_dir"
 	cp -v "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS" "$_deploy_dir"
 	cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_image-$MACHINE.manifest") "$_deploy_dir/$_image-$MACHINE.manifest"
-	cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/resin-image-$MACHINE.docker") "$_deploy_dir/resin-image.docker"
+	cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/balena-image-$MACHINE.docker") "$_deploy_dir/balena-image.docker"
 
 	test "$SLUG" = "edge" && return
 
@@ -336,7 +336,7 @@ deploy_images () {
 	# Make sure the tags are valid
 	# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
 	local _tag="$(echo $VERSION_HOSTOS$_variant-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
-	local _exported_image_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/resin-image-$MACHINE.docker)
+	local _exported_image_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/balena-image-$MACHINE.docker)
 
 	echo "[INFO] Pushing image to dockerhub $_docker_repo:$_tag..."
 
