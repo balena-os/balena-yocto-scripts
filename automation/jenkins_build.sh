@@ -14,6 +14,10 @@ print_help() {
 	\t\t\t (mandatory) Directory where to store shared downloads and shared sstate.\n
 	\t\t -b | --build-flavor\n\
 	\t\t\t (mandatory) The build flavor. (prod | dev)\n
+	\t\t -t | --bitbake-target\n\
+	\t\t\t (optional) The bitbake targets to build. If omitted the device type default image is used.\n
+	\t\t -p | --package-feed\n\
+	\t\t\t (optional) Deploy the package feed locally to the deploy folder.\n
 	\t\t -a | --additional-variable\n\
 	\t\t\t (optional) Inject additional local.conf variables. The format of the arguments needs to be VARIABLE=VALUE.\n\
 	\t\t --meta-balena-branch\n\
@@ -48,7 +52,17 @@ cleanup() {
 trap 'cleanup fail' SIGINT SIGTERM
 
 script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-source "${script_dir}/balena-lib.sh"
+source "${script_dir}/balena-lib.inc"
+
+PACKAGE_TYPE=${PACKAGE_TYPE:-ipk}
+deploy_local_feed () {
+	local _deploy_dir="$1"
+	if [ -e "${WORKSPACE}/build/tmp/deploy/${PACKAGE_TYPE}" ]; then
+		echo "[INFO]: Deploying package feed"
+		mkdir -p "$_deploy_dir/${PACKAGE_TYPE}"
+		cp -r "${WORKSPACE}/build/tmp/deploy/${PACKAGE_TYPE}" "$_deploy_dir/"
+	fi
+}
 
 deploy_build () {
 	local _deploy_dir="$1"
@@ -59,6 +73,12 @@ deploy_build () {
 	local _deploy_flasher_artifact=$(jq --raw-output '.yocto.deployFlasherArtifact // empty' $DEVICE_TYPE_JSON)
 	local _compressed=$(jq --raw-output '.yocto.compressed' $DEVICE_TYPE_JSON)
 	local _archive=$(jq --raw-output '.yocto.archive' $DEVICE_TYPE_JSON)
+
+	# Check that there are images to deploy
+	if [ ! -f $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_image-$MACHINE.manifest") ]; then
+		echo "[WARN] No artifacts to deploy."
+		return
+	fi
 
 	[ -z ${PRESERVE_BUILD} ] && rm -rf "$_deploy_dir"
 	mkdir -p "$_deploy_dir/image"
@@ -198,6 +218,29 @@ while [[ $# -ge 1 ]]; do
 		--preserve-container)
 			REMOVE_CONTAINER=""
 			;;
+		-c|--continue)
+			BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --continue"
+			;;
+		-p|--package-feed)
+			DEPLOY_PKG_FEED=1
+			;;
+		-t|--bitbake-target)
+			if [ -z "$2" ]; then
+				echo "-t|--bitbake-targer argument needs a target name"
+				exit 1
+			fi
+			BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --bitbake-target $2"
+			_cnt=1
+			for k in $(eval "echo {3..$#}"); do
+				case ${!k} in
+				-*|--*) break;;
+					*) BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} ${!k}"
+					((_cnt=_cnt+1))
+					;;
+				esac
+			done
+			shift $_cnt
+			;;
 	esac
 	shift
 done
@@ -295,9 +338,11 @@ DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
 DEVICE_STATE=$(jq --raw-output '.state' "$DEVICE_TYPE_JSON")
 META_BALENA_VERSION=$(cat layers/meta-balena/meta-balena-common/conf/distro/include/balena-os.inc | grep -m 1 DISTRO_VERSION | cut -d ' ' -f3)
 if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
-	VERSION_HOSTOS=$(cat "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS")
+	VERSION_HOSTOS=$(get_os_version)
 else
-	VERSION_HOSTOS=$(cat "$WORKSPACE/VERSION")
+	if [ -f "$WORKSPACE/VERSION" ]; then
+		VERSION_HOSTOS=$(cat "$WORKSPACE/VERSION")
+	fi
 fi
 
 API_TOKEN=$BALENAOS_STAGING_TOKEN
@@ -310,7 +355,7 @@ fi
 API_DEVICE_TYPE=$(curl -H "Authorization: Bearer ${API_TOKEN}" --silent --retry 5 \
 "${API_ENDPOINT}/v6/device_type?\$filter=slug%20eq%20%27${SLUG}%27&\$select=slug,is_private" | jq -r '.d[0]')
 
-if [ "$API_DEVICE_TYPE" = "null" ]; then 
+if [ "$API_DEVICE_TYPE" = "null" ]; then
 	echo "Device type could not be found in the API, exiting";
 	exit 1;
 fi;
@@ -321,6 +366,9 @@ PRIVATE_DT=${PRIVATE_DT:-true}
 # Jenkins artifacts
 echo "[INFO] Starting creating jenkins artifacts..."
 deploy_build "$WORKSPACE/deploy-jenkins" "true"
+if [ "${DEPLOY_PKG_FEED}" = 1 ]; then
+	deploy_local_feed "$WORKSPACE/deploy-jenkins" "true"
+fi
 
 deploy_images () {
 	local _docker_repo
