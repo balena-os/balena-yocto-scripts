@@ -49,17 +49,13 @@ mount_boot_partition() {
     local img=$1
     local __retvalue=$2
 
-    local sector_size
-    local partition_offset
-    local boot_partition_mountpoint
-
-    sector_size=$(fdisk -l "$img" | sed -n "s|Sector\ssize.*:\s\([0-9]\+\)\s.*$|\1|p")
-    partition_offset=$(fdisk -l "$img" | sed -n "s|${img}[0-9]\s\+\*\s\+\([0-9]\+\)\s\+.*$|\1|p")
+    img_loop_dev=$(losetup -fP --show "${img}")
     boot_partition_mountpoint=$(mktemp -d)
-    mount -o loop,offset=$((sector_size * partition_offset)) "$img" "$boot_partition_mountpoint"
 
-    echo "* Boot partition mounted on $boot_partition_mountpoint"
-    eval "$__retvalue='$boot_partition_mountpoint'"
+    mount "${img_loop_dev}p1" "${boot_partition_mountpoint}" > /dev/null 2>&1
+
+    echo "* Boot partition mounted on ${boot_partition_mountpoint}"
+    eval "$__retvalue='${boot_partition_mountpoint}'"
 }
 
 deploy_preload_app_to_image() {
@@ -158,7 +154,6 @@ create_aws_ami() {
                                 VolumeSize=${AMI_EBS_VOLUME_SIZE},
                                 VolumeType=${AMI_EBS_VOLUME_TYPE}}" \
     | jq -r .ImageId)
-
 
     # If the AMI creation fails, aws-cli will show the error message to the user and we won't get any imageId
     [[ -z "${image_id}" ]] && exit 1
