@@ -84,16 +84,9 @@ deploy_build () {
 	cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$_deploy_dir" || true
 	cp -v "$YOCTO_BUILD_DEPLOY/kernel_source.tar.gz" "$_deploy_dir" || true
 	cp -v "$MACHINE.svg" "$_deploy_dir/logo.svg"
-	if [ "${_compressed}" != 'true' ]; then
-		# uncompressed, just copy and we're done
-		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/balena.img"
-		if [ -n "$_deploy_flasher_artifact" ]; then
-			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_flasher_artifact") "$_deploy_dir/image/resin-flasher.img"
-		fi
-		return
-	fi
 
-	if [ "${_archive}" = 'true' ]; then
+	if [ "${_archive}" = 'true' ] && [ "${_compressed}" = 'true' ]; then
+		# Archive and we are done
 		cp -rv "$YOCTO_BUILD_DEPLOY"/"$_deploy_artifact"/* "$_deploy_dir"/image/
 		(cd "$_deploy_dir/image/" && zip -r "../$_deploy_artifact.zip" .)
 		if [ -n "$_deploy_flasher_artifact" ]; then
@@ -103,18 +96,40 @@ deploy_build () {
 		if [ "$_remove_compressed_file" = "true" ]; then
 			rm -rf $_deploy_dir/image
 		fi
-	else
-		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/balena.img"
-		(cd "$_deploy_dir/image" && zip balena.img.zip balena.img)
-		if [ -n "$_deploy_flasher_artifact" ]; then
-			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_flasher_artifact") "$_deploy_dir/image/resin-flasher.img"
-			(cd "$_deploy_dir/image" && zip resin-flasher.img.zip resin-flasher.img)
-		fi
-		if [ "$_remove_compressed_file" = "true" ]; then
-			rm -rf $_deploy_dir/image/balena.img
-			rm -rf $_deploy_dir/image/resin-flasher.img
-		fi
+		return
 	fi
+
+	cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/balena-raw.img"
+	if [ -n "$_deploy_flasher_artifact" ]; then
+		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_flasher_artifact") "$_deploy_dir/image/balena-flasher.img"
+	elif [ "$_image" = "resin-image-flasher" ]; then
+		# deployFlasherArtifact is not set and deployArtifact contains flasher
+		mv "$_deploy_dir/image/balena-raw.img" "$_deploy_dir/image/balena-flasher.img"
+	fi
+
+	# Create the unflagged balena.img for backwards compatibility
+	if [ "$_image" = "resin-image-flasher" ]; then
+		cp -v "$_deploy_dir/image/balena-flasher.img" "$_deploy_dir/image/balena.img"
+	else
+		cp -v "$_deploy_dir/image/balena-raw.img" "$_deploy_dir/image/balena.img"
+	fi
+
+	if [ "${_compressed}" != 'true' ]; then
+		# uncompressed, just copy and we're done
+		return
+	fi
+
+	for filename in balena.img balena-raw.img balena-flasher.img; do
+		if [ ! -f "$_deploy_dir/image/$filename" ]; then
+			continue
+		fi
+
+		(cd "$_deploy_dir/image" && zip "$filename.zip" "$filename")
+
+		if [ "$_remove_compressed_file" = "true" ]; then
+			rm -rf "$_deploy_dir/image/$filename"
+		fi
+	done
 
 	if [ -d "${WORKSPACE}/layers/meta-balena/tests" ]
 	then
