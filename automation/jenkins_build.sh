@@ -97,7 +97,7 @@ deploy_build () {
 	test "$SLUG" = "edge" && return
 
 	if [ "$_deploy_artifact" = "docker-image" ]; then
-		echo "[WARN] No artifacts to deploy. The images will be pushed to docker registry."
+		echo "[WARN] No artifacts to deploy. The images will be pushed to the registry."
 		return
 	fi
 
@@ -513,7 +513,6 @@ if [ "$deploy" = "yes" ]; then
 	if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
 		_exported_image_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/balena-image-$MACHINE.docker)
 		deploy_to_dockerhub "${_exported_image_path}"
-		deploy_to_balena "${_exported_image_path}" "$(balena_lib_environment)" "$(balena_lib_token)"
 	fi
 
 fi

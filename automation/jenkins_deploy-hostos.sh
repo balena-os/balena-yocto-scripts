@@ -20,7 +20,8 @@ BALENA_TOKEN=$(balena_lib_token)
 [ -z "${BALENA_TOKEN}" ] && echo "API or session token is required" && exit 1
 
 if [ "${deploy}" = "no" ]; then
-	echo "Deploy is set to no - bailing out"
+	echo "[ERROR] Deploy is set to no - bailing out"
+	echo "[ERROR] Remove the 'deploy' environment from your build job as this script always deploys to balenaCloud"
 	exit 1
 fi
 
