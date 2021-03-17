@@ -63,6 +63,131 @@ balena_lib_docker_remove_helper_images() {
 	done
 }
 
+# Output the partition table type for the specified device type
+#
+# Inputs:
+#
+# $1: Device type name
+#
+# Returns:
+# 0 on success and outputs partition table type in stdout
+# 1 on error
+#
+balena_lib_contract_get_partition_table () {
+	local _slug="${1}"
+	local _contract
+
+	_contract=$(__find_contract_by_slug "${_slug}")
+	if [ "$?" == "0" ]; then
+		echo $(cat "${_contract}" | jq -r '.partitionTable.type')
+		return 0
+	fi
+	return 1
+}
+
+# Output the storage units for the specified device type
+#
+# Inputs:
+#
+# $1: Device type name
+#
+# Returns:
+# 0 on success and outputs storage units in stdout
+# 1 on error
+#
+balena_lib_contract_get_units () {
+	local _slug="${1}"
+	local _contract
+
+	_contract=$(__find_contract_by_slug "${_slug}")
+	if [ "$?" == "0" ]; then
+		echo $(cat "${_contract}" | jq -r '.partitionTable.units')
+		return 0
+	fi
+	return 1
+}
+
+# Output the details for the specified partition name and device type
+#
+# Inputs:
+#
+# $1: Device type name
+# $2: Partition name
+#
+# Returns:
+# 0 on success and outputs partition details json in stdout
+# 1 on error
+#
+balena_lib_contract_get_part () {
+	local _slug="${1}"
+	local _part_name="${2}"
+	local _contract
+
+	_contract=$(__find_contract_by_slug "${_slug}")
+	if [ "$?" == "0" ]; then
+		echo $(cat "${_contract}" | jq -r '.partitionTable.partitions["'${_part_name}'"]')
+		return 0
+	fi
+	return 1
+}
+
+# Output a space separates list of partition names
+#
+# Inputs:
+#
+# $1: Device type name
+#
+# Returns:
+# 0 on success and outputs a space separated list of partition names in stdout
+# 1 on error
+#
+balena_lib_contract_get_partitions_list () {
+	local _slug="${1}"
+	local _contract
+
+	_contract=$(__find_contract_by_slug "${_slug}")
+	if [ "$?" == "0" ]; then
+		echo "$(cat "${_contract}" | jq -r '.partitionTable.partitions | keys_unsorted[]' | tr "\n" " ")"
+		return 0
+	fi
+	return 1
+}
+
+# Output the total image size
+#
+# Inputs:
+#
+# $1: Device type name
+#
+# Returns:
+# 0 on success and outputs a the total image size in stdout
+# 1 on error
+#
+balena_lib_contract_get_image_size () {
+	local _slug="${1}"
+	local _contract
+	local _sizes
+	local _total_size
+	local _alignment
+	local _alignments
+
+	_contract=$(__find_contract_by_slug "${_slug}")
+	if [ "$?" == "0" ]; then
+		_total_size=0
+		_sizes=$(cat "${_contract}" | jq -r '.partitionTable.partitions[].size' | tr "\n" " ")
+		for size in ${_sizes}; do
+			_total_size=$(( _total_size + size ))
+		done
+		_alignments=$(cat "${_contract}" | jq -r '.partitionTable.partitions[].alignment' | tr "\n" " ")
+		for _alignment in ${_alignments}; do
+			_total_size=$(( _total_size + _alignment ))
+		done
+		echo "${_total_size}"
+		return 0
+	fi
+	return 1
+}
+
 # Find a contract path by slug name
 #
 # Inputs:
