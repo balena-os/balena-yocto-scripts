@@ -48,6 +48,119 @@ balena_lib_docker_pull_helper_image() {
 	eval "$_retvalue"='${BALENA_YOCTO_SCRIPTS_REVISION}'
 }
 
+# Output the partition table type for the specified device type
+#
+# Inputs:
+#
+# $1: Device type name
+#
+# Returns:
+# 0 on success and outputs partition table type in stdout
+# 1 on error
+#
+balena_lib_contract_get_partition_table () {
+    local _device_type="${1}"
+    local _contract
+
+    if [ _contract=$(__find_contract_by_slug "${_device_type}") ]; then
+        echo $(echo "${_contract}" | jq -r '.data.storage.partitionTableType')
+        return 0
+    fi
+    return 1
+}
+
+# Output the storage units for the specified device type
+#
+# Inputs:
+#
+# $1: Device type name
+#
+# Returns:
+# 0 on success and outputs storage units in stdout
+# 1 on error
+#
+balena_lib_contract_get_units () {
+    local _device_type="${1}"
+    local _contract
+
+    if [ _contract=$(__find_contract_by_slug "${_device_type}") ]; then
+        echo $(echo "${_contract}" | jq -r '.data.storage.units')
+        return 0
+    fi
+    return 1
+}
+
+# Output the details for the specified partition name and device type
+#
+# Inputs:
+#
+# $1: Device type name
+# $2: Partition name
+#
+# Returns:
+# 0 on success and outputs partition details json in stdout
+# 1 on error
+#
+balena_lib_contract_get_part () {
+    local _device_type="${1}"
+    local _part_name="${2}"
+    local _contract
+
+    if [ _contract=$(__find_contract_by_slug "${_device_type}") ]; then
+        echo $(jq -r ".data.storage.partitions[${_part_name}]")
+        return 0
+    fi
+    return 1
+}
+
+# Output a space separates list of partition names
+#
+# Inputs:
+#
+# $1: Device type name
+#
+# Returns:
+# 0 on success and outputs a space separated list of partition names in stdout
+# 1 on error
+#
+balena_lib_contract_get_partitions_list () {
+    local _device_type="${1}"
+    local _contract
+
+    if [ _contract=$(__find_contract_by_slug "${_device_type}") ]; then
+        echo $(echo "${_contract}" | jq -r '.data.storage.partitions | keys[]' | tr "\n" " ")
+        return 0
+    fi
+    return 1
+}
+
+# Output the total image size
+#
+# Inputs:
+#
+# $1: Device type name
+#
+# Returns:
+# 0 on success and outputs a the total image size in stdout
+# 1 on error
+#
+balena_lib_contract_get_image_size () {
+    local _device_type="${1}"
+    local _contract
+    local _sizes
+    local _total_size=0
+
+    if [ _contract=$(__find_contract_by_slug "${_device_type}") ]; then
+        _sizes=$(echo "${_contract}" | jq -r '.data.storage.partitions[].size' | tr "\n" " ")
+        for size in ${sizes}; do
+            _total_size=$(( _total_size + size ))
+        done
+        echo "${_total_size}"
+        return 0
+    fi
+    return 1
+}
+
 # Find a contract path by slug name
 #
 # Inputs:
