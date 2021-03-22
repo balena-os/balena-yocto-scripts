@@ -322,7 +322,8 @@ PRIVATE_DT=${PRIVATE_DT:-true}
 echo "[INFO] Starting creating jenkins artifacts..."
 deploy_build "$WORKSPACE/deploy-jenkins" "true"
 
-deploy_images () {
+deploy_to_dockerhub () {
+	local _exported_image_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/balena-image-$MACHINE.docker)
 	local _docker_repo
 	local _variant=""
 	if [ "$deployTo" = "production" ]; then
@@ -336,7 +337,8 @@ deploy_images () {
 	# Make sure the tags are valid
 	# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
 	local _tag="$(echo $VERSION_HOSTOS$_variant-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
-	local _exported_image_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/balena-image-$MACHINE.docker)
+
+	balena_lib_dockerhub_login
 
 	echo "[INFO] Pushing image to dockerhub $_docker_repo:$_tag..."
 
@@ -352,8 +354,6 @@ deploy_images () {
 	if [ "$PRIVATE_DT" = "false" ]; then
 		docker push $_docker_repo:$_tag
 	fi
-	# Every image is deployed to balena
-	deploy_to_balena $_exported_image_path
 
 	docker rmi -f "$_hostapp_image"
 }
@@ -484,7 +484,9 @@ if [ "$deploy" = "yes" ]; then
 	deploy_to_s3 "$S3_BUCKET"
 
 	if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
-		deploy_images
+		_exported_image_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/balena-image-$MACHINE.docker)
+		deploy_to_dockerhub "${_exported_image_path}"
+		deploy_to_balena "${_exported_image_path}" "$(balena_lib_environment)" "$(balena_lib_token)"
 	fi
 
 fi
