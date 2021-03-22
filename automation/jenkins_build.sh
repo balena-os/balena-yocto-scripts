@@ -34,6 +34,7 @@ print_help() {
 
 script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source "${script_dir}/balena-lib.inc"
+source "${script_dir}/balena-deploy.inc"
 
 deploy_build () {
 	local _deploy_dir="$1"
@@ -311,26 +312,6 @@ deploy_to_dockerhub () {
 	docker rmi -f "$_hostapp_image"
 }
 
-deploy_to_balena() {
-	local _exported_image_path=$1
-	if ! balena_lib_docker_pull_helper_image "Dockerfile_balena-push-env" balena_yocto_scripts_revision; then
-		exit 1
-	fi
-	docker run --rm -t \
-		-e BASE_DIR=/host \
-		-e BALENAOS_STAGING_TOKEN=$BALENAOS_STAGING_TOKEN \
-		-e BALENAOS_PRODUCTION_TOKEN=$BALENAOS_PRODUCTION_TOKEN \
-		-e APPNAME=$SLUG \
-		-e DEVELOPMENT_IMAGE=$DEVELOPMENT_IMAGE \
-		-e DEPLOY_TO=$deployTo \
-		-e VERSION_HOSTOS=$VERSION_HOSTOS \
-		-e ESR=$ESR \
-		-e META_BALENA_VERSION=$META_BALENA_VERSION \
-		-v $_exported_image_path:/host/appimage.docker \
-		--privileged \
-		${NAMESPACE}/balena-push-env:${balena_yocto_scripts_revision} /balena-push-os-version.sh
-}
-
 deploy_to_s3() {
 	local _s3_bucket=$1
 	local _s3_version_hostos=$VERSION_HOSTOS
@@ -439,7 +420,7 @@ if [ "$deploy" = "yes" ]; then
 	if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
 		_exported_image_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/balena-image-$MACHINE.docker)
 		deploy_to_dockerhub "${_exported_image_path}"
-		deploy_to_balena "${_exported_image_path}" "$(balena_lib_environment)" "$(balena_lib_token)"
+		balena_deploy_hostapp "${_exported_image_path}" "$(balena_lib_environment)" "$(balena_lib_token)"
 	fi
 
 fi
