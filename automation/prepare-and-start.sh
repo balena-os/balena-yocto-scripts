@@ -1,15 +1,15 @@
 #!/bin/bash
 set -e
 
-source /manage-docker.sh
+source /balena-docker.inc
 
-trap 'cleanup fail' SIGINT SIGTERM
+trap 'balena_docker_stop fail' SIGINT SIGTERM
 
 # Create the normal user to be used for bitbake (barys)
 echo "[INFO] Creating and setting builder user $BUILDER_UID:$BUILDER_GID."
 groupadd -g $BUILDER_GID builder
-groupadd docker
-useradd -m -u $BUILDER_UID -g $BUILDER_GID -G docker builder
+if ! cat "/etc/group" | grep docker > /dev/null; then  groupadd docker; fi
+useradd -m -u $BUILDER_UID -g $BUILDER_GID -G docker builder && newgrp docker
 
 # Make the "builder" user inherit the $SSH_AUTH_SOCK variable set-up so he can use the host ssh keys for various operations
 # (like being able to clone private git repos from within bitbake using the ssh protocol)
@@ -21,9 +21,8 @@ mkdir -p /home/builder/.ssh/
 echo "StrictHostKeyChecking no" > /home/builder/.ssh/config
 
 # Start docker
-echo "[INFO] Starting docker."
-docker daemon 2> /dev/null &
-wait_docker
+balena_docker_start
+balena_docker_wait
 
 # Authenticate with Balena registry if required
 BALENAOS_ACCOUNT="balena_os"
@@ -53,5 +52,5 @@ fi
 barys_pid=$!
 wait $barys_pid || true
 
-cleanup
+balena_docker_stop
 exit 0

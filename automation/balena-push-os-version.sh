@@ -1,14 +1,13 @@
 #!/bin/bash
 set -e
 
-source /manage-docker.sh
+source /balena-docker.inc
 
-trap 'cleanup fail' SIGINT SIGTERM
+trap 'balena_docker_stop fail' SIGINT SIGTERM
 
 # Start docker
-echo "[INFO] Starting docker."
-dockerd --data-root /scratch/docker > /var/log/docker.log &
-wait_docker
+balena_docker_start "/scratch/docker" "/var/run" "/var/log/docker.log"
+balena_docker_wait
 
 _local_image=$(docker load -i /host/appimage.docker | cut -d: -f1 --complement | tr -d " " )
 BALENAOS_ACCOUNT="balena_os"
@@ -42,5 +41,5 @@ if [ "$ESR" = "true" ]; then
 	balena tag set meta-balena-base $META_BALENA_VERSION --release $_releaseID
 fi
 
-cleanup
+balena_docker_stop
 exit 0
