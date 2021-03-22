@@ -407,7 +407,7 @@ if [ "x$REMOVEBUILD" == "xyes" ]; then
     rm -rf $SCRIPTPATH/../../$BUILD_DIR
 fi
 
-BALENA_MACHINE_LAYER=$(ls ${SCRIPTPATH}/../../layers/ | grep meta-balena-)
+BALENA_MACHINE_LAYER=$(ls ${SCRIPTPATH}/../../layers/ | grep meta-balena- | grep -v -e 'meta-balena-bsp' -e 'meta-balena-distro')
 
 # Configure build
 
