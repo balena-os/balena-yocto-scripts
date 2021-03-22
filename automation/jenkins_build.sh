@@ -295,7 +295,7 @@ DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
 DEVICE_STATE=$(jq --raw-output '.state' "$DEVICE_TYPE_JSON")
 META_BALENA_VERSION=$(cat layers/meta-balena/meta-balena-common/conf/distro/include/balena-os.inc | grep -m 1 DISTRO_VERSION | cut -d ' ' -f3)
 if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
-	VERSION_HOSTOS=$(cat "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS")
+	VERSION_HOSTOS=$(balena_lib_get_os_version)
 else
 	VERSION_HOSTOS=$(cat "$WORKSPACE/VERSION")
 fi
