@@ -36,80 +36,6 @@ script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source "${script_dir}/balena-lib.inc"
 source "${script_dir}/balena-deploy.inc"
 
-deploy_build () {
-	local _deploy_dir="$1"
-	local _remove_compressed_file="$2"
-
-	local _deploy_artifact=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
-	local _image=$(jq --raw-output '.yocto.image' $DEVICE_TYPE_JSON)
-	local _deploy_flasher_artifact=$(jq --raw-output '.yocto.deployFlasherArtifact // empty' $DEVICE_TYPE_JSON)
-	local _compressed=$(jq --raw-output '.yocto.compressed' $DEVICE_TYPE_JSON)
-	local _archive=$(jq --raw-output '.yocto.archive' $DEVICE_TYPE_JSON)
-
-	[ -z ${PRESERVE_BUILD} ] && rm -rf "$_deploy_dir"
-	mkdir -p "$_deploy_dir/image"
-
-	cp -v "$DEVICE_TYPE_JSON" "$_deploy_dir/device-type.json"
-	if [ "$DEVICE_STATE" = "DISCONTINUED" ]; then
-	       echo "$SLUG is discontinued so only device-type.json will be deployed as build artifact."
-	       return
-	fi
-
-	cp -v "$YOCTO_BUILD_DEPLOY/VERSION" "$_deploy_dir"
-	cp -v "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS" "$_deploy_dir"
-	cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_image-$MACHINE.manifest") "$_deploy_dir/$_image-$MACHINE.manifest"
-	cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/balena-image-$MACHINE.docker") "$_deploy_dir/balena-image.docker"
-
-	test "$SLUG" = "edge" && return
-
-	if [ "$_deploy_artifact" = "docker-image" ]; then
-		echo "[WARN] No artifacts to deploy. The images will be pushed to docker registry."
-		return
-	fi
-
-	cp -v "$YOCTO_BUILD_DEPLOY/kernel_modules_headers.tar.gz" "$_deploy_dir" || true
-	cp -v "$YOCTO_BUILD_DEPLOY/kernel_source.tar.gz" "$_deploy_dir" || true
-	cp -v "$MACHINE.svg" "$_deploy_dir/logo.svg"
-	if [ "${_compressed}" != 'true' ]; then
-		# uncompressed, just copy and we're done
-		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/balena.img"
-		if [ -n "$_deploy_flasher_artifact" ]; then
-			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_flasher_artifact") "$_deploy_dir/image/resin-flasher.img"
-		fi
-		return
-	fi
-
-	if [ "${_archive}" = 'true' ]; then
-		cp -rv "$YOCTO_BUILD_DEPLOY"/"$_deploy_artifact"/* "$_deploy_dir"/image/
-		(cd "$_deploy_dir/image/" && zip -r "../$_deploy_artifact.zip" .)
-		if [ -n "$_deploy_flasher_artifact" ]; then
-		    cp -rv "$YOCTO_BUILD_DEPLOY"/"$_deploy_flasher_artifact"/* "$_deploy_dir"/image/
-		    (cd "$_deploy_dir/image/" && zip -r "../$_deploy_flasher_artifact.zip" .)
-		fi
-		if [ "$_remove_compressed_file" = "true" ]; then
-			rm -rf $_deploy_dir/image
-		fi
-	else
-		cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_artifact") "$_deploy_dir/image/balena.img"
-		(cd "$_deploy_dir/image" && zip balena.img.zip balena.img)
-		if [ -n "$_deploy_flasher_artifact" ]; then
-			cp -v $(readlink --canonicalize "$YOCTO_BUILD_DEPLOY/$_deploy_flasher_artifact") "$_deploy_dir/image/resin-flasher.img"
-			(cd "$_deploy_dir/image" && zip resin-flasher.img.zip resin-flasher.img)
-		fi
-		if [ "$_remove_compressed_file" = "true" ]; then
-			rm -rf $_deploy_dir/image/balena.img
-			rm -rf $_deploy_dir/image/resin-flasher.img
-		fi
-	fi
-
-	if [ -d "${WORKSPACE}/layers/meta-balena/tests" ]
-	then
-		# package all leviathan/testbot tests from meta-balena to the deploy dir
-		# make sure they are compressed so a flattened unzip of artifacts does not fail
-		(cd "${WORKSPACE}/layers/meta-balena/tests" && tar -czvf "$_deploy_dir/tests.tar.gz" .)
-	fi
-}
-
 rootdir="$( cd "$( dirname "$0" )" && pwd )/../../"
 WORKSPACE=${WORKSPACE:-$rootdir}
 ENABLE_TESTS=${ENABLE_TESTS:=false}
@@ -203,15 +129,14 @@ fi
 
 if [ "$buildFlavor" = "dev" ]; then
 	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --development-image"
-	DEVELOPMENT_IMAGE=yes
 elif [ "$buildFlavor" = "prod" ]; then
-	DEVELOPMENT_IMAGE=no
+	:
 else
 	echo "[ERROR] No such build flavor: $buildFlavor."
 	exit 1
 fi
 
-# When supervisorTag is provided, you the appropiate barys argument
+# When supervisorTag is provided, set the appropiate barys argument
 if [ "$supervisorTag" != "__ignore__" ]; then
 	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --supervisor-tag $supervisorTag"
 fi
@@ -230,7 +155,6 @@ fi
 
 "${script_dir}"/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -v "${buildFlavor}" -g "${BARYS_ARGUMENTS_VAR}"
 
-
 if [ "$ENABLE_TESTS" = true ]; then
 	# Run the test script in the device specific repository
 	if [ -f $WORKSPACE/tests/start.sh ]; then
@@ -242,185 +166,28 @@ if [ "$ENABLE_TESTS" = true ]; then
 fi
 
 # Artifacts
-YOCTO_BUILD_DEPLOY="$WORKSPACE/build/tmp/deploy/images/$MACHINE"
-DEVICE_TYPE_JSON="$WORKSPACE/$MACHINE.json"
-SLUG=$(jq --raw-output '.slug' $DEVICE_TYPE_JSON)
-DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
-DEVICE_STATE=$(jq --raw-output '.state' "$DEVICE_TYPE_JSON")
-META_BALENA_VERSION=$(cat layers/meta-balena/meta-balena-common/conf/distro/include/balena-os.inc | grep -m 1 DISTRO_VERSION | cut -d ' ' -f3)
+DEVICE_STATE=$(balena_lib_get_dt_state "${MACHINE}")
 if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
 	VERSION_HOSTOS=$(balena_lib_get_os_version)
 else
 	VERSION_HOSTOS=$(cat "$WORKSPACE/VERSION")
 fi
 
-API_TOKEN=$BALENAOS_STAGING_TOKEN
-API_ENDPOINT="https://api.balena-staging.com"
-if [ "$deployTo" = "production" ]; then
-	API_TOKEN=$BALENAOS_PRODUCTION_TOKEN
-	API_ENDPOINT="https://api.balena-cloud.com"
-fi
-
-API_DEVICE_TYPE=$(curl -H "Authorization: Bearer ${API_TOKEN}" --silent --retry 5 \
-"${API_ENDPOINT}/v6/device_type?\$filter=slug%20eq%20%27${SLUG}%27&\$select=slug,is_private" | jq -r '.d[0]')
-
-if [ "$API_DEVICE_TYPE" = "null" ]; then 
-	echo "Device type could not be found in the API, exiting";
-	exit 1;
-fi;
-
-PRIVATE_DT=$(echo $API_DEVICE_TYPE | jq '.is_private')
-PRIVATE_DT=${PRIVATE_DT:-true}
+PRIVATE_DT=$(balena_api_is_dt_private "${MACHINE}")
 
 # Jenkins artifacts
 echo "[INFO] Starting creating jenkins artifacts..."
-deploy_build "$WORKSPACE/deploy-jenkins" "true"
-
-deploy_to_dockerhub () {
-	local _exported_image_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/balena-image-$MACHINE.docker)
-	local _docker_repo
-	local _variant=""
-	if [ "$deployTo" = "production" ]; then
-		_docker_repo="${NAMESPACE}/resinos"
-	else
-		_docker_repo="${NAMESPACE}/resinos-staging"
-	fi
-	if [ "$DEVELOPMENT_IMAGE" = "yes" ]; then
-		_variant=".dev"
-	fi
-	# Make sure the tags are valid
-	# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
-	local _tag="$(echo $VERSION_HOSTOS$_variant-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
-
-	balena_lib_dockerhub_login
-
-	echo "[INFO] Pushing image to dockerhub $_docker_repo:$_tag..."
-
-	if [ ! -f $_exported_image_path ]; then
-		echo "[ERROR] The build didn't produce a valid image."
-		exit 1
-	fi
-
-	local _hostapp_image=$(docker load --quiet -i "$_exported_image_path" | cut -d: -f1 --complement | tr -d ' ')
-	docker tag "$_hostapp_image" "$_docker_repo:$_tag"
-
-	# We only push to dockerhub if it is a public image.
-	if [ "$PRIVATE_DT" = "false" ]; then
-		docker push $_docker_repo:$_tag
-	fi
-
-	docker rmi -f "$_hostapp_image"
-}
-
-deploy_to_s3() {
-	local _s3_bucket=$1
-	local _s3_version_hostos=$VERSION_HOSTOS
-	if [ "$DEVELOPMENT_IMAGE" = "yes" ]; then
-		_s3_version_hostos=$_s3_version_hostos.dev
-	else
-		_s3_version_hostos=$_s3_version_hostos.prod
-	fi
-	local _s3_deploy_dir="$WORKSPACE/deploy-s3"
-	local _s3_deploy_images_dir="$_s3_deploy_dir/$SLUG/$_s3_version_hostos"
-
-	deploy_build "$_s3_deploy_images_dir" "false"
-
-	local _s3_access_key _s3_secret_key
-	if [ "$deployTo" = "production" ]; then
-		_s3_access_key=${PRODUCTION_S3_ACCESS_KEY}
-		_s3_secret_key=${PRODUCTION_S3_SECRET_KEY}
-	elif [ "$deployTo" = "staging" ]; then
-		_s3_access_key=${STAGING_S3_ACCESS_KEY}
-		_s3_secret_key=${STAGING_S3_SECRET_KEY}
-	else
-		echo "[ERROR] Refusing to deploy to anything other than production or master."
-		exit 1
-	fi
-
-	local _s3_policy="private"
-	if [ "${PRIVATE_DT}" = "false" ]; then
-		_s3_policy="public-read"
-	fi
-
-	local _s3_cmd="s4cmd --access-key=${_s3_access_key} --secret-key=${_s3_secret_key}"
-	local _s3_sync_opts="--recursive --API-ACL=${_s3_policy}"
-	docker pull ${NAMESPACE}/resin-img:master
-	docker run --rm -t \
-		-e BASE_DIR=/host/images \
-		-e S3_CMD="$_s3_cmd" \
-		-e S3_SYNC_OPTS="$_s3_sync_opts" \
-		-e S3_BUCKET="$_s3_bucket" \
-		-e SLUG="$SLUG" \
-		-e DEPLOY_ARTIFACT="$DEPLOY_ARTIFACT" \
-		-e BUILD_VERSION="$_s3_version_hostos" \
-		-e DEVELOPMENT_IMAGE="$DEVELOPMENT_IMAGE" \
-		-e DEPLOYER_UID=$(id -u) \
-		-e DEPLOYER_GID=$(id -g) \
-		-e DEVICE_STATE="$DEVICE_STATE" \
-		-v $_s3_deploy_dir:/host/images ${NAMESPACE}/resin-img:master /bin/sh -x -e -c ' \
-			apt-get -y update
-			apt-get install -y s4cmd
-			echo "Creating and setting deployer user $DEPLOYER_UID:$DEPLOYER_GID."
-			groupadd -g $DEPLOYER_GID deployer
-			useradd -m -u $DEPLOYER_UID -g $DEPLOYER_GID deployer
-			su deployer<<EOSU
-set -ex
-echo "${BUILD_VERSION}" > "/host/images/${SLUG}/latest"
-if [ "$DEPLOY_ARTIFACT" = "docker-image" ] || [ "$DEVICE_STATE" = "DISCONTINUED" ]; then
-	echo "WARNING: No raw image prepare step for docker images only artifacts or discontinued device types."
-else
-	/usr/src/app/node_modules/.bin/ts-node /usr/src/app/scripts/prepare.ts
-fi
-if [ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ] || [ -n "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/IGNORE)" ]; then
-	touch /host/images/${SLUG}/${BUILD_VERSION}/IGNORE
-	$S3_CMD del -rf s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}
-	$S3_CMD put /host/images/${SLUG}/${BUILD_VERSION}/IGNORE s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
-	$S3_CMD $S3_SYNC_OPTS dsync /host/images/${SLUG}/${BUILD_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
-	if [ "${DEVELOPMENT_IMAGE}" = "no" ]; then
-		$S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/ --API-ACL=public-read -f
-	fi
-	$S3_CMD put /host/images/${SLUG}/${BUILD_VERSION}/logo.svg s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/ --API-ACL=public-read -f --API-ContentType=image/svg+xml
-	$S3_CMD del s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/IGNORE
-else
-	echo "WARNING: Deployment already done for ${SLUG} at version ${BUILD_VERSION}"
-fi
-EOSU
-		'
-
-}
+balena_deploy_artifacts "${MACHINE}" "$WORKSPACE/deploy-jenkins" "true"
 
 # Deploy
-
 if [ "$deploy" = "yes" ]; then
 	echo "[INFO] Starting deployment..."
 
-	if [ "$deployTo" = "production" ]; then
-		S3_BUCKET_PREFIX="resin-production-img-cloudformation"
+	balena_deploy_to_s3 "$MACHINE" "${buildFlavor}" "${ESR}" "${deployTo}"
 
-		if [ "${ESR}" =  "true" ]; then
-			S3_BUCKET_SUFFIX="esr-images"
-		else
-			S3_BUCKET_SUFFIX="images"
-		fi
-		S3_BUCKET="${S3_BUCKET_PREFIX}/${S3_BUCKET_SUFFIX}"
-
-	elif [ "$deployTo" = "staging" ]; then
-		S3_BUCKET_PREFIX="resin-staging-img"
-
-		if [ "${ESR}" =  "true" ]; then
-			S3_BUCKET_SUFFIX="esr-images"
-		else
-			S3_BUCKET_SUFFIX="images"
-		fi
-		S3_BUCKET="${S3_BUCKET_PREFIX}/${S3_BUCKET_SUFFIX}"
-	fi
-
-	deploy_to_s3 "$S3_BUCKET"
-
-	if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
-		_exported_image_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/balena-image-$MACHINE.docker)
-		deploy_to_dockerhub "${_exported_image_path}"
-		balena_deploy_hostapp "${_exported_image_path}" "$(balena_lib_environment)" "$(balena_lib_token)"
+	if [ "${_state}" != "DISCONTINUED" ]; then
+		balena_deploy_to_dockerhub "${MACHINE}"
+		balena_deploy_hostapp "${MACHINE}"
 	fi
 
 fi
