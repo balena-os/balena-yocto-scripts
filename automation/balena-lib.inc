@@ -120,6 +120,11 @@ balena_lib_login() {
 }
 
 # Login to dockerhub
+#
+# Inputs:
+# $1: Dockerhub username
+# $2: Dockerhub password
+#
 balena_lib_dockerhub_login() {
 	local _user="${1}"
 	local _pwd="${2}"
@@ -139,4 +144,83 @@ balena_lib_dockerhub_login() {
 
 	# Fallback to interactive or cached credentials
 	docker login -u "${_user}" -p "${_pwd}"
+}
+
+# Retrieve slug from device type JSON file
+#
+# Inputs:
+# $1: Device type name
+#
+# Returns:
+# 0 on success 1 on failure
+#
+# Outputs:
+# slug in stdout if successful, device type name in stdout if failed
+#
+balena_lib_get_slug() {
+	local _device_type="${1}"
+	local _slug
+	local _device_type_json="${device_dir}/${_device_type}.json"
+
+	if [ ! -f "${_device_type_json}" ]; then
+		>&2 echo "[balena_lib_get_slug]: Device type JSON not found - assuming equal to device type"
+		echo "${_device_type}"
+		return 1
+	fi
+
+	_slug=$(jq --raw-output '.slug' "${_device_type_json}")
+	echo "${_slug}"
+	return 0
+}
+
+# Retrieve deploy artifact from device type JSON file
+#
+# Inputs:
+# $1: Device type name
+#
+# Returns:
+# 0 on success 1 on failure
+#
+# Outputs:
+# deploy artifact in stdout if successful
+#
+balena_lib_get_deploy_artifact() {
+	local _device_type="${1}"
+	local _artifact
+	local _device_type_json="${device_dir}/${_device_type}.json"
+
+	if [ ! -f "${_device_type_json}" ]; then
+		>&2 echo "[balena_lib_get_deploy_artifact]: Device type JSON not found"
+		return 1
+	fi
+
+	_artifact=$(jq --raw-output '.yocto.deployArtifact' "${_device_type_json}")
+	echo "${_artifact}"
+	return 0
+}
+
+# Retrieve device state from device type JSON file
+#
+# Inputs:
+# $1: Device type name
+#
+# Returns:
+# 0 on success 1 on failure
+#
+# Outputs:
+# device state in stdout if successful
+#
+balena_lib_get_dt_state() {
+	local _device_type="${1}"
+	local _state
+	local _device_type_json="${device_dir}/${_device_type}.json"
+
+	if [ ! -f "${_device_type_json}" ]; then
+		>&2 echo "[balena_lib_get_slug]: Device type JSON not found"
+		return 1
+	fi
+
+	_state=$(jq --raw-output '.state' "${_device_type_json}")
+	echo "${_state}"
+	return 0
 }
