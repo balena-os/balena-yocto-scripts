@@ -71,7 +71,7 @@ balena_lib_environment() {
 			_api_env="balena-cloud.com"
 		fi
 	else
-		echo "Defaulting to balena-cloud.com"
+		>&2 echo "[balena_lib_environment]: Defaulting to balena-cloud.com"
 		_api_env="balena-cloud.com"
 	fi
 	export BALENARC_BALENA_URL=${_api_env}
@@ -102,21 +102,40 @@ balena_lib_token() {
 }
 
 # Logins to Balena cloud
+#
+# Inputs:
+#
+# $1: Balena API environment
+# $2: Balena API token
+# $3: Force flag to override ~/.balena/token
+#
+# Returns:
+# 0 if successful or 1 if failed
+#
 balena_lib_login() {
 	local _api_env=$1
 	local _token=$2
+	local _force=$3
 
-	[ -z "${_api_env}" ] && _api_env=$(balena_enviroment)
+	[ -z "${_api_env}" ] && _api_env=$(balena_lib_environment)
 	if [ -z "${_api_env}" ]; then
 		echo "A Balena environment is required"
-		return
+		return 1
 	fi
-	[ -z "${_token}" ] && _token=$(balena_lib_token)
 	if [ -z "${_token}" ]; then
-		echo "A Balena token is required"
-		return
+		if [ ! -f "${HOME}/.balena/token" ] || [ -n "${_force}" ];then
+			_token=$(balena_lib_token)
+			if [ -z "${_token}" ]; then
+				echo "A Balena token is required"
+				return 1
+			fi
+		else
+			>&2 echo "[balena_lib_login]: Using existing login"
+			return 0
+		fi
 	fi
 	BALENARC_BALENA_URL=${_api_env} balena login --token "${_token}"
+	return 0
 }
 
 # Login to dockerhub
