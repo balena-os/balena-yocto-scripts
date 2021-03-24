@@ -2,7 +2,6 @@
 
 set -ex
 
-BUILD_CONTAINER_NAME=yocto-build-$$
 NAMESPACE=${NAMESPACE:-resin}
 
 print_help() {
@@ -32,20 +31,6 @@ print_help() {
 	\t\t\t (optional) Is this an ESR build\n\
 \t\t\t\t Defaults to false.\n"
 }
-
-cleanup() {
-	echo "[INFO] $0: Cleanup."
-
-	# Stop docker container
-	echo "[INFO] $0: Cleaning up yocto-build container."
-	docker stop $BUILD_CONTAINER_NAME 2> /dev/null || true
-	docker rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
-
-	if [ "$1" = "fail" ]; then
-		exit 1
-	fi
-}
-trap 'cleanup fail' SIGINT SIGTERM
 
 script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source "${script_dir}/balena-lib.inc"
@@ -202,8 +187,6 @@ while [[ $# -ge 1 ]]; do
 	shift
 done
 
-JENKINS_DL_DIR=$JENKINS_PERSISTENT_WORKDIR/shared-downloads
-JENKINS_SSTATE_DIR=$JENKINS_PERSISTENT_WORKDIR/$MACHINE/sstate
 metaResinBranch=${metaResinBranch:-__ignore__}
 supervisorTag=${supervisorTag:-__ignore__}
 
@@ -244,38 +227,8 @@ else
 	popd > /dev/null 2>&1
 fi
 
-# Make sure shared directories are in place
-mkdir -p $JENKINS_DL_DIR
-mkdir -p $JENKINS_SSTATE_DIR
+"${script_dir}"/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -v "${buildFlavor}" -g "${BARYS_ARGUMENTS_VAR}"
 
-# Run build
-docker stop $BUILD_CONTAINER_NAME 2> /dev/null || true
-docker rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
-if ! balena_lib_docker_pull_helper_image "Dockerfile_yocto-build-env" balena_yocto_scripts_revision; then
-	exit 1
-fi
-docker run ${REMOVE_CONTAINER} \
-    -v $WORKSPACE:/yocto/resin-board \
-    -v $JENKINS_DL_DIR:/yocto/shared-downloads \
-    -v $JENKINS_SSTATE_DIR:/yocto/shared-sstate \
-    -v $SSH_AUTH_SOCK:/tmp/ssh-agent \
-    -e SSH_AUTH_SOCK=/tmp/ssh-agent \
-    -e BUILDER_UID=$(id -u) \
-    -e BUILDER_GID=$(id -g) \
-    -e BALENAOS_STAGING_TOKEN=$BALENAOS_STAGING_TOKEN \
-    -e BALENAOS_PRODUCTION_TOKEN=$BALENAOS_PRODUCTION_TOKEN \
-    -e DEVELOPMENT_IMAGE=$DEVELOPMENT_IMAGE \
-    --name $BUILD_CONTAINER_NAME \
-    --privileged \
-    ${NAMESPACE}/yocto-build-env:"${balena_yocto_scripts_revision}" \
-    /prepare-and-start.sh \
-        --log \
-        --machine "$MACHINE" \
-        ${BARYS_ARGUMENTS_VAR} \
-        --shared-downloads /yocto/shared-downloads \
-        --shared-sstate /yocto/shared-sstate \
-        --skip-discontinued \
-        --rm-work
 
 if [ "$ENABLE_TESTS" = true ]; then
 	# Run the test script in the device specific repository
