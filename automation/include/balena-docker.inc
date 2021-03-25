@@ -122,3 +122,35 @@ balena_docker_wait() {
   done
   __dlog "[INFO] Docker was initialized."
 }
+
+# Retrieves the specified image
+#
+# Inputs:
+#
+# $1: Image reference (local file or repository tag)
+# $2: Docker socket (defaults to /var/run/docker.sock)
+#
+# Returns:
+#
+# 0 on success, other on failure
+#
+balena_docker_image_retrieve() {
+	local _image="${1}"
+	local _docker_host="${2:-"${DOCKER_HOST}"}"
+	local _image_id
+        [ -z "${_docker_host}" ] && _docker_host="unix:///var/run/docker.sock"
+	if [ -f "${_image}" ]; then
+		if ! _image_id=$(DOCKER_HOST=${_docker_host} docker load -i "${_image}" | grep -o -E '[a-z0-9]{64}'); then
+			>&2 echo "_image_retrieve: ${_image} not loaded"
+			return 1
+		fi
+	else
+		if ! DOCKER_HOST=${_docker_host} docker pull "${_image}" > /dev/null 2>&1; then
+			>&2 echo "_image_retrieve: Failed to pull ${_image}"
+			return 1
+		fi
+		_image_id=$(DOCKER_HOST=${_docker_host} docker images --digests | grep "${_image#*@}" | tr -s " " | cut -d " " -f4)
+	fi
+	export IMAGEID=${_image_id}
+	echo "${_image_id}"
+}
