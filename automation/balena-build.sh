@@ -145,7 +145,7 @@ main() {
 		[ -z "${_device_type}" ] && echo "Device type is required" && exit 1
 
 		_api_env="${_api_env:-$(balena_lib_environment)}"
-		_token="${_token:-$(balena_lib_token)}"
+		_token="${_token:-$(balena_lib_token "${_api_env}")}"
 		_shared_dir="${_shared_dir:-"${YOCTO_DIR}"}"
 		[ -z "${_shared_dir}" ] && echo "Shared directory is required" && exit 1
 		_variant="${_variant:-"${buildFlavor}"}"
