@@ -23,6 +23,7 @@ if [ "$ESR" = "true" ]; then
 fi
 
 echo "[INFO] Pushing $_local_image to ${BALENAOS_ACCOUNT}/$APPNAME"
+balena_api_create_public_app "${APPNAME}" "${BALENARC_BALENA_URL}" "${MACHINE}" "${balenaCloudEmail}" "${balenaCloudPassword}" "${BOOTABLE}"
 _releaseID=$(balena deploy "${BALENAOS_ACCOUNT}/$APPNAME" "$_local_image" | sed -n 's/.*Release: //p')
 
 # Legacy hostapp tagging
