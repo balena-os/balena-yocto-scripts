@@ -401,3 +401,22 @@ balena_lib_get_dt_arch() {
 	echo "${_arch}"
 	return 0
 }
+
+# Fetch image label
+#
+# Inputs:
+# $1: Image ID
+# $2: Label key to look for
+#
+#
+# Output:
+#  Label value in stdout or null
+#
+balena_lib_get_label_from_image() {
+	local _image_id="${1}"
+	local _label="${2}"
+	local _value
+
+	_value=$(docker inspect "${_image_id}" | jq -r '.[].Config.Labels["'"${_label}"'"]')
+	echo "${_value}"
+}
