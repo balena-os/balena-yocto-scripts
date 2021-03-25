@@ -407,7 +407,7 @@ if [ "x$REMOVEBUILD" == "xyes" ]; then
     rm -rf $SCRIPTPATH/../../$BUILD_DIR
 fi
 
-BALENA_MACHINE_LAYER=$(ls ${SCRIPTPATH}/../../layers/ | grep meta-balena-)
+BALENA_MACHINE_LAYER=$(ls ${SCRIPTPATH}/../../layers/meta-balena*/conf/samples/bblayers.conf.sample | awk -F'/' '{print $(NF-3)}')
 
 # Configure build
 
