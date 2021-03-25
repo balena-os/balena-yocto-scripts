@@ -8,16 +8,9 @@ SCRIPTPATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 REVISION=$(cd "${SCRIPTPATH}" && git rev-parse --short HEAD)
 NAMESPACE=${NAMESPACE:-resin}
 
-DOCKERHUB_USER="${DOCKERHUB_USER:-"balenadevices"}"
-DOCKERHUB_PWD=${DOCKERHUB_PWD:-"${balenadevicesDockerhubPassword}"}
+source "${SCRIPTPATH}/balena-lib.inc"
 
-if [ -z "${JOB_NAME}" ]; then
-    echo "[ERROR] No job name specified."
-    exit 1
-fi
-
-echo "Login to docker as ${DOCKERHUB_USER}"
-docker login -u "${DOCKERHUB_USER}" -p "${DOCKERHUB_PWD}"
+balena_lib_dockerhub_login
 
 for DOCKERFILE in "${DOCKERFILES[@]}"
 do

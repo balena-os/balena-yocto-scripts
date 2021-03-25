@@ -2,7 +2,6 @@
 
 set -ex
 
-BUILD_CONTAINER_NAME=yocto-build-$$
 NAMESPACE=${NAMESPACE:-resin}
 
 print_help() {
@@ -33,22 +32,9 @@ print_help() {
 \t\t\t\t Defaults to false.\n"
 }
 
-cleanup() {
-	echo "[INFO] $0: Cleanup."
-
-	# Stop docker container
-	echo "[INFO] $0: Cleaning up yocto-build container."
-	docker stop $BUILD_CONTAINER_NAME 2> /dev/null || true
-	docker rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
-
-	if [ "$1" = "fail" ]; then
-		exit 1
-	fi
-}
-trap 'cleanup fail' SIGINT SIGTERM
-
 script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source "${script_dir}/balena-lib.inc"
+source "${script_dir}/balena-deploy.inc"
 
 deploy_build () {
 	local _deploy_dir="$1"
@@ -202,8 +188,6 @@ while [[ $# -ge 1 ]]; do
 	shift
 done
 
-JENKINS_DL_DIR=$JENKINS_PERSISTENT_WORKDIR/shared-downloads
-JENKINS_SSTATE_DIR=$JENKINS_PERSISTENT_WORKDIR/$MACHINE/sstate
 metaResinBranch=${metaResinBranch:-__ignore__}
 supervisorTag=${supervisorTag:-__ignore__}
 
@@ -244,38 +228,8 @@ else
 	popd > /dev/null 2>&1
 fi
 
-# Make sure shared directories are in place
-mkdir -p $JENKINS_DL_DIR
-mkdir -p $JENKINS_SSTATE_DIR
+"${script_dir}"/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -v "${buildFlavor}" -g "${BARYS_ARGUMENTS_VAR}"
 
-# Run build
-docker stop $BUILD_CONTAINER_NAME 2> /dev/null || true
-docker rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
-if ! balena_lib_docker_pull_helper_image "Dockerfile_yocto-build-env" balena_yocto_scripts_revision; then
-	exit 1
-fi
-docker run ${REMOVE_CONTAINER} \
-    -v $WORKSPACE:/yocto/resin-board \
-    -v $JENKINS_DL_DIR:/yocto/shared-downloads \
-    -v $JENKINS_SSTATE_DIR:/yocto/shared-sstate \
-    -v $SSH_AUTH_SOCK:/tmp/ssh-agent \
-    -e SSH_AUTH_SOCK=/tmp/ssh-agent \
-    -e BUILDER_UID=$(id -u) \
-    -e BUILDER_GID=$(id -g) \
-    -e BALENAOS_STAGING_TOKEN=$BALENAOS_STAGING_TOKEN \
-    -e BALENAOS_PRODUCTION_TOKEN=$BALENAOS_PRODUCTION_TOKEN \
-    -e DEVELOPMENT_IMAGE=$DEVELOPMENT_IMAGE \
-    --name $BUILD_CONTAINER_NAME \
-    --privileged \
-    ${NAMESPACE}/yocto-build-env:"${balena_yocto_scripts_revision}" \
-    /prepare-and-start.sh \
-        --log \
-        --machine "$MACHINE" \
-        ${BARYS_ARGUMENTS_VAR} \
-        --shared-downloads /yocto/shared-downloads \
-        --shared-sstate /yocto/shared-sstate \
-        --skip-discontinued \
-        --rm-work
 
 if [ "$ENABLE_TESTS" = true ]; then
 	# Run the test script in the device specific repository
@@ -295,7 +249,7 @@ DEPLOY_ARTIFACT=$(jq --raw-output '.yocto.deployArtifact' $DEVICE_TYPE_JSON)
 DEVICE_STATE=$(jq --raw-output '.state' "$DEVICE_TYPE_JSON")
 META_BALENA_VERSION=$(cat layers/meta-balena/meta-balena-common/conf/distro/include/balena-os.inc | grep -m 1 DISTRO_VERSION | cut -d ' ' -f3)
 if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
-	VERSION_HOSTOS=$(cat "$YOCTO_BUILD_DEPLOY/VERSION_HOSTOS")
+	VERSION_HOSTOS=$(balena_lib_get_os_version)
 else
 	VERSION_HOSTOS=$(cat "$WORKSPACE/VERSION")
 fi
@@ -322,7 +276,8 @@ PRIVATE_DT=${PRIVATE_DT:-true}
 echo "[INFO] Starting creating jenkins artifacts..."
 deploy_build "$WORKSPACE/deploy-jenkins" "true"
 
-deploy_images () {
+deploy_to_dockerhub () {
+	local _exported_image_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/balena-image-$MACHINE.docker)
 	local _docker_repo
 	local _variant=""
 	if [ "$deployTo" = "production" ]; then
@@ -336,7 +291,8 @@ deploy_images () {
 	# Make sure the tags are valid
 	# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
 	local _tag="$(echo $VERSION_HOSTOS$_variant-$SLUG | sed 's/[^a-z0-9A-Z_.-]/_/g')"
-	local _exported_image_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/balena-image-$MACHINE.docker)
+
+	balena_lib_dockerhub_login
 
 	echo "[INFO] Pushing image to dockerhub $_docker_repo:$_tag..."
 
@@ -352,30 +308,8 @@ deploy_images () {
 	if [ "$PRIVATE_DT" = "false" ]; then
 		docker push $_docker_repo:$_tag
 	fi
-	# Every image is deployed to balena
-	deploy_to_balena $_exported_image_path
 
 	docker rmi -f "$_hostapp_image"
-}
-
-deploy_to_balena() {
-	local _exported_image_path=$1
-	if ! balena_lib_docker_pull_helper_image "Dockerfile_balena-push-env" balena_yocto_scripts_revision; then
-		exit 1
-	fi
-	docker run --rm -t \
-		-e BASE_DIR=/host \
-		-e BALENAOS_STAGING_TOKEN=$BALENAOS_STAGING_TOKEN \
-		-e BALENAOS_PRODUCTION_TOKEN=$BALENAOS_PRODUCTION_TOKEN \
-		-e APPNAME=$SLUG \
-		-e DEVELOPMENT_IMAGE=$DEVELOPMENT_IMAGE \
-		-e DEPLOY_TO=$deployTo \
-		-e VERSION_HOSTOS=$VERSION_HOSTOS \
-		-e ESR=$ESR \
-		-e META_BALENA_VERSION=$META_BALENA_VERSION \
-		-v $_exported_image_path:/host/appimage.docker \
-		--privileged \
-		${NAMESPACE}/balena-push-env:${balena_yocto_scripts_revision} /balena-push-os-version.sh
 }
 
 deploy_to_s3() {
@@ -484,7 +418,9 @@ if [ "$deploy" = "yes" ]; then
 	deploy_to_s3 "$S3_BUCKET"
 
 	if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
-		deploy_images
+		_exported_image_path=$(readlink --canonicalize $WORKSPACE/build/tmp/deploy/images/$MACHINE/balena-image-$MACHINE.docker)
+		deploy_to_dockerhub "${_exported_image_path}"
+		balena_deploy_hostapp "${_exported_image_path}" "$(balena_lib_environment)" "$(balena_lib_token)"
 	fi
 
 fi
