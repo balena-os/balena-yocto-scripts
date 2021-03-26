@@ -25,6 +25,8 @@ balena_deploy_hostapp() {
 	local _variant="${5}"
 	local _balenaos_account="${6}"
 	local _app="${7}"
+	local _balenaCloudEmail="${8:-"${balenaCloudEmail}"}"
+	local _balenaCloudPassword="${9:-"${balenaCloudPassword}"}"
 	local _version
 	local _image_path
 	[ -z "${_device_type}" ] && echo "[balena_deploy_hostapp] A device type is required" && return 1
@@ -46,14 +48,16 @@ balena_deploy_hostapp() {
 
 	# shellcheck disable=SC2154
 	docker run --rm -t \
-		-e BASE_DIR=/host \
-		-e TOKEN="${_token}" \
+		-e BALENAOS_TOKEN="${_token}" \
 		-e API_ENV="${_api_env}" \
 		-e APPNAME="${_app}" \
 		-e BALENAOS_ACCOUNT="${_balenaos_account}" \
 		-e VARIANT="${_variant}" \
-		-e VERSION_HOSTOS="${_version}" \
+		-e RELEASE_VERSION="${_version}" \
 		-e ESR="${_esr}" \
+		-e MACHINE="${_device_type}" \
+		-e balenaCloudEmail="${_balenaCloudEmail}" \
+		-e balenaCloudPassword="${_balenaCloudPassword}" \
 		-e META_BALENA_VERSION="${_meta_balena_version}" \
 		-v "${_image_path}":/host/appimage.docker \
 		--privileged \
