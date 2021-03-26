@@ -80,7 +80,7 @@ balena_lib_environment() {
 
 # Output the Balena environment token according to set environment
 balena_lib_token() {
-	local _api_env
+	local _api_env="${1}"
 	[ -z "${_api_env}" ] && _api_env=$(balena_lib_environment)
 	if [ "${_api_env}" = "balena-staging.com" ]; then
 		if [ -n "${BALENAOS_STAGING_TOKEN}" ]; then
@@ -124,7 +124,7 @@ balena_lib_login() {
 	fi
 	if [ -z "${_token}" ]; then
 		if [ ! -f "${HOME}/.balena/token" ] || [ -n "${_force}" ];then
-			_token=$(balena_lib_token)
+			_token=$(balena_lib_token "${_api_env}")
 			if [ -z "${_token}" ]; then
 				echo "A Balena token is required"
 				return 1
