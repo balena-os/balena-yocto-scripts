@@ -52,13 +52,13 @@ balena_lib_docker_pull_helper_image() {
 # $1: Image name
 #
 balena_lib_docker_remove_helper_images() {
-    local _image_name="${1}"
-    local _image_ids
-    local _id
-    _image_ids=$(docker images "${NAMESPACE}/${_image_name}" --format "{{.ID}}")
-    for _id in ${_image_ids}; do
-        docker rmi -f "${_id}" || true
-    done
+	local _image_name="${1}"
+	local _image_ids
+	local _id
+	_image_ids=$(docker images "${NAMESPACE}/${_image_name}" --format "{{.ID}}")
+	for _id in ${_image_ids}; do
+		docker rmi -f "${_id}" || true
+	done
 }
 
 # Outputs to Balena environment according to Jenkins "deployTo" environment variables
@@ -91,13 +91,13 @@ balena_lib_token() {
 			_token="${BALENAOS_PRODUCTION_TOKEN}"
 		fi
 	fi
-        if [ -z "${_token}" ]; then
-            if [ -f "${HOME}/.balena/token" ]; then
-                _token="$(cat "${HOME}/.balena/token")"
-            else
-                return
-            fi
-        fi
+	if [ -z "${_token}" ]; then
+		if [ -f "${HOME}/.balena/token" ]; then
+			_token="$(cat "${HOME}/.balena/token")"
+		else
+			return
+		fi
+	fi
 	echo "${_token}"
 }
 
@@ -121,22 +121,22 @@ balena_lib_login() {
 
 # Login to dockerhub
 balena_lib_dockerhub_login() {
-    local _user="${1}"
-    local _pwd="${2}"
+	local _user="${1}"
+	local _pwd="${2}"
 
-    if [ -z "${_user}" ]; then
-        if [ -n "${JOB_NAME}" ]; then
-            _user="${DOCKERHUB_USER:-"balenadevices"}"
-            echo "Login to docker as ${_user}"
-        fi
-    fi
+	if [ -z "${_user}" ]; then
+		if [ -n "${JOB_NAME}" ]; then
+			_user="${DOCKERHUB_USER:-"balenadevices"}"
+			echo "Login to docker as ${_user}"
+		fi
+	fi
 
-    if [ -z "${_pwd}" ]; then
-        if [ -n "${JOB_NAME}" ]; then
-            _pwd=${DOCKERHUB_PWD:-"${balenadevicesDockerhubPassword}"}
-        fi
-    fi
+	if [ -z "${_pwd}" ]; then
+		if [ -n "${JOB_NAME}" ]; then
+			_pwd=${DOCKERHUB_PWD:-"${balenadevicesDockerhubPassword}"}
+		fi
+	fi
 
-    # Fallback to interactive or cached credentials
-    docker login -u "${_user}" -p "${_pwd}"
+	# Fallback to interactive or cached credentials
+	docker login -u "${_user}" -p "${_pwd}"
 }
