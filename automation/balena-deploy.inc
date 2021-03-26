@@ -3,45 +3,46 @@ set -e
 
 script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 device_dir=$(realpath "${script_dir}/../../")
-BALENA_YOCTO_SCRIPTS_REVISION=$(cd "${script_dir}" && git rev-parse --short HEAD)
 
 source "${script_dir}/balena-api.inc"
 source "${script_dir}/balena-lib.inc"
 
 # Deploys to passed container image to BalenaCloud
 # Input arguments:
-#  $1: Path to the local image to deploy
+#  $1: Device type (defaults to MACHINE environmental variable)
 #  $2: Balena environment
 #  $3: Balena API token
-#  $4: BalenaOS account (defaults to balena_os)
-#  $5: ESR release flag (default to "ESR" environment variable)
-#  $6: Development flag (defaults to DEVELOPMENT_IMAGE environment variable)
-#  $7: App name to deploy to (defaults to SLUG environment variable)
+#  $4: ESR release flag (default to "ESR" environment variable)
+#  $5: Build variant (defaults to buildFlavor environment variable)
+#  $6: BalenaOS account (defaults to balena_os)
+#  $7: App name to deploy to (defaults to specified device type)
 #
 balena_deploy_hostapp() {
-	local _image_path="${1}"
-	local _api_env="${2}"
-	local _token="${3}"
-	local _balenaos_account="${4}"
-	local _esr="${5}"
-	local _variant="${6}"
+	local _device_type="${1:-"${MACHINE}"}"
+	local _api_env="${2:-$(balena_lib_environment)}"
+	local _token="${3:-$(balena_lib_token)}"
+	local _esr="${4}"
+	local _variant="${5}"
+	local _balenaos_account="${6}"
 	local _app="${7}"
 	local _version
+	local _image_path
+	[ -z "${_device_type}" ] && echo "[balena_deploy_hostapp] A device type is required" && return 1
+	_image_path=$(readlink --canonicalize "${device_dir}/build/tmp/deploy/images/${_device_type}/balena-image-${_device_type}.docker")
 	if ! balena_lib_docker_pull_helper_image "Dockerfile_balena-push-env" balena_yocto_scripts_revision; then
 		exit 1
 	fi
 
-	[ -z "${_image_path}" ] && echo "An image is required" && return
-	[ -z "${_token}" ] && echo "A Balena token is required" && return
-	[ -z "${_api_env}" ] && echo "A Balena environment is required" && return
+	[ -z "${_token}" ] && echo "A Balena token is required" && return 1
+	[ -z "${_api_env}" ] && echo "A Balena environment is required" && return 1
 
 	_version=${VERSION_HOSTOS:-$(balena_lib_get_os_version)}
-	_app=${_app:="${MACHINE}"}
+	_app=${_app:-"${_device_type}"}
 	_esr=${_esr:-"${ESR}"}
 	_variant=${_variant:-"${buildFlavor}"}
 	_meta_balena_version=${META_BALENA_VERSION:-$(balena_lib_get_meta_balena_version)}
 	NAMESPACE=${NAMESPACE:-resin}
-        _balenaos_account="${_balenaos_account:-"balena_os"}"
+	_balenaos_account="${_balenaos_account:-"balena_os"}"
 
 	# shellcheck disable=SC2154
 	docker run --rm -t \
@@ -58,7 +59,7 @@ balena_deploy_hostapp() {
 		--privileged \
 		"${NAMESPACE}"/balena-push-env:"${balena_yocto_scripts_revision}" /balena-deploy-block.sh
 
-        balena_lib_docker_remove_helper_images "balena-push-env"
+	balena_lib_docker_remove_helper_images "balena-push-env"
 }
 
 # Deploy Jenkins build artifacts
