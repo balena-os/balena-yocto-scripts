@@ -28,7 +28,7 @@ balena_deploy_hostapp() {
 	local _version
 	local _image_path
 	[ -z "${_device_type}" ] && echo "[balena_deploy_hostapp] A device type is required" && return 1
-	_image_path=$(readlink --canonicalize "${device_dir}/build/tmp/deploy/images/${_device_type}/balena-image-${_device_type}.docker")
+	_image_path="$(readlink --canonicalize "${device_dir}/build/tmp/deploy/images/${_device_type}/balena-image-${_device_type}.docker")"
 	if ! balena_lib_docker_pull_helper_image "Dockerfile_balena-push-env" balena_yocto_scripts_revision; then
 		exit 1
 	fi
@@ -86,13 +86,14 @@ balena_deploy_artifacts () {
 	local _yocto_build_deploy
 	local _slug
 
+
 	[ ! -f "${_device_type_json}" ] && echo "[balena_deploy_artifacts] Device type JSON not found" && return
 
 	_deploy_artifact=$(jq --raw-output '.yocto.deployArtifact' "${_device_type_json}")
-	 _image=$(jq --raw-output '.yocto.image' "${_device_type_json}")
+	_image=$(jq --raw-output '.yocto.image' "${_device_type_json}")
 	_deploy_flasher_artifact=$(jq --raw-output '.yocto.deployFlasherArtifact // empty' "${_device_type_json}")
 	_compressed=$(jq --raw-output '.yocto.compressed' "${_device_type_json}")
-	_archive=$(jq --raw-output '.yocto.archive' "${_device_type_json}")
+	_archive=$(jq --raw-output '.yocto.archive' "$_device_type_json")
 	_device_state=$(jq --raw-output '.state' "${_device_type_json}")
 	_yocto_build_deploy="${device_dir}/build/tmp/deploy/images/${_device_type}"
 	_slug=$(jq --raw-output '.slug' "${_device_type_json}")
@@ -176,18 +177,21 @@ balena_deploy_to_dockerhub () {
 	local _deploy_to="${3:-"${deployTo}"}"
 	local _namespace="${4:-resin}"
 	local _version
+	local _private
+	local _docker_repo
+	local _exported_image_path
+	local _slug
+	local _tag
+	local _hostapp_image
+
+	_version=$(balena_lib_get_os_version)
 	[ -z "${_device_type}" ] && echo "[balena_deploy_to_dockerhub] Device type is required" && return 1
 	[ -z "${_variant}" ] && echo "[balena_deploy_to_dockerhub] OS variant is required" && return 1
-	_version=$(balena_lib_get_os_version)
 
-	local _private
 	_private=$(balena_api_is_dt_private "${_device_type}")
-	local _docker_repo
 
-	local _exported_image_path
 	_exported_image_path=$(readlink --canonicalize "${device_dir}/build/tmp/deploy/images/${_device_type}/balena-image-${_device_type}.docker")
 
-	local _slug
 	_slug=$(balena_lib_get_slug "${_device_type}")
 	[ -z "${_namespace}" ] && _namespace="${NAMESPACE:="resin"}"
 
@@ -202,19 +206,17 @@ balena_deploy_to_dockerhub () {
 	fi
 	# Make sure the tags are valid
 	# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
-	local _tag
 	_tag="$(echo "${_version}${_variant}-${_slug}" | sed 's/[^a-z0-9A-Z_.-]/_/g')"
 
 	balena_lib_dockerhub_login
 
 	echo "[INFO] Pushing image to dockerhub $_docker_repo:$_tag..."
 
-	if [ ! -f "$_exported_image_path" ]; then
+	if [ ! -f "${_exported_image_path}" ]; then
 		echo "[ERROR] The build didn't produce a valid image."
 		exit 1
 	fi
 
-	local _hostapp_image
 	_hostapp_image=$(docker load --quiet -i "$_exported_image_path" | cut -d: -f1 --complement | tr -d ' ')
 	docker tag "$_hostapp_image" "$_docker_repo:$_tag"
 
@@ -248,7 +250,9 @@ balena_deploy_to_s3() {
 	local _s3_bucket
 	local _s3_bucket_prefix
 	local _s3_bucket_suffix
+	local _is_private
 	local _s3_version_hostos
+
 	_slug=$(balena_lib_get_slug "${_device_type}")
 	_artifact=$(balena_lib_get_deploy_artifact "${_device_type}")
 	_state=$(balena_lib_get_dt_state "${_device_type}")
@@ -262,9 +266,9 @@ balena_deploy_to_s3() {
 
 	[ -z "${_namespace}" ] && _namespace=${NAMESPACE:-"resin"}
 	[ -z "${_esr}" ] && _esr="${_esr:-"${ESR:-false}"}"
-	_s3_version_hostos="$(balena_lib_get_os_version).${_variant}"
 	local _s3_deploy_dir="${device_dir}/deploy-s3"
 	local _s3_deploy_images_dir="$_s3_deploy_dir/$_slug/$_s3_version_hostos"
+	_s3_version_hostos="$(balena_lib_get_os_version).${_variant}"
 
 	balena_deploy_artifacts "${MACHINE}" "$_s3_deploy_images_dir" "false"
 
@@ -293,7 +297,6 @@ balena_deploy_to_s3() {
 	fi
 
 	local _s3_policy="private"
-	local _is_private
 	_is_private=$(balena_api_is_dt_private "${_device_type}")
 	if [ "${_is_private}" = "false" ]; then
 		_s3_policy="public-read"
