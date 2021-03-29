@@ -23,7 +23,7 @@ EOF
 	exit 0
 }
 
-source "${script_dir}/balena-lib.inc"
+source "${script_dir}/../automation/include/balena-lib.inc"
 
 __check_docker() {
     if ! "${DOCKER}" info > /dev/null 2>&1; then
