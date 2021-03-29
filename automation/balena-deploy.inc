@@ -20,7 +20,7 @@ source "${script_dir}/balena-lib.inc"
 balena_deploy_hostapp() {
 	local _device_type="${1:-"${MACHINE}"}"
 	local _api_env="${2:-$(balena_lib_environment)}"
-	local _token="${3:-$(balena_lib_token)}"
+	local _token="${3:-$(balena_lib_token "${_api_env}")}"
 	local _esr="${4}"
 	local _variant="${5}"
 	local _balenaos_account="${6}"
@@ -32,7 +32,7 @@ balena_deploy_hostapp() {
 	[ -z "${_device_type}" ] && echo "[balena_deploy_hostapp] A device type is required" && return 1
 	_image_path="$(readlink --canonicalize "${device_dir}/build/tmp/deploy/images/${_device_type}/balena-image-${_device_type}.docker")"
 	if ! balena_lib_docker_pull_helper_image "Dockerfile_balena-push-env" balena_yocto_scripts_revision; then
-		exit 1
+		return 1
 	fi
 
 	[ -z "${_token}" ] && echo "A Balena token is required" && return 1
@@ -218,7 +218,7 @@ balena_deploy_to_dockerhub () {
 
 	if [ ! -f "${_exported_image_path}" ]; then
 		echo "[ERROR] The build didn't produce a valid image."
-		exit 1
+		return 1
 	fi
 
 	_hostapp_image=$(docker load --quiet -i "$_exported_image_path" | cut -d: -f1 --complement | tr -d ' ')
@@ -297,7 +297,7 @@ balena_deploy_to_s3() {
 		_s3_bucket="${_s3_bucket_prefix}/${_s3_bucket_suffix}"
 	else
 		echo "[ERROR] Refusing to deploy to anything other than production or staging."
-		exit 1
+		return 1
 	fi
 
 	local _s3_policy="private"
