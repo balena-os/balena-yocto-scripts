@@ -71,7 +71,7 @@ balena_lib_environment() {
 			_api_env="balena-cloud.com"
 		fi
 	else
-		echo "Defaulting to balena-cloud.com"
+		>&2 echo "[balena_lib_environment]: Defaulting to balena-cloud.com"
 		_api_env="balena-cloud.com"
 	fi
 	export BALENARC_BALENA_URL=${_api_env}
@@ -102,24 +102,48 @@ balena_lib_token() {
 }
 
 # Logins to Balena cloud
+#
+# Inputs:
+#
+# $1: Balena API environment
+# $2: Balena API token
+# $3: Force flag to override ~/.balena/token
+#
+# Returns:
+# 0 if successful or 1 if failed
+#
 balena_lib_login() {
 	local _api_env=$1
 	local _token=$2
+	local _force=$3
 
-	[ -z "${_api_env}" ] && _api_env=$(balena_enviroment)
+	[ -z "${_api_env}" ] && _api_env=$(balena_lib_environment)
 	if [ -z "${_api_env}" ]; then
 		echo "A Balena environment is required"
-		return
+		return 1
 	fi
-	[ -z "${_token}" ] && _token=$(balena_lib_token)
 	if [ -z "${_token}" ]; then
-		echo "A Balena token is required"
-		return
+		if [ ! -f "${HOME}/.balena/token" ] || [ -n "${_force}" ];then
+			_token=$(balena_lib_token)
+			if [ -z "${_token}" ]; then
+				echo "A Balena token is required"
+				return 1
+			fi
+		else
+			>&2 echo "[balena_lib_login]: Using existing login"
+			return 0
+		fi
 	fi
 	BALENARC_BALENA_URL=${_api_env} balena login --token "${_token}"
+	return 0
 }
 
 # Login to dockerhub
+#
+# Inputs:
+# $1: Dockerhub username
+# $2: Dockerhub password
+#
 balena_lib_dockerhub_login() {
 	local _user="${1}"
 	local _pwd="${2}"
@@ -139,4 +163,83 @@ balena_lib_dockerhub_login() {
 
 	# Fallback to interactive or cached credentials
 	docker login -u "${_user}" -p "${_pwd}"
+}
+
+# Retrieve slug from device type JSON file
+#
+# Inputs:
+# $1: Device type name
+#
+# Returns:
+# 0 on success 1 on failure
+#
+# Outputs:
+# slug in stdout if successful, device type name in stdout if failed
+#
+balena_lib_get_slug() {
+	local _device_type="${1}"
+	local _slug
+	local _device_type_json="${device_dir}/${_device_type}.json"
+
+	if [ ! -f "${_device_type_json}" ]; then
+		>&2 echo "[balena_lib_get_slug]: Device type JSON not found - assuming equal to device type"
+		echo "${_device_type}"
+		return 1
+	fi
+
+	_slug=$(jq --raw-output '.slug' "${_device_type_json}")
+	echo "${_slug}"
+	return 0
+}
+
+# Retrieve deploy artifact from device type JSON file
+#
+# Inputs:
+# $1: Device type name
+#
+# Returns:
+# 0 on success 1 on failure
+#
+# Outputs:
+# deploy artifact in stdout if successful
+#
+balena_lib_get_deploy_artifact() {
+	local _device_type="${1}"
+	local _artifact
+	local _device_type_json="${device_dir}/${_device_type}.json"
+
+	if [ ! -f "${_device_type_json}" ]; then
+		>&2 echo "[balena_lib_get_deploy_artifact]: Device type JSON not found"
+		return 1
+	fi
+
+	_artifact=$(jq --raw-output '.yocto.deployArtifact' "${_device_type_json}")
+	echo "${_artifact}"
+	return 0
+}
+
+# Retrieve device state from device type JSON file
+#
+# Inputs:
+# $1: Device type name
+#
+# Returns:
+# 0 on success 1 on failure
+#
+# Outputs:
+# device state in stdout if successful
+#
+balena_lib_get_dt_state() {
+	local _device_type="${1}"
+	local _state
+	local _device_type_json="${device_dir}/${_device_type}.json"
+
+	if [ ! -f "${_device_type_json}" ]; then
+		>&2 echo "[balena_lib_get_slug]: Device type JSON not found"
+		return 1
+	fi
+
+	_state=$(jq --raw-output '.state' "${_device_type_json}")
+	echo "${_state}"
+	return 0
 }

@@ -28,3 +28,21 @@ balena_api_set_release_version () {
 		return 1
 	fi
 }
+
+balena_api_is_dt_private() {
+	local _device_type="${1}"
+	local _slug
+	local _api_env
+	local _token
+	local _is_private
+	_slug=$(balena_lib_get_slug "${_device_type}")
+	_api_env=$(balena_lib_environment)
+	_token=$(balena_lib_token)
+
+	_is_private=$(${CURL} -XGET -H "Content-type: application/json" -H "Authorization: bearer ${_token}" --silent --retry 5 "https://api.${_api_env}/${TRANSLATION}/device_type?\$filter=slug%20eq%20%27${_slug}%27&\$select=slug,is_private" | jq -r '.d[0].is_private')
+	if [ -z "${_is_private}" ] || [ "${_is_private}" = "null" ]; then
+		>&2 echo "[] Device type not found, assuming private"
+		echo "true"
+	fi
+	echo "${_is_private}"
+}
