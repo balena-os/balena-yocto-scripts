@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-device_dir=$(realpath "${script_dir}/../../")
-BALENA_YOCTO_SCRIPTS_REVISION=$(cd "${script_dir}" && git rev-parse --short HEAD)
+include_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+device_dir=$(realpath "${include_dir}/../../../")
+BALENA_YOCTO_SCRIPTS_REVISION=$(cd "${include_dir}" && git rev-parse --short HEAD)
 
 # Return the latest tag of the device repository
 balena_lib_get_os_version() {
@@ -42,7 +42,7 @@ balena_lib_docker_pull_helper_image() {
 	esac
 
 	if ! docker pull "${NAMESPACE}"/"${_image_prefix}""${_image_name}":"${BALENA_YOCTO_SCRIPTS_REVISION}"; then
-		JOB_NAME="${JOB_NAME}" DOCKERFILES="${_dockerfile_name}" "${script_dir}/jenkins_build-containers.sh"
+		JOB_NAME="${JOB_NAME}" DOCKERFILES="${_dockerfile_name}" "${include_dir}/../jenkins_build-containers.sh"
 	fi
 	eval "$_retvalue"='${BALENA_YOCTO_SCRIPTS_REVISION}'
 }

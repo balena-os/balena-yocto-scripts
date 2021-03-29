@@ -8,7 +8,7 @@ SCRIPTPATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 REVISION=$(cd "${SCRIPTPATH}" && git rev-parse --short HEAD)
 NAMESPACE=${NAMESPACE:-resin}
 
-source "${SCRIPTPATH}/balena-lib.inc"
+source "${SCRIPTPATH}/include/balena-lib.inc"
 
 balena_lib_dockerhub_login
 

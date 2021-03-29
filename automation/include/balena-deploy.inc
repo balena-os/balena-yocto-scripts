@@ -1,11 +1,11 @@
 #!/bin/bash
 set -e
 
-script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-device_dir=$(realpath "${script_dir}/../../")
+include_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+device_dir=$(realpath "${include_dir}/../../../")
 
-source "${script_dir}/balena-api.inc"
-source "${script_dir}/balena-lib.inc"
+source "${include_dir}/balena-api.inc"
+source "${include_dir}/balena-lib.inc"
 
 # Deploys to passed container image to BalenaCloud
 # Input arguments:
