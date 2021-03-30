@@ -5,6 +5,8 @@ include_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 device_dir=$(realpath "${include_dir}/../../../")
 BALENA_YOCTO_SCRIPTS_REVISION=$(cd "${include_dir}" && git rev-parse --short HEAD)
 
+NAMESPACE="${NAMESPACE:-"resin"}"
+
 # Return the latest tag of the device repository
 balena_lib_get_os_version() {
 	pushd "${device_dir}" > /dev/null 2>&1 || return
