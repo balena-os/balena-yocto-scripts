@@ -32,9 +32,9 @@ print_help() {
 \t\t\t\t Defaults to false.\n"
 }
 
-script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-source "${script_dir}/balena-lib.inc"
-source "${script_dir}/balena-deploy.inc"
+automation_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+source "${automation_dir}/include/balena-lib.inc"
+source "${automation_dir}/include/balena-deploy.inc"
 
 rootdir="$( cd "$( dirname "$0" )" && pwd )/../../"
 WORKSPACE=${WORKSPACE:-$rootdir}
@@ -153,7 +153,7 @@ else
 	popd > /dev/null 2>&1
 fi
 
-"${script_dir}"/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -v "${buildFlavor}" -g "${BARYS_ARGUMENTS_VAR}"
+"${automation_dir}"/../build/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -v "${buildFlavor}" -g "${BARYS_ARGUMENTS_VAR}"
 
 if [ "$ENABLE_TESTS" = true ]; then
 	# Run the test script in the device specific repository
