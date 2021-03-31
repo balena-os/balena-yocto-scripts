@@ -4,6 +4,12 @@ set -e
 
 DOCKER_TIMEOUT=20 # Wait 20 seconds for docker to start
 
+__dlog() {
+	if [ "${DEBUG}" = "1" ]; then
+		>&2 echo "${1}"
+	fi
+}
+
 # Starts a new docker instance
 #
 # Inputs:
@@ -38,7 +44,7 @@ balena_docker_start() {
 	[ ! -d "${_data_dir}" ] && mkdir -p "${_data_dir}"
 	[ ! -d "${_rootDir}" ] && mkdir -p "${_rootDir}"
 
-	>&2 echo "[INFO]: Starting docker: data root ${_data_dir}, base root dir ${_rootDir}, engine ${_storageEngine}"
+	__dlog "[INFO]: Starting docker: data root ${_data_dir}, base root dir ${_rootDir}"
         dockerd --data-root="${_data_dir}" --pidfile="${_rootDir}/docker.pid" --host="unix://${_rootDir}/docker.sock" --iptables=false --ip-masq=false --exec-root="${_rootDir}/ds" > "${_logfile}" 2>&1 &
         echo "unix://${_rootDir}/docker.sock ${_rootDir}/docker.pid"
 }
@@ -60,11 +66,11 @@ balena_docker_stop() {
 	local _stime
 	local _etime
 
-	echo "[INFO] Running balena_docker_stop..."
+	__dlog "[INFO] Running balena_docker_stop..."
 
 	# Stop docker gracefully
-	echo "[INFO] Stopping in container docker..."
-	if [ -f ${_pid_file} ] && [ -s ${_pid_file} ] && ps $(cat ${_pid_file}) | grep -q docker; then
+	__dlog "[INFO] Stopping in container docker..."
+	if [ -f "${_pid_file}" ] && [ -s "${_pid_file}" ] && ps "$(cat "${_pid_file}")" | grep -q docker; then
 		kill "$(cat "${_pid_file}")"
 		# Now wait for it to die
 		_stime=$(date +%s)
@@ -83,7 +89,7 @@ balena_docker_stop() {
 		>&2 echo "[WARN] Your host might have been left with unreleased resources (ex. loop devices)."
 	fi
 
-	if [ "$1" == "fail" ]; then
+	if [ "${_fail}" == "fail" ]; then
 		exit 1
 	fi
 }
@@ -102,7 +108,7 @@ balena_docker_wait() {
   local _stime
   local _etime
   local _timeout=20
-  >&2 echo "[INFO] Waiting for docker to initialize..."
+   __dlog "[INFO] Waiting for docker to initialize..."
   _stime=$(date +%s)
   _etime=$(date +%s)
   until DOCKER_HOST=${_docker_host} docker info >/dev/null 2>&1; do
@@ -114,5 +120,5 @@ balena_docker_wait() {
           exit 1
       fi
   done
-  >&2 echo "[INFO] Docker was initialized."
+  __dlog "[INFO] Docker was initialized."
 }
