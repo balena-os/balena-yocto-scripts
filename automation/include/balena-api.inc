@@ -4,6 +4,11 @@ CURL="curl -s"
 
 TRANSLATION=${TRANSLATION:-"v6"}
 
+BALENA_HOSTOS_BLOCK_CLASS="io.balena.image.class"
+BALENA_HOSTOS_BLOCK_STORE="io.balena.image.store"
+BALENA_HOSTOS_BLOCK_REQUIRES_REBOOT="io.balena.image.requires-reboot"
+BALENA_HOSTOS_BLOCK_BOOTABLE="io.balena.image.bootable"
+
 DEBUG=0
 __pp_json() {
 	if [ "${DEBUG}" = "1" ]; then
@@ -293,4 +298,311 @@ balena_api_is_dt_private() {
 		echo "true"
 	fi
 	echo "${_is_private}"
+}
+
+# Gets a release
+# Arguments:
+#
+# $1: Application name
+# $2: Release version string
+# $3: Balena target environment
+#
+# Result:
+# 	Success or failed.
+balena_api_get_release() {
+	local _appName=$1
+	local _release_version=$2
+	local _apiEnv=$3
+	local _token=$4
+	local _appID
+	local _json
+	_appID=$(balena_api_appID_from_appName "${_appName}" "${_apiEnv}" "${_token}")
+	if [ "${_appID}" = "null" ]; then
+		>&2 echo "[${_appName}] No such application"
+		return 1
+	fi
+	 __dlog "Fetch release ${_release_version} from ${_appName}"
+	 _json=$(${CURL} -XGET -H "Content-type: application/json" "https://api.${_apiEnv}/${TRANSLATION}/release?\$filter=(belongs_to__application%20eq%20${_appID})%20and%20(release_version%20eq%20%27${_release_version}%27)")
+	 echo "${_json}"
+	_result=$(echo "${_json}" | jq -e '.d[0].id')
+	return "$?"
+}
+
+# Output a space separated list of images labelled for the given store
+#
+# Inputs:
+#
+# $1: Application name
+# $2: Release version
+# $3: Store type
+# $4: Balena API environment (defaults to balena-cloud.com)
+balena_api_get_images_for_store() {
+	local _app_name="${1}"
+	local _release_version="${2}"
+	local _store="${3}"
+	local _api_env="${4:-"balena-cloud.com"}"
+	local _token="${5}"
+	local _release
+
+	if [ -z "${_app_name}" ] || [ -z "${_release_version}" ] || [ -z "${_store}" ]; then
+		return
+	fi
+
+	_release=$(balena_api_get_release "${_app_name}" "${_release_version}" "${_api_env}" "${_token}")
+	[ "${_release}" = "null " ] && return
+	_images=$(echo "${_release}" | jq -r '.d[0].composition.services[] | select(.labels["'${BALENA_HOSTOS_BLOCK_STORE}'"] == "'"${_store}"'") | .image' 2> /dev/null | tr "\n" " ")
+	echo "${_images}"
+}
+
+# Output a space separated list of images labelled with the given class
+#
+# Inputs:
+#
+# $1: Application name
+# $2: Release version
+# $3: Class type
+# $4: Balena API environment (defaults to balena-cloud.com)
+balena_api_get_images_with_class() {
+	local _app_name="${1}"
+	local _release_version="${2}"
+	local _class="${3}"
+	local _api_env="${4:-"balena-cloud.com"}"
+	local _token="${5}"
+	local _release
+
+	if [ -z "${_app_name}" ] || [ -z "${_release_version}" ] || [ -z "${_class}" ] || [ -z "${_token}" ]; then
+		return
+	fi
+
+	_release=$(balena_api_get_release "${_app_name}" "${_release_version}" "${_api_env}" "${_token}")
+	[ "${_release}" = "null " ] && return
+	_images=$(echo "${_release}" | jq -r '.d[0].composition.services[] | select(.labels["'${BALENA_HOSTOS_BLOCK_CLASS}'"] == "'"${_class}"'") | .image' 2> /dev/null | tr "\n" " ")
+	echo "${_images}"
+}
+
+# Output a space separated list of images for a given store and labelled with the given class
+#
+# Inputs:
+#
+# $1: Application name
+# $2: Release version
+# $3: Class type
+# $4: Store type
+# $5: Balena API environment (defaults to balena-cloud.com)
+# $6: Balena API token
+# $7: Bootable flag (optional, not used to filter if not provided)
+#
+balena_api_get_images_for_store_with_class() {
+	local _app_name="${1}"
+	local _release_version="${2}"
+	local _class="${3}"
+	local _store="${4}"
+	local _api_env="${5:-"balena-cloud.com"}"
+	local _token="${6}"
+	local _bootable="${7}"
+	local _release
+	local _images
+	local _json
+
+	if [ -z "${_app_name}" ] || [ -z "${_release_version}" ] || [ -z "${_class}" ] || [ -z "${_store}" ]; then
+		return
+	fi
+
+	_release=$(balena_api_get_release "${_app_name}" "${_release_version}" "${_api_env}" "${_token}")
+	[ "${_release}" = "null " ] && return
+	_json=$(echo "${_release}" | jq -r '.d[0].composition.services[] | select(.labels["'${BALENA_HOSTOS_BLOCK_CLASS}'"] == "'"${_class}"'") | select(.labels["'"${BALENA_HOSTOS_BLOCK_STORE}"'"] == "'"${_store}"'")' 2> /dev/null)
+	if [ -n "${_bootable}" ]; then
+		_json=$(echo "${_json}" | jq -r '. | select(.labels["'"${BALENA_HOSTOS_BLOCK_BOOTABLE}"'"] == "'"${_bootable}"'")' 2> /dev/null)
+	fi
+	_images=$(echo "${_json}" | jq -r '.image' 2> /dev/null | tr "\n" " ")
+	echo "${_images}"
+}
+
+# Output a space separated list of labels for a given release version
+#
+# Inputs:
+#
+# $1: Application name
+# $2: Release version
+# $3: Balena API environment (defaults to balena-cloud.com)
+balena_api_get_image_labels() {
+	local _app_name="${1}"
+	local _release_version="${2}"
+	local _api_env="${3:-"balena-cloud.com"}"
+	local _token="${4}"
+	local _labels
+
+	if [ -z "${_app_name}" ] || [ -z "${_release_version}" ]; then
+		return
+	fi
+
+	_release=$(balena_api_get_release "${_app_name}" "${_release_version}" "${_api_env}" "${_token}")
+	[ "${_release}" = "null " ] && return
+	_labels=$(echo "${_release}" | jq -r '.d[0].composition.services[].labels' | tr "\n" " ")
+	echo "${_labels}"
+}
+
+# Print application ID from application name
+# Arguments:
+#
+# $1: Application name
+# $2: Balena target environment
+#
+# Result:
+#  true in stdout if bootable, false if not
+#
+# Returns:
+#
+# 0 if the application is bootable, non-zero otherwise
+#
+balena_api_is_bootable() {
+	local _appName="$1"
+	local _apiEnv="$2"
+	local _token="$3"
+	[ -z "${_appName}" ] && >&2 echo "Application name is required" && return 1
+	local _json=""
+	local _admin=${BALENA_ADMIN:-balena_os}
+	# Unauthenticated only shows public apps
+	if [ -z "${_token}" ]; then
+		if [ -f "${HOME}/.balena/token" ]; then
+			_token=$(cat "${HOME}/.balena/token")
+		fi
+	fi
+	if [ -n "${_token}" ]; then
+		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/application?\$filter=(slug%20eq%20%27${_admin}/${_appName}%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}")
+	else
+		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/application?\$filter=(slug%20eq%20%27${_admin}/${_appName}%27)" -H "Content-Type: application/json")
+	fi
+	__pp_json "${_json}"
+	echo "${_json}" | jq -r '.d[0].is_host'
+	return 0
+}
+
+# Print UUID from public application name
+# Arguments:
+#
+# $1: Application name
+# $2: Balena target environment
+#
+# Result:
+# Prints the application UUID or null if it does not exist
+balena_api_get_appUUID_from_appName() {
+	local _appName="$1"
+	local _apiEnv="$2"
+	[ -z "${_appName}" ] && >&2 echo "Application name is required" && return 1
+	local _appUUID=""
+	local _json=""
+	local _admin=${BALENA_ADMIN:-balena_os}
+	_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/application?\$filter=(slug%20eq%20%27${_admin}/${_appName}%27)" -H "Content-Type: application/json")
+	__pp_json "${_json}"
+	_appUUID=$(echo "${_json}" | jq --raw-output ".d[0].uuid")
+	dlog "[${_appName}] Application UUID is ${_appUUID}"
+	echo "${_appUUID}"
+}
+
+# Fetch the releases at a specific release version
+# Arguments:
+#
+# $1: Public application name
+# $2: Balena target environment
+# $3: Release version string
+#
+# Result:
+# Prints the release metadata in JSON format
+balena_api_fetch_release_json() {
+	local _appName="$1"
+	local _apiEnv="$2"
+	local _version="$3"
+	local _json=""
+	local _selector=""
+
+	# Get application ID from application name
+	_appID=$(balena_api_appID_from_appName "${_appName}" "${_apiEnv}")
+
+	_selector="%20and%20(release_version%20eq%20%27${_version}%27)"
+	_json=$(${CURL} -XGET -H "Content-Type: application/json" "https://api.${_apiEnv}/${TRANSLATION}/release?\$filter=(belongs_to__application%20eq%20${_appID})${_selector}")
+	__pp_json "${_json}"
+	echo "${_json}"
+}
+
+# Get release database ID from public application name for a specific release
+# Arguments:
+#
+# $1: Application name
+# $2: Release version label
+# $3: Balena API environment
+#
+# Result:
+# Prints the release database ID in stdout
+__get_dbid_from_app_name() {
+	local _appName="${1}"
+	local _version="${2}"
+	local _apiEnv="${3}"
+	local _appID=""
+	local _dbID=""
+
+	__dlog "[__get_dbid_from_app_name] Fetching images from ${_appName}, release ${_version}"
+
+	# Fetch release database identifier from application with specified release version
+	_dbID=$(balena_api_fetch_release_json "${_appName}" "${_apiEnv}" "${_version}" | jq --raw-output '.d[0].id')
+	echo "${_dbID}"
+}
+
+# Fetch image location for a specific release
+# Arguments:
+#
+# $1: Application name
+# $2: Balena target environment
+# $3: BalenaOS version
+#
+# Result:
+# Prints the releases metadata in JSON format
+balena_api_fetch_image_json() {
+	local _appName="$1"
+	local _apiEnv="$2"
+	local _version="$3"
+	local _json=""
+	local _dbID
+
+	_dbID=$(__get_dbid_from_app_name "${_appName}" "${_version}" "${_apiEnv}")
+	if [ "${_dbID}" = "null" ]; then
+		>&2 echo "[${_appName}] No such release ${_version} in ${_apiEnv}"
+		return
+	fi
+
+	_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/image?%24expand=is_part_of__release(%24expand=release)&%24filter=is_part_of__release/release%20eq%20${_dbID}" -H "Content-Type:application/json")
+	__pp_json "${_json}"
+	echo "${_json}"
+}
+
+# Get image registry location from a public application name for a specific release
+# Arguments:
+#
+# $1: Application name
+# $2: Release version label
+# $3: Balena API environment
+#
+# Result:
+# Prints the image location in stdout
+balena_api_fetch_image_from_app() {
+	local _appName="${1}"
+	local _version="${2}"
+	local _apiEnv="${3}"
+	local _imageLocation=""
+	local _imageDigest=""
+	local _json=""
+
+	_json=$(balena_api_fetch_image_json "${_appName}" "${_apiEnv}" "${_version}")
+        [ -z "${_json}" ] && return
+	if ! echo "${_json}" | jq -e '.d[0].id' > /dev/null 2>&1; then
+		>&2 echo "[${_appName}]: ${_version} not found in ${_apiEnv}"
+		return
+	fi
+
+	# Get locations for image associated with it
+	_imageLocation=$(echo "${_json}" | jq --raw-output '.d[0].is_stored_at__image_location')
+	_imageDigest=$(echo "${_json}" | jq  --raw-output '.d[0].content_hash')
+
+	__dlog "Image is ${_imageLocation}@${_imageDigest}"
+	echo "${_imageLocation}@${_imageDigest}"
 }
