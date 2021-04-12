@@ -20,11 +20,12 @@ balena_api_set_release_version () {
 	local _token=$3
 	local _release_version=$4
 	local _result
-	echo "[INFO] Setting release version of ${_releaseID} to ${_release_version}"
 	_result=$(${CURL} -XPATCH -H "Content-type: application/json" -H "Authorization: Bearer ${_token}" "https://api.${_apiEnv}/${TRANSLATION}/release?\$filter=commit%20eq%20'${_releaseID}'" -d "{\"release_version\": \"${_release_version}\"}")
 	if [ "${_result}" = "OK" ]; then
+		echo "[INFO] Setting release version of ${_releaseID} to ${_release_version}"
 		return 0
 	else
+		echo "[ERROR] Failed to set release version of ${_releaseID} - is ${_release_version} unique?"
 		return 1
 	fi
 }
