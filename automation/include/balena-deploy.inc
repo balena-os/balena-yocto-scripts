@@ -267,12 +267,12 @@ balena_deploy_to_s3() {
 		echo "[balena_deploy_to_s3] Invalid variant ${_variant}"
 		return 1
 	fi
+	_s3_version_hostos="$(balena_lib_get_os_version).${_variant}"
 
 	[ -z "${_namespace}" ] && _namespace=${NAMESPACE:-"resin"}
 	[ -z "${_esr}" ] && _esr="${_esr:-"${ESR:-false}"}"
 	local _s3_deploy_dir="${device_dir}/deploy-s3"
 	local _s3_deploy_images_dir="$_s3_deploy_dir/$_slug/$_s3_version_hostos"
-	_s3_version_hostos="$(balena_lib_get_os_version).${_variant}"
 
 	balena_deploy_artifacts "${MACHINE}" "$_s3_deploy_images_dir" "false"
 
