@@ -5,7 +5,7 @@ set -ev
 [ -z "${DOCKERFILES}" ] && DOCKERFILES=( Dockerfile_yocto-block-build-env Dockerfile_yocto-build-env Dockerfile_balena-push-env )
 
 SCRIPTPATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-REVISION=$(cd "${SCRIPTPATH}" && git rev-parse --short HEAD)
+REVISION=$(cd "${SCRIPTPATH}" && git rev-parse --short=7 HEAD)
 NAMESPACE=${NAMESPACE:-resin}
 
 source "${SCRIPTPATH}/include/balena-lib.inc"
