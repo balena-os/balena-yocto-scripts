@@ -245,3 +245,24 @@ balena_lib_get_dt_state() {
 	echo "${_state}"
 	return 0
 }
+
+# Provide a contract slug given a Yocto machine type
+#
+# Inputs:
+# $1: Yocto machine
+#
+# Output:
+# Contract slug in srdout
+#
+balena_lib_resolve_aliases() {
+	local _device_type="${1}"
+
+	case "${_device_type}" in
+		"genericx86-64") echo "intel-nuc" ;;
+		"raspberrypi") echo "raspberry-pi" ;;
+		"raspberrypi2") echo "raspberry-pi2" ;;
+		"beaglebone") echo "beaglebone-black" ;;
+		"edison") echo "intel-edison" ;;
+		*) echo "${_device_type}";;
+	esac
+}
