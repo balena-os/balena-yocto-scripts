@@ -3,7 +3,7 @@ set -e
 
 include_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 device_dir=$(realpath "${include_dir}/../../../")
-BALENA_YOCTO_SCRIPTS_REVISION=$(cd "${include_dir}" && git rev-parse --short HEAD)
+BALENA_YOCTO_SCRIPTS_REVISION=$(cd "${include_dir}" && git rev-parse --short=7 HEAD || true)
 
 NAMESPACE="${NAMESPACE:-"resin"}"
 

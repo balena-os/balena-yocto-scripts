@@ -18,7 +18,6 @@ Usage: ${script_name} [OPTIONS]
     -i Bitbake targets (default to the device type default, balena-image or balena-image-flasher)
     -g Barys extra arguments
     -h Display usage
-    -v Verbose output
 EOF
 	exit 0
 }
@@ -72,6 +71,10 @@ balena_build_run_barys() {
     mkdir -p "${_sstate_dir}"
     [ -n "${_bitbake_args}" ] && _bitbake_args="--bitbake-args ${_bitbake_args}"
     [ -n "${_bitbake_targets}" ] && _bitbake_targets="--bitbake-target ${_bitbake_targets}"
+    DEVELOPMENT_IMAGE="no"
+    if [ "${_variant}" = "dev" ]; then
+	DEVELOPMENT_IMAGE="yes"
+    fi
 
     _token=${_token:-"$(balena_lib_token)"}
 
@@ -94,7 +97,7 @@ balena_build_run_barys() {
         -e BUILDER_UID="$(id -u)" \
         -e BUILDER_GID="$(id -g)" \
         -e BALENA_TOKEN="${_token}" \
-        -e DEVELOPMENT_IMAGE="${_variant}" \
+        -e DEVELOPMENT_IMAGE="${DEVELOPMENT_IMAGE}" \
         --name $BUILD_CONTAINER_NAME \
         --privileged \
         "${_namespace}"/yocto-build-env:"${balena_yocto_scripts_revision}" \
@@ -126,7 +129,7 @@ main() {
 		usage
 		exit 1
 	else
-		while getopts "hv:d:a:t:s:v:b:i:g:" c; do
+		while getopts "hd:a:t:s:v:b:i:g:" c; do
 			case "${c}" in
 				d) _device_type="${OPTARG}";;
 				a) _api_env="${OPTARG}";;
