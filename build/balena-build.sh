@@ -89,6 +89,7 @@ balena_build_run_barys() {
     if ! balena_lib_docker_pull_helper_image "Dockerfile_yocto-build-env" balena_yocto_scripts_revision; then
             exit 1
     fi
+    [ -z "${SSH_AUTH_SOCK}" ] && echo "No SSH_AUTH_SOCK in environment - private repositories won't be accessible to the builder" && SSH_AUTH_SOCK="/dev/null"
     ${DOCKER} run ${__docker_run_args} \
         -v "${work_dir}":/yocto/resin-board \
         -v "${_dl_dir}":/yocto/shared-downloads \
