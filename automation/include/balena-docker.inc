@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
@@ -45,8 +45,8 @@ balena_docker_start() {
 	[ ! -d "${_rootDir}" ] && mkdir -p "${_rootDir}"
 
 	__dlog "[INFO]: Starting docker: data root ${_data_dir}, base root dir ${_rootDir}"
-        dockerd --data-root="${_data_dir}" --pidfile="${_rootDir}/docker.pid" --host="unix://${_rootDir}/docker.sock" --iptables=false --ip-masq=false --exec-root="${_rootDir}/ds" > "${_logfile}" 2>&1 &
-        echo "unix://${_rootDir}/docker.sock ${_rootDir}/docker.pid"
+	dockerd --data-root="${_data_dir}" --pidfile="${_rootDir}/docker.pid" --host="unix://${_rootDir}/docker.sock" --iptables=false --ip-masq=false --exec-root="${_rootDir}/ds" > "${_logfile}" 2>&1 &
+	echo "unix://${_rootDir}/docker.sock ${_rootDir}/docker.pid"
 }
 
 # Terminate the dockerd daemon
@@ -76,7 +76,10 @@ balena_docker_stop() {
 		_stime=$(date +%s)
 		_etime=$(date +%s)
 		while [ -f "${_pid_file}" ] && [ -s "${_pid_file}" ] && ps "$(cat "${_pid_file}")" | grep -q docker; do
-			if [ $(( _etime - _stime )) -le "${_timeout}" ]; then
+			# shellcheck disable=SC2003
+			# shellcheck disable=SC2006
+			# Bitbake requires this syntax
+			if [ "`expr "$_etime" - "$_stime"`" -le "${_timeout}" ]; then
 				sleep 1
 				_etime=$(date +%s)
 			else
@@ -87,10 +90,9 @@ balena_docker_stop() {
 	else
 		>&2 echo "[WARN] Can't stop docker container."
 		>&2 echo "[WARN] Your host might have been left with unreleased resources (ex. loop devices)."
-	fi
-
-	if [ "${_fail}" == "fail" ]; then
-		exit 1
+		if [ "${_fail}" = "fail" ]; then
+			exit 1
+		fi
 	fi
 }
 
@@ -104,21 +106,24 @@ balena_docker_stop() {
 # 0 on success, 1 and exit in case of failure
 #
 balena_docker_wait() {
-  local _docker_host=${1:-"unix:///var/run/docker.sock"}
-  local _stime
-  local _etime
-  local _timeout=20
-   __dlog "[INFO] Waiting for docker to initialize..."
-  _stime=$(date +%s)
-  _etime=$(date +%s)
-  until DOCKER_HOST=${_docker_host} docker info >/dev/null 2>&1; do
-      if [ $(( _etime - _stime )) -le ${_timeout} ]; then
-          sleep 1
-          _etime=$(date +%s)
-      else
-          >&2 echo "[ERROR] Timeout while waiting for docker to come up."
-          exit 1
-      fi
-  done
-  __dlog "[INFO] Docker was initialized."
+	local _docker_host=${1:-"unix:///var/run/docker.sock"}
+	local _stime
+	local _etime
+	local _timeout=20
+	__dlog "[INFO] Waiting for docker to initialize..."
+	_stime=$(date +%s)
+	_etime=$(date +%s)
+	until DOCKER_HOST=${_docker_host} docker info >/dev/null 2>&1; do
+		# shellcheck disable=SC2003
+		# shellcheck disable=SC2006
+		# Bitbake requires this syntax
+		if [ "`expr "$_etime" - "$_stime"`" -le ${_timeout} ]; then
+			sleep 1
+			_etime=$(date +%s)
+		else
+			>&2 echo "[ERROR] Timeout while waiting for docker to come up."
+			exit 1
+		fi
+	done
+	__dlog "[INFO] Docker was initialized."
 }
