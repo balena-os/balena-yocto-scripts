@@ -62,20 +62,21 @@ balena_docker_start() {
 balena_docker_stop() {
 	local _fail="${1:-"noexit"}"
 	local _pid_file=${2:-"/var/run/docker.pid"}
-	local _timeout=${3:-20}
+	local _pname=${3:-"docker"}
+	local _timeout=${4:-20}
 	local _stime
 	local _etime
 
 	__dlog "[INFO] Running balena_docker_stop..."
 
 	# Stop docker gracefully
-	__dlog "[INFO] Stopping in container docker..."
-	if [ -f "${_pid_file}" ] && [ -s "${_pid_file}" ] && ps "$(cat "${_pid_file}")" | grep -q docker; then
+	__dlog "[INFO] Stopping in container ${_pname}..."
+	if [ -f "${_pid_file}" ] && [ -s "${_pid_file}" ] && ps "$(cat "${_pid_file}")" | grep -q "${_pname}"; then
 		kill "$(cat "${_pid_file}")"
 		# Now wait for it to die
 		_stime=$(date +%s)
 		_etime=$(date +%s)
-		while [ -f "${_pid_file}" ] && [ -s "${_pid_file}" ] && ps "$(cat "${_pid_file}")" | grep -q docker; do
+		while [ -f "${_pid_file}" ] && [ -s "${_pid_file}" ] && ps "$(cat "${_pid_file}")" | grep -q "${_pname}"; do
 			# shellcheck disable=SC2003
 			# shellcheck disable=SC2006
 			# Bitbake requires this syntax
@@ -83,12 +84,12 @@ balena_docker_stop() {
 				sleep 1
 				_etime=$(date +%s)
 			else
-				>&2 echo "[ERROR] Timeout while waiting for in container docker to die."
+				>&2 echo "[ERROR] Timeout while waiting for in container ${_pname} to die."
 				exit 1
 			fi
 		done
 	else
-		>&2 echo "[WARN] Can't stop docker container."
+		>&2 echo "[WARN] Can't stop ${_pname}."
 		>&2 echo "[WARN] Your host might have been left with unreleased resources (ex. loop devices)."
 		if [ "${_fail}" = "fail" ]; then
 			exit 1
@@ -107,13 +108,14 @@ balena_docker_stop() {
 #
 balena_docker_wait() {
 	local _docker_host=${1:-"unix:///var/run/docker.sock"}
+	local _pname="${2:-"docker"}"
 	local _stime
 	local _etime
 	local _timeout=20
-	__dlog "[INFO] Waiting for docker to initialize..."
+	__dlog "[INFO] Waiting for ${_pname} to initialize..."
 	_stime=$(date +%s)
 	_etime=$(date +%s)
-	until DOCKER_HOST=${_docker_host} docker info >/dev/null 2>&1; do
+	until DOCKER_HOST=${_docker_host} ${_pname} info >/dev/null 2>&1; do
 		# shellcheck disable=SC2003
 		# shellcheck disable=SC2006
 		# Bitbake requires this syntax
@@ -121,9 +123,9 @@ balena_docker_wait() {
 			sleep 1
 			_etime=$(date +%s)
 		else
-			>&2 echo "[ERROR] Timeout while waiting for docker to come up."
+			>&2 echo "[ERROR] Timeout while waiting for ${_pname} to come up."
 			exit 1
 		fi
 	done
-	__dlog "[INFO] Docker was initialized."
+	__dlog "[INFO] ${_pname} was initialized."
 }
