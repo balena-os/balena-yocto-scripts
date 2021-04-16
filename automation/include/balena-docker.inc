@@ -63,7 +63,8 @@ balena_docker_start() {
 balena_docker_stop() {
 	local _fail="${1:-"noexit"}"
 	local _pid_file=${2:-"/var/run/docker.pid"}
-	local _timeout=${3:-20}
+	local _pname=${3:-"docker"}
+	local _timeout=${4:-20}
 	local _stime
 	local _etime
 
@@ -71,12 +72,12 @@ balena_docker_stop() {
 
 	# Stop docker gracefully
 	__dlog "[INFO] Stopping in container docker..."
-	if [ -f "${_pid_file}" ] && [ -s "${_pid_file}" ] && ps "$(cat "${_pid_file}")" | grep -q docker; then
+	if [ -f "${_pid_file}" ] && [ -s "${_pid_file}" ] && ps "$(cat "${_pid_file}")" | grep -q "${_pname}"; then
 		kill "$(cat "${_pid_file}")"
 		# Now wait for it to die
 		_stime=$(date +%s)
 		_etime=$(date +%s)
-		while [ -f "${_pid_file}" ] && [ -s "${_pid_file}" ] && ps "$(cat "${_pid_file}")" | grep -q docker; do
+		while [ -f "${_pid_file}" ] && [ -s "${_pid_file}" ] && ps "$(cat "${_pid_file}")" | grep -q "${_pname}"; do
 			# shellcheck disable=SC2003
 			# shellcheck disable=SC2006
 			# Bitbake requires this syntax
