@@ -26,13 +26,13 @@ RUN apt-get update && apt-get install -y jq nodejs sudo && rm -rf /var/lib/apt/l
 RUN apt-get update && apt-get install -y dos2unix && rm -rf /var/lib/apt/lists/*
 
 # Install docker
-# https://docs.docker.com/engine/install/ubuntu/
-RUN apt-get update && apt-get install -y iptables procps e2fsprogs xfsprogs xz-utils git kmod apt-transport-https ca-certificates curl gnupg lsb-release && rm -rf /var/lib/apt/lists/*
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
-echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-RUN apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io && rm -rf /var/lib/apt/lists/*
+# https://github.com/docker/docker/blob/master/project/PACKAGERS.md#runtime-dependencies
+RUN apt-get update && apt-get install -y iptables procps e2fsprogs xfsprogs xz-utils git kmod && rm -rf /var/lib/apt/lists/*
+ENV DOCKER_VERSION 1.10.1
+ENV DOCKER_SHA256 de4057057acd259ec38b5244a40d806993e2ca219e9869ace133fad0e09cedf2
 VOLUME /var/lib/docker
+RUN wget -q -O /usr/bin/docker https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_VERSION} && chmod +x /usr/bin/docker \
+    && echo "${DOCKER_SHA256}" /usr/bin/docker | sha256sum -c -
 
 # Install balena-cli
 ENV BALENA_CLI_VERSION 11.35.4
@@ -41,7 +41,7 @@ RUN curl -sSL https://github.com/balena-io/balena-cli/releases/download/v$BALENA
   mv balena-cli/* /usr/bin && \
   rm -rf balena-cli.zip balena-cli
 
-COPY include/balena-docker.inc /
+COPY include/balena-docker.inc include/manage-docker.sh /
 COPY entry_scripts/prepare-and-start.sh /
 
 WORKDIR /work
