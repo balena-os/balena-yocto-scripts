@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+set -x
 
 DOCKER_TIMEOUT=20 # Wait 20 seconds for docker to start
 

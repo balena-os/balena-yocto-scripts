@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 CURL="curl -s"
 
 TRANSLATION=${TRANSLATION:-"v6"}
