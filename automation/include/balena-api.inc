@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 CURL="curl -s"
 
 script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
