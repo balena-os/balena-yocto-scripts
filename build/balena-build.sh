@@ -51,11 +51,12 @@ balena_build_run_barys() {
     local _device_type="${1}"
     local _shared_dir="${2}"
     local _variant="${3}"
-    local _token="${4}"
-    local _bitbake_args="${5}"
-    local _bitbake_targets="${6}"
-    local _barys_args="${7}"
-    local _docker_run_args="${8:-"--rm"}"
+    local _api_env="${4:-"balena-cloud.com"}"
+    local _token="${5}"
+    local _bitbake_args="${6}"
+    local _bitbake_targets="${7}"
+    local _barys_args="${8}"
+    local _docker_run_args="${9:-"--rm"}"
     local _dl_dir
     local _sstate_dir
     local _namespace="${NAMESPACE:-"resin"}"
@@ -107,6 +108,7 @@ balena_build_run_barys() {
             ${_bitbake_args} \
             ${_bitbake_targets} \
             ${_barys_args} \
+	    -a BALENA_API_ENV=${_api_env} \
             --shared-downloads /yocto/shared-downloads \
             --shared-sstate /yocto/shared-sstate \
             --skip-discontinued \
@@ -154,7 +156,7 @@ main() {
 		_variant="${_variant:-"${buildFlavor}"}"
 		[ -z "${_variant}" ] && echo "Variant is required" && exit 1
 
-                balena_build_run_barys "${_device_type}" "${_shared_dir}" "${_variant}" "${_token}" "${_bitbake_args}" "${_bitbake_targets}" "${_barys_args}"
+                balena_build_run_barys "${_device_type}" "${_shared_dir}" "${_variant}" "${_api_env}" "${_token}" "${_bitbake_args}" "${_bitbake_targets}" "${_barys_args}"
 	fi
 }
 
