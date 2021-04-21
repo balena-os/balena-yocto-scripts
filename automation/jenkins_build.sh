@@ -91,7 +91,7 @@ while [[ $# -ge 1 ]]; do
 				echo "--meta-balena-branch argument needs a meta-balena branch name (if this option is not used, the default value is __ignore__)"
 				exit 1
 			fi
-			metaResinBranch="${metaResinBranch:-$2}"
+			metaBalenaBranch="${metaBalenaBranch:-$2}"
 			;;
 		--supervisor-release)
 			if [ -z "$2" ]; then
@@ -114,7 +114,7 @@ while [[ $# -ge 1 ]]; do
 	shift
 done
 
-metaResinBranch=${metaResinBranch:-__ignore__}
+metaBalenaBranch=${metaBalenaBranch:-__ignore__}
 supervisorRelease=${supervisorRelease:-__ignore__}
 
 # Sanity checks
@@ -142,14 +142,14 @@ if [ "$supervisorRelease" != "__ignore__" ]; then
 fi
 
 # Checkout meta-balena
-if [ "$metaResinBranch" = "__ignore__" ]; then
+if [ "$metaBalenaBranch" = "__ignore__" ]; then
 	echo "[INFO] Using the default meta-balena revision (as configured in submodules)."
 else
 	echo "[INFO] Using special meta-balena revision from build params."
 	pushd $WORKSPACE/layers/meta-balena > /dev/null 2>&1
 	git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
 	git fetch --all
-	git checkout --force $metaResinBranch
+	git checkout --force $metaBalenaBranch
 	popd > /dev/null 2>&1
 fi
 
