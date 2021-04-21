@@ -22,7 +22,7 @@ BUILD_DIR=build
 REMOVEBUILD=no
 COMPRESS=no
 DEVELOPMENT_IMAGE=no
-SUPERVISOR_TAG=
+SUPERVISOR_VERSION=
 SHARED_DOWNLOADS=
 SHARED_SSTATE=
 DRY_RUN=no
@@ -75,8 +75,8 @@ function help {
     echo -e "\t\t The format of the arguments need to be VARIABLE=VALUE ."
     echo -e "\t\t VALUE doesn't support white spaces."
 
-    echo -e "\t--supervisor-tag"
-    echo -e "\t\t Use a specific supervisor tag."
+    echo -e "\t--supervisor-release"
+    echo -e "\t\t Use a specific supervisor release version."
     echo -e "\t\t Default: production."
 
     echo -e "\t-r | --remove-build"
@@ -257,11 +257,11 @@ while [[ $# -ge 1 ]]; do
 	    done
 	    shift $_cnt
             ;;
-        --supervisor-tag)
+        --supervisor-release)
             if [ -z "$2" ]; then
                 log ERROR "\"$1\" argument needs a value."
             fi
-            SUPERVISOR_TAG=$2
+            SUPERVISOR_VERSION=$2
             shift
             ;;
         -r|--remove-build)
@@ -340,9 +340,9 @@ while [[ $# -ge 1 ]]; do
                 [Yy]* ) DEVELOPMENT_IMAGE=yes;;
             esac
 
-            read -p "Supervisor version? [$SUPERVISOR_TAG] " yn
+            read -p "Supervisor version? [$SUPERVISOR_VERSION] " yn
             if [ -n "$yn" ]; then
-                SUPERVISOR_TAG=$yn
+                SUPERVISOR_VERSION=$yn
             fi
 
             read -p "Remove build directory? yes/[no] " yn
@@ -423,7 +423,7 @@ if [ "z$LOG" == "zyes" ]; then
     echo "Shared downloads directory: $SHARED_DOWNLOADS" >> $LOGFILE
     echo "Shared sstate directory: $SHARED_SSTATE" >> $LOGFILE
     echo "Development image? $DEVELOPMENT_IMAGE" >> $LOGFILE
-    echo "Forced supervisor image tag: $SUPERVISOR_TAG" >> $LOGFILE
+    echo "Forced supervisor image release version: $SUPERVISOR_VERSION" >> $LOGFILE
     echo "Inherit rm_work? $RM_WORK" >> $LOGFILE
     echo "Enable build history? $BUILD_HISTORY" >> $LOGFILE
     echo "================"`basename "$0"`" HEADER STOP=====================" >> $LOGFILE
@@ -462,10 +462,10 @@ fi
 if [ -n "$SHARED_SSTATE" ]; then
     sed -i "s#.*SSTATE_DIR ?=.*#SSTATE_DIR ?= \"$SHARED_SSTATE\"#g" conf/local.conf
 fi
-if [ -n "$SUPERVISOR_TAG" ]; then
-    grep -q 'SUPERVISOR_TAG ?=' conf/local.conf \
-    && sed -i "s/.*SUPERVISOR_TAG ?=.*/SUPERVISOR_TAG ?= \"$SUPERVISOR_TAG\"/g" conf/local.conf \
-    || echo "SUPERVISOR_TAG ?= $SUPERVISOR_TAG" >> conf/local.conf
+if [ -n "$SUPERVISOR_VERSION" ]; then
+    grep -q 'SUPERVISOR_VERSION ?=' conf/local.conf \
+    && sed -i "s/.*SUPERVISOR_VERSION ?=.*/SUPERVISOR_VERSION ?= \"$SUPERVISOR_VERSION\"/g" conf/local.conf \
+    || echo 'SUPERVISOR_VERSION ?= "'"${SUPERVISOR_VERSION}"'"' >> conf/local.conf
 fi
 
 perl -i -pe 'BEGIN {$/ = undef}; s/^\n# Barys: Additional variables.*//sm' conf/local.conf
