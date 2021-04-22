@@ -25,10 +25,10 @@ EOF
 source "${script_dir}/../automation/include/balena-lib.inc"
 
 __check_docker() {
-    if ! "${DOCKER}" info > /dev/null 2>&1; then
-        return 1
-    fi
-    return 0
+	if ! "${DOCKER}" info > /dev/null 2>&1; then
+		return 1
+	fi
+	return 0
 }
 
 BUILD_CONTAINER_NAME=yocto-build-$$
@@ -48,71 +48,74 @@ docker_build_cleanup() {
 trap 'docker_build_cleanup fail' SIGINT SIGTERM
 
 balena_build_run_barys() {
-    local _device_type="${1}"
-    local _shared_dir="${2}"
-    local _variant="${3}"
-    local _token="${4}"
-    local _bitbake_args="${5}"
-    local _bitbake_targets="${6}"
-    local _barys_args="${7}"
-    local _docker_run_args="${8:-"--rm"}"
-    local _dl_dir
-    local _sstate_dir
-    local _namespace="${NAMESPACE:-"resin"}"
+	local _device_type="${1}"
+	local _shared_dir="${2}"
+	local _variant="${3}"
+	local _api_env="${4:-"balena-cloud.com"}"
+	local _token="${5}"
+	local _bitbake_args="${6}"
+	local _bitbake_targets="${7}"
+	local _barys_args="${8}"
+	local _docker_run_args="${9:-"--rm"}"
+	local _dl_dir
+	local _sstate_dir
+	local _namespace="${NAMESPACE:-"resin"}"
 
-    [ -z "${_device_type}" ] && echo "Device type is required"  && exit 1
-    [ -z "${_shared_dir}" ] && echo "Shared directory path is required"  && exit 1
-    [ -z "${_variant}" ] && echo "Variant is required"  && exit 1
-    [ -z "${_bitbake_args}" ] && _bitbake_args=""
-    [ -z "${_bitbake_targets}" ] && _bitbake_targets=""
-    _dl_dir="${_shared_dir}/shared-downloads"
-    _sstate_dir="${_shared_dir}/${_device_type}/sstate"
-    mkdir -p "${_dl_dir}"
-    mkdir -p "${_sstate_dir}"
-    [ -n "${_bitbake_args}" ] && _bitbake_args="--bitbake-args ${_bitbake_args}"
-    [ -n "${_bitbake_targets}" ] && _bitbake_targets="--bitbake-target ${_bitbake_targets}"
-    DEVELOPMENT_IMAGE="no"
-    if [ "${_variant}" = "dev" ]; then
-	DEVELOPMENT_IMAGE="yes"
-    fi
+	[ -z "${_device_type}" ] && echo "Device type is required"  && exit 1
+	[ -z "${_shared_dir}" ] && echo "Shared directory path is required"  && exit 1
+	[ -z "${_variant}" ] && echo "Variant is required"  && exit 1
+	[ -z "${_bitbake_args}" ] && _bitbake_args=""
+	[ -z "${_bitbake_targets}" ] && _bitbake_targets=""
+	_dl_dir="${_shared_dir}/shared-downloads"
+	_sstate_dir="${_shared_dir}/${_device_type}/sstate"
+	mkdir -p "${_dl_dir}"
+	mkdir -p "${_sstate_dir}"
+	[ -n "${_bitbake_args}" ] && _bitbake_args="--bitbake-args ${_bitbake_args}"
+	[ -n "${_bitbake_targets}" ] && _bitbake_targets="--bitbake-target ${_bitbake_targets}"
+	DEVELOPMENT_IMAGE="no"
+	if [ "${_variant}" = "dev" ]; then
+		DEVELOPMENT_IMAGE="yes"
+	fi
 
-    _token=${_token:-"$(balena_lib_token)"}
+	_token=${_token:-"$(balena_lib_token)"}
 
-    if ! __check_docker; then
-	    echo "Docker needs to be installed"
-	    exit 1
-    fi
+	if ! __check_docker; then
+		echo "Docker needs to be installed"
+		exit 1
+	fi
 
-    "${DOCKER}" stop $BUILD_CONTAINER_NAME 2> /dev/null || true
-    "${DOCKER}" rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
-    if ! balena_lib_docker_pull_helper_image "Dockerfile_yocto-build-env" balena_yocto_scripts_revision; then
-            exit 1
-    fi
-    ${DOCKER} run ${__docker_run_args} \
-        -v "${work_dir}":/yocto/resin-board \
-        -v "${_dl_dir}":/yocto/shared-downloads \
-        -v "${_sstate_dir}":/yocto/shared-sstate \
-        -v "${SSH_AUTH_SOCK}":/tmp/ssh-agent \
-        -e SSH_AUTH_SOCK=/tmp/ssh-agent \
-        -e BUILDER_UID="$(id -u)" \
-        -e BUILDER_GID="$(id -g)" \
-        -e BALENA_TOKEN="${_token}" \
-        -e DEVELOPMENT_IMAGE="${DEVELOPMENT_IMAGE}" \
-        --name $BUILD_CONTAINER_NAME \
-        --privileged \
-        "${_namespace}"/yocto-build-env:"${balena_yocto_scripts_revision}" \
-        /prepare-and-start.sh \
-            --log \
-            --machine "${_device_type}" \
-            ${_bitbake_args} \
-            ${_bitbake_targets} \
-            ${_barys_args} \
-            --shared-downloads /yocto/shared-downloads \
-            --shared-sstate /yocto/shared-sstate \
-            --skip-discontinued \
-            --rm-work
+	"${DOCKER}" stop $BUILD_CONTAINER_NAME 2> /dev/null || true
+	"${DOCKER}" rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
+	if ! balena_lib_docker_pull_helper_image "Dockerfile_yocto-build-env" balena_yocto_scripts_revision; then
+		exit 1
+	fi
+	[ -z "${SSH_AUTH_SOCK}" ] && echo "No SSH_AUTH_SOCK in environment - private repositories won't be accessible to the builder" && SSH_AUTH_SOCK="/dev/null"
+	${DOCKER} run --rm -t ${__docker_run_args} \
+		-v "${work_dir}":/yocto/resin-board \
+		-v "${_dl_dir}":/yocto/shared-downloads \
+		-v "${_sstate_dir}":/yocto/shared-sstate \
+		-v "${SSH_AUTH_SOCK}":/tmp/ssh-agent \
+		-e SSH_AUTH_SOCK=/tmp/ssh-agent \
+		-e BUILDER_UID="$(id -u)" \
+		-e BUILDER_GID="$(id -g)" \
+		-e BALENA_TOKEN="${_token}" \
+		-e DEVELOPMENT_IMAGE="${DEVELOPMENT_IMAGE}" \
+		--name $BUILD_CONTAINER_NAME \
+		--privileged \
+		"${_namespace}"/yocto-build-env:"${balena_yocto_scripts_revision}" \
+		/prepare-and-start.sh \
+		--log \
+		--machine "${_device_type}" \
+		${_bitbake_args} \
+		${_bitbake_targets} \
+		${_barys_args} \
+		-a BALENA_API_ENV=${_api_env} \
+		--shared-downloads /yocto/shared-downloads \
+		--shared-sstate /yocto/shared-sstate \
+		--skip-discontinued \
+		--rm-work
 
-    balena_lib_docker_remove_helper_images "yocto-build-env"
+	balena_lib_docker_remove_helper_images "yocto-build-env"
 }
 
 main() {
@@ -154,7 +157,7 @@ main() {
 		_variant="${_variant:-"${buildFlavor}"}"
 		[ -z "${_variant}" ] && echo "Variant is required" && exit 1
 
-                balena_build_run_barys "${_device_type}" "${_shared_dir}" "${_variant}" "${_token}" "${_bitbake_args}" "${_bitbake_targets}" "${_barys_args}"
+		balena_build_run_barys "${_device_type}" "${_shared_dir}" "${_variant}" "${_api_env}" "${_token}" "${_bitbake_args}" "${_bitbake_targets}" "${_barys_args}"
 	fi
 }
 
