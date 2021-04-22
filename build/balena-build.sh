@@ -84,6 +84,10 @@ balena_build_run_barys() {
 		exit 1
 	fi
 
+	pushd "${script_dir}"
+	git submodule status
+	popd
+
 	"${DOCKER}" stop $BUILD_CONTAINER_NAME 2> /dev/null || true
 	"${DOCKER}" rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
 	if ! balena_lib_docker_pull_helper_image "Dockerfile_yocto-build-env" balena_yocto_scripts_revision; then
