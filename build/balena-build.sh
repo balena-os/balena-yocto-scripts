@@ -10,13 +10,13 @@ usage() {
 	cat <<EOF
 Usage: ${script_name} [OPTIONS]
     -d Device type name
-    -a Balena API environment
-    -t Balena API token
     -s Shared build directory
     -v BalenaOS variant (dev | prod)
-    -b Bitbake arguments
-    -i Bitbake targets (default to the device type default, balena-image or balena-image-flasher)
-    -g Barys extra arguments
+    -i Bitbake targets (defaults to the device type default, balena-image or balena-image-flasher)
+    -b Bitbake arguments (optional, for example '-b "-c cleanall"')
+    -g Barys extra arguments (optional, for example '-g "-a VARIABLE=value"')
+    -a Balena API environment (defaults to "balena-cloud.com")
+    -t Balena API token (optional - private apps access)
     -h Display usage
 EOF
 	exit 0
@@ -60,6 +60,7 @@ balena_build_run_barys() {
 	local _dl_dir
 	local _sstate_dir
 	local _namespace="${NAMESPACE:-"resin"}"
+	local _development_image
 
 	[ -z "${_device_type}" ] && echo "Device type is required"  && exit 1
 	[ -z "${_shared_dir}" ] && echo "Shared directory path is required"  && exit 1
@@ -72,9 +73,8 @@ balena_build_run_barys() {
 	mkdir -p "${_sstate_dir}"
 	[ -n "${_bitbake_args}" ] && _bitbake_args="--bitbake-args ${_bitbake_args}"
 	[ -n "${_bitbake_targets}" ] && _bitbake_targets="--bitbake-target ${_bitbake_targets}"
-	DEVELOPMENT_IMAGE="no"
 	if [ "${_variant}" = "dev" ]; then
-		DEVELOPMENT_IMAGE="yes"
+		_development_image="-d"
 	fi
 
 	_token=${_token:-"$(balena_lib_token)"}
@@ -83,6 +83,11 @@ balena_build_run_barys() {
 		echo "Docker needs to be installed"
 		exit 1
 	fi
+
+	pushd "${work_dir}"
+	printf "Submodule details:\n\n"
+	git submodule status
+	popd
 
 	"${DOCKER}" stop $BUILD_CONTAINER_NAME 2> /dev/null || true
 	"${DOCKER}" rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
@@ -99,13 +104,13 @@ balena_build_run_barys() {
 		-e BUILDER_UID="$(id -u)" \
 		-e BUILDER_GID="$(id -g)" \
 		-e BALENA_TOKEN="${_token}" \
-		-e DEVELOPMENT_IMAGE="${DEVELOPMENT_IMAGE}" \
 		--name $BUILD_CONTAINER_NAME \
 		--privileged \
 		"${_namespace}"/yocto-build-env:"${balena_yocto_scripts_revision}" \
 		/prepare-and-start.sh \
 		--log \
 		--machine "${_device_type}" \
+		${_development_image} \
 		${_bitbake_args} \
 		${_bitbake_targets} \
 		${_barys_args} \
