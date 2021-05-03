@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y build-essential chrpath curl diffstat g
 RUN locale-gen en_US.UTF-8
 ENV LANG en_US.UTF-8
 
-# Additional host packages required by resin
-RUN apt-get update && apt-get install -y apt-transport-https && rm -rf /var/lib/apt/lists/*
+# Additional host packages required by balena
+RUN apt-get update && apt-get install -y apt-transport-https iptables iproute2 procps uidmap && rm -rf /var/lib/apt/lists/*
 RUN curl --silent https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
 ENV NODE_VERSION node_8.x
 ENV DISTRO bionic
