@@ -1,10 +1,6 @@
 #!/bin/bash
 set -e
 
-source /balena-docker.inc
-
-trap 'balena_docker_stop fail' SIGINT SIGTERM
-
 INSTALL_DIR="/work"
 
 # Create the normal user to be used for bitbake (barys)
@@ -21,10 +17,6 @@ echo 'Defaults env_keep += "SSH_AUTH_SOCK"' > /etc/sudoers.d/ssh-auth-sock
 # (not disabling it will make this script fail because /home/builder/.ssh/known_hosts file is empty)
 mkdir -p /home/builder/.ssh/
 echo "StrictHostKeyChecking no" > /home/builder/.ssh/config
-
-# Start docker
-balena_docker_start
-balena_docker_wait
 
 # Authenticate with Balena registry if required
 BALENAOS_ACCOUNT="balena_os"
@@ -54,5 +46,4 @@ fi
 barys_pid=$!
 wait $barys_pid || true
 
-balena_docker_stop
 exit 0
