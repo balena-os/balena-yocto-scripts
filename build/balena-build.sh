@@ -95,7 +95,7 @@ balena_build_run_barys() {
 		exit 1
 	fi
 	[ -z "${SSH_AUTH_SOCK}" ] && echo "No SSH_AUTH_SOCK in environment - private repositories won't be accessible to the builder" && SSH_AUTH_SOCK="/dev/null"
-	${DOCKER} run --rm -t ${__docker_run_args} \
+	${DOCKER} run --rm ${__docker_run_args} \
 		-v "${work_dir}":/yocto/resin-board \
 		-v "${_dl_dir}":/yocto/shared-downloads \
 		-v "${_sstate_dir}":/yocto/shared-sstate \
