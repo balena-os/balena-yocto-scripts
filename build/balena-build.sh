@@ -17,6 +17,7 @@ Usage: ${script_name} [OPTIONS]
     -g Barys extra arguments (optional, for example '-g "-a VARIABLE=value"')
     -a Balena API environment (defaults to "balena-cloud.com")
     -t Balena API token (optional - private apps access)
+    -k Keep local containers (optional- by default container iamges are removed)
     -h Display usage
 EOF
 	exit 0
@@ -53,10 +54,11 @@ balena_build_run_barys() {
 	local _variant="${3}"
 	local _api_env="${4:-"balena-cloud.com"}"
 	local _token="${5}"
-	local _bitbake_args="${6}"
-	local _bitbake_targets="${7}"
-	local _barys_args="${8}"
-	local _docker_run_args="${9:-"--rm"}"
+	local _keep_helpers="${6}"
+	local _bitbake_args="${7}"
+	local _bitbake_targets="${8}"
+	local _barys_args="${9}"
+	local _docker_run_args="${10:-"--rm"}"
 	local _dl_dir
 	local _sstate_dir
 	local _namespace="${NAMESPACE:-"resin"}"
@@ -95,8 +97,8 @@ balena_build_run_barys() {
 		exit 1
 	fi
 	[ -z "${SSH_AUTH_SOCK}" ] && echo "No SSH_AUTH_SOCK in environment - private repositories won't be accessible to the builder" && SSH_AUTH_SOCK="/dev/null"
-	${DOCKER} run --rm -t ${__docker_run_args} \
-		-v "${work_dir}":/yocto/resin-board \
+	${DOCKER} run --rm ${__docker_run_args} \
+		-v "${work_dir}":/work \
 		-v "${_dl_dir}":/yocto/shared-downloads \
 		-v "${_sstate_dir}":/yocto/shared-sstate \
 		-v "${SSH_AUTH_SOCK}":/tmp/ssh-agent \
@@ -120,24 +122,27 @@ balena_build_run_barys() {
 		--skip-discontinued \
 		--rm-work
 
-	balena_lib_docker_remove_helper_images "yocto-build-env"
+	if [ "${_keep_helpers}" = "0" ]; then
+		balena_lib_docker_remove_helper_images "yocto-build-env"
+	fi
 }
 
 main() {
 	local _device_type
 	local _api_env
-	local _token
+	local _token="none"
 	local _shared_dir
 	local _variant
 	local _bitbake_args
 	local _bitbake_targets
 	local _barys_args
+	local _keep_helpers=0
 	## Sanity checks
 	if [ ${#} -lt 1 ] ; then
 		usage
 		exit 1
 	else
-		while getopts "hd:a:t:s:v:b:i:g:" c; do
+		while getopts "hd:a:t:s:v:b:i:g:k" c; do
 			case "${c}" in
 				d) _device_type="${OPTARG}";;
 				a) _api_env="${OPTARG}";;
@@ -147,6 +152,7 @@ main() {
 				b) _bitbake_args="${OPTARG}" ;;
 				i) _bitbake_targets="${OPTARG}" ;;
 				g) _barys_args="${OPTARG}" ;;
+				k) _keep_helpers=1 ;;
 				h) usage;;
 				*) usage;exit 1;;
 			esac
@@ -162,7 +168,7 @@ main() {
 		_variant="${_variant:-"${buildFlavor}"}"
 		[ -z "${_variant}" ] && echo "Variant is required" && exit 1
 
-		balena_build_run_barys "${_device_type}" "${_shared_dir}" "${_variant}" "${_api_env}" "${_token}" "${_bitbake_args}" "${_bitbake_targets}" "${_barys_args}"
+		balena_build_run_barys "${_device_type}" "${_shared_dir}" "${_variant}" "${_api_env}" "${_token}" "${_keep_helpers}" "${_bitbake_args}" "${_bitbake_targets}" "${_barys_args}"
 	fi
 }
 

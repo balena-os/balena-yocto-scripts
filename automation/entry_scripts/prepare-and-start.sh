@@ -1,9 +1,7 @@
 #!/bin/bash
 set -e
 
-source /balena-docker.inc
-
-trap 'balena_docker_stop fail' SIGINT SIGTERM
+INSTALL_DIR="/work"
 
 # Create the normal user to be used for bitbake (barys)
 echo "[INFO] Creating and setting builder user $BUILDER_UID:$BUILDER_GID."
@@ -19,10 +17,6 @@ echo 'Defaults env_keep += "SSH_AUTH_SOCK"' > /etc/sudoers.d/ssh-auth-sock
 # (not disabling it will make this script fail because /home/builder/.ssh/known_hosts file is empty)
 mkdir -p /home/builder/.ssh/
 echo "StrictHostKeyChecking no" > /home/builder/.ssh/config
-
-# Start docker
-balena_docker_start
-balena_docker_wait
 
 # Authenticate with Balena registry if required
 BALENAOS_ACCOUNT="balena_os"
@@ -44,13 +38,12 @@ sudo -H -u builder git config --get user.email
 
 # Start barys with all the arguments requested
 echo "[INFO] Running build as builder user..."
-if [ -d /yocto/resin-board/balena-yocto-scripts ]; then
-    sudo -H -u builder /yocto/resin-board/balena-yocto-scripts/build/barys $@ &
+if [ -d "${INSTALL_DIR}/balena-yocto-scripts" ]; then
+    sudo -H -u builder "${INSTALL_DIR}/balena-yocto-scripts/build/barys" $@ &
 else
-    sudo -H -u builder /yocto/resin-board/resin-yocto-scripts/build/barys $@ &
+    sudo -H -u builder "${INSTALL_DIR}/resin-yocto-scripts/build/barys" $@ &
 fi
 barys_pid=$!
 wait $barys_pid || true
 
-balena_docker_stop
 exit 0
