@@ -44,4 +44,4 @@ RUN curl -sSL https://github.com/balena-io/balena-cli/releases/download/v$BALENA
 COPY include/balena-docker.inc /
 COPY entry_scripts/prepare-and-start.sh /
 
-WORKDIR /yocto/resin-board
+WORKDIR /work
