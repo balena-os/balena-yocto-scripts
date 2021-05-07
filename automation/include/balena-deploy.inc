@@ -66,6 +66,39 @@ balena_deploy_hostapp() {
 	balena_lib_docker_remove_helper_images "balena-push-env"
 }
 
+add_test_suite () {
+	local config_js="${1}"
+	local suite_path="${2}"
+
+	# skip this dir if a suite.js is not present
+	[ -f "${suite_path}/suite.js" ] || return
+
+	# source suite.env if present to allow overrides
+	# shellcheck disable=SC1091
+	. "${suite_path}/suite.env" || true
+
+	# write the javascript blob assuming there will be another element to follow
+	# if not the final close/open brackets will be replaced with the array closure
+	cat << EOF >> "${config_js}"
+	deviceType: \`${JOB_NAME#yocto-}\`,
+	suite: \`\${__dirname}/../suites/$(basename "${suite_path}")\`,
+	config: {
+		networkWired: ${NETWORK_WIRED:-false},
+		networkWireless: ${NETWORK_WIRELESS:-true},
+		downloadType: '${DOWNLOAD_TYPE:-local}',
+		interactiveTests: ${INTERACTIVE_TESTS:-false},
+		apiUrl: '${API_URL:-balena-cloud.com}',
+	},
+	image: \`\${__dirname}/${IMAGE:-my-image.img.gz}\`,
+	workers: {
+		balenaApplication: '${BALENA_APPLICATION:-testbot-rig}',
+		apiKey: process.env.BALENA_CLOUD_API_KEY,
+	},
+	},
+	{
+EOF
+}
+
 # Deploy Jenkins build artifacts
 #
 # Inputs:
@@ -160,6 +193,19 @@ balena_deploy_artifacts () {
 
 	if [ -d "${device_dir}/layers/meta-balena/tests" ]
 	then
+		local config_js="${WORKSPACE}/layers/meta-balena/tests/suites/config.js"
+		# create a new config.js manifest file to be read by leviathan (js NOT json)
+		echo -e 'module.exports = [{' > "${config_js}"
+		# for each dir in tests/suites/* add the suite to the manifest
+		for suite_path in "${WORKSPACE}"/layers/meta-balena/tests/suites/*/
+		do
+			add_test_suite "${config_js}" "${suite_path}"
+		done
+		# delete the last two lines of the manifest file, which should be },\n{
+		sed -e :a -e '$d;N;2,2ba' -e 'P;D' -i "${config_js}"
+		# add the closing of the array and the object
+		echo '}];' >> "${config_js}"
+
 		# package all leviathan/testbot tests from meta-balena to the deploy dir
 		# make sure they are compressed so a flattened unzip of artifacts does not fail
 		(cd "${device_dir}/layers/meta-balena/tests" && tar -czvf "$_deploy_dir/tests.tar.gz" .)
