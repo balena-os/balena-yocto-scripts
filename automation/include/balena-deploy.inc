@@ -2,7 +2,7 @@
 set -e
 
 include_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-device_dir=$(realpath "${include_dir}/../../../")
+device_dir=$( if cat /proc/self/cgroup | grep -q docker; then if [ -d "/work" ]; then cd "/work" && pwd; fi; else cd "${include_dir}/../../.." && pwd; fi )
 
 source "${include_dir}/balena-api.inc"
 source "${include_dir}/balena-lib.inc"
