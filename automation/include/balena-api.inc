@@ -49,6 +49,7 @@ __check_fail() {
 #
 # $1: Application name
 # $2: Balena target environment
+# $3: Balena API token
 #
 # Result:
 # Prints the application ID or null if it does not exist
@@ -348,6 +349,13 @@ balena_api_set_release_version () {
 	fi
 }
 
+# Checks if the given device type is private
+# Arguments:
+#
+# $1: Device type
+#
+# Result:
+# 	True if private, false otherwise.
 balena_api_is_dt_private() {
 	local _device_type="${1}"
 	local _slug
@@ -370,8 +378,9 @@ balena_api_is_dt_private() {
 # Arguments:
 #
 # $1: Application name
-# $2: Release version string
+# $2: Release version string (typically a semver of the form M.m.p)
 # $3: Balena target environment
+# $4: Balena API token
 #
 # Result:
 # 	Success or failed.
