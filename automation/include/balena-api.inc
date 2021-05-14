@@ -528,7 +528,7 @@ balena_api_get_image_labels() {
 #
 # $1: Application name
 # $2: Balena target environment
-# $3: Balena API token
+# $3: Balena API token (without it only public apps are accessible)
 #
 # Result:
 #  true in stdout if bootable, false if not
@@ -540,7 +540,7 @@ balena_api_get_image_labels() {
 balena_api_is_bootable() {
 	local _appName="$1"
 	local _apiEnv="$2"
-	local _token="$3"
+	local _token="${3:-""}"
 	[ -z "${_appName}" ] && >&2 echo "Application name is required" && return 1
 	local _json=""
 	local _admin=${BALENA_ADMIN:-balena_os}
