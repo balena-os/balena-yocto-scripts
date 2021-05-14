@@ -310,6 +310,7 @@ balena_api_create_public_app() {
 	_appID=$(balena_api_appID_from_appName "${_appName}" "${_apiEnv}" "${_token}")
 	if [ -z "${_appID}" ] || [ "${_appID}" = "null" ]; then
 		__create_app "${_appName}" "${_apiEnv}" "${_token}" "${_device_type}"
+		balena_api_add_role_access "${_appName}" "${_apiEnv}" "${_token}"
 		_appID=$(__set_public_app "${_appName}" "${_apiEnv}" "${_token}" "${_url}" || true)
 		if [ -n "${_appID}" ] && [ "${_appID}" != "null" ]; then
 			>&2 echo "[${_appName}] Application ${_appID} has been created as public"
@@ -700,4 +701,103 @@ balena_api_fetch_image_from_app() {
 
 	__dlog "Image is ${_imageLocation}@${_imageDigest}"
 	echo "${_imageLocation}@${_imageDigest}"
+}
+
+# Get ID for specified organization's team
+# Arguments:
+#
+# $1: Role name (defaults to 'OS Devs')
+# $2: Organization name (defaults to 'balena_os')
+# $3: Balena API environment
+# $4: Balena API token
+#
+# Result:
+# Prints the role ID in stdout or null
+balena_api_get_teamID() {
+	local _roleName="${1:-"OS%20Devs"}"
+	local _orgName="${2:-"balena_os"}"
+	local _apiEnv="${3:-$(balena_lib_environment)}"
+	local _token="${4:-$(balena_lib_token)}"
+	local _json=""
+	local _id
+
+	_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/team?\$select=id&\$filter=(name%20eq%20'${_roleName}')%20and%20(belongs_to__organization/any(o:o/handle%20eq%20'${_orgName}'))" -H "Content-Type:application/json" -H "Authorization: Bearer ${_token}")
+	__pp_json "${_json}"
+	_id=$(echo "${_json}" | jq -r '.d[0].id')
+	echo "${_id}"
+}
+
+# Get ID for specified application role
+# Arguments:
+#
+# $1: Role name (defaults to 'developer')
+# $2: Balena API environment
+# $3: Balena API token
+#
+# Result:
+# Prints the team ID in stdout or null
+balena_api_get_roleID() {
+	local _roleName="${1:-"developer"}"
+	local _apiEnv="${2:-$(balena_lib_environment)}"
+	local _token="${3:-$(balena_lib_token)}"
+	local _json=""
+	local _id
+
+	_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/application_membership_role?\$select=id&\$filter=name%20eq%20'${_roleName}'" -H "Content-Type:application/json" -H "Authorization: Bearer ${_token}")
+	__pp_json "${_json}"
+	_id=$(echo "${_json}" | jq -r '.d[0].id')
+	echo "${_id}"
+}
+
+# Set role access to application
+# Arguments:
+#
+# $1: Application name
+# $2: Balena API environment
+# $3: Balena API token
+# $4: Role name (defaults to 'developer')
+# $4: Application group name (defaults to 'OS Devs')
+#
+# Result:
+# Prints the appID in stdout if successful or null
+balena_api_add_role_access() {
+	local _appName="$1"
+	local _apiEnv="${2:-$(balena_lib_environment)}"
+	local _token="${3:-$(balena_lib_token)}"
+	local _roleName="${4:-"developer"}"
+	local _accessGroup=${5:-"OS%20Devs"}
+	local _json=""
+	local _appID
+	local _teamID
+	local _roleID
+	local _id
+
+	_appID=$(balena_api_appID_from_appName "${_appName}" "${_apiEnv}" "${_token}")
+	if [ "${_appID}" = "null" ]; then
+		>&2 echo "[${_appName}] No such application in ${_apiEnv}"
+		return
+	fi
+
+	_teamID=$(balena_api_get_teamID "${_accessGroup}")
+	_roleID=$(balena_api_get_roleID "${_roleName}")
+
+	while read -r -d '' _post_data <<-EOF
+{
+	"team": ${_teamID},
+	"grants_access_to__application": ${_appID},
+	"application_membership_role": ${_roleID}
+}
+EOF
+do
+	# This avoid read returning error from not finding a newline termination
+	:
+done
+	_json=$(${CURL} -XPOST "https://api.${_apiEnv}/${TRANSLATION}/team_application_access" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}" --data "${_post_data}")
+	_id=$(echo "${_json}" | jq -r '.id')
+	if [ "${_id}" = "null" ]; then
+		>&2 echo "Failed to add "${_roleName}" access tole to ${_appName}"
+	else
+		__dlog "[${_appName}] Application ID ${_appID} now has ${_roleName} access"
+	fi
+	echo "${_appID}"
 }
