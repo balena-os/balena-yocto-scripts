@@ -16,6 +16,8 @@ __dlog() {
 # $1: Data root directory (defaults to /var/lib/docker)
 # $2: Base root directory (defaults to /var/run/docker)
 # $3: Storage engine directory path (defaults to docker)
+# $4: Iptables flag (defaults to true - set to false if running multiple docker daemons)
+# $5: Ip masquerading flag (defaults to true - set to false if running multiple docker daemons)
 #
 # Returns:
 #
@@ -39,13 +41,14 @@ balena_docker_start() {
 	local _data_dir="${1:-"/var/lib/docker"}"
 	local _rootDir="${2:-"/var/run"}"
 	local _logfile=${3:-"/dev/null"}
-	local _timeout=${4:-20}
+	local _iptables=${4:-"true"}
+	local _ipmasq=${5:-"true"}
 
 	[ ! -d "${_data_dir}" ] && mkdir -p "${_data_dir}"
 	[ ! -d "${_rootDir}" ] && mkdir -p "${_rootDir}"
 
 	__dlog "[INFO]: Starting docker: data root ${_data_dir}, base root dir ${_rootDir}"
-	dockerd --data-root="${_data_dir}" --pidfile="${_rootDir}/docker.pid" --host="unix://${_rootDir}/docker.sock" --iptables=false --ip-masq=false --exec-root="${_rootDir}/ds" > "${_logfile}" 2>&1 &
+	dockerd --data-root="${_data_dir}" --pidfile="${_rootDir}/docker.pid" --host="unix://${_rootDir}/docker.sock" --iptables=${_iptables} --ip-masq=${_ipmasq} --exec-root="${_rootDir}/ds" > "${_logfile}" 2>&1 &
 	echo "unix://${_rootDir}/docker.sock ${_rootDir}/docker.pid"
 }
 
