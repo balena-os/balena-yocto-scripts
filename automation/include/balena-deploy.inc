@@ -163,7 +163,7 @@ balena_deploy_artifacts () {
 		# package all leviathan/testbot tests from meta-balena to the deploy dir
 		# make sure they are compressed so a flattened unzip of artifacts does not fail
 		(cd "${device_dir}/layers/meta-balena/tests" || return
-			[ -f config.js ] && sed "s/deviceType: .*/deviceType: '${JOB_NAME#yocto-}',/g" -i config.js
+			[ -f suites/config.js ] && sed "s/deviceType: .*/deviceType: '${MACHINE}',/g" -i suites/config.js
 			tar -czvf "$_deploy_dir/tests.tar.gz" .
 		)
 	fi
