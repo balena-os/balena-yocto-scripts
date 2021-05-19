@@ -2,6 +2,11 @@
 
 This repository provides helper scripts and tools for building Balena OS.
 
+* __build/barys__: Used for native builds, barys is a wrapper script over bitbake that builds BalenaOS. Used to initialize a build directory and create device type json files out of the coffeescript files, and then run the default build. Use `-n` to just setup the build directory.
+* __build/balena-build.sh__: Used to build in a container, this script downloads a container builder image and calls barys.
+* __automation/jenkins_build.sh__: Used in jenkins automation to build the OS, requires a jenkins environment to work.
+* __automation/jenkins_build-blocks.sh__: Used in jenkins automation to build OS blocks defined in a hostOS contract, requires a jenkins environment to work.
+
 ## Contributing
 
 ### Issues
