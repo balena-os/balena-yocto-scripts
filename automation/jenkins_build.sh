@@ -18,8 +18,8 @@ print_help() {
 	\t\t --meta-balena-branch\n\
 	\t\t\t (optional) The meta-balena branch to checkout before building.\n\
 \t\t\t\t Default value is __ignore__ which means it builds the meta-balena revision as configured in the git submodule.\n
-	\t\t --supervisor-tag\n\
-	\t\t\t (optional) The resin supervisor tag specifying which supervisor version is to be included in the build.\n\
+	\t\t --supervisor-version\n\
+	\t\t\t (optional) The balena supervisor release version to be included in the build.\n\
 \t\t\t\t Default value is __ignore__ which means use the supervisor version already included in the meta-balena submodule.\n
 	\t\t --preserve-build\n\
 	\t\t\t (optional) Do not delete existing build directory.\n\
@@ -91,14 +91,14 @@ while [[ $# -ge 1 ]]; do
 				echo "--meta-balena-branch argument needs a meta-balena branch name (if this option is not used, the default value is __ignore__)"
 				exit 1
 			fi
-			metaResinBranch="${metaResinBranch:-$2}"
+			metaBalenaBranch="${metaBalenaBranch:-$2}"
 			;;
-		--supervisor-tag)
+		--supervisor-version)
 			if [ -z "$2" ]; then
-				echo "--supervisor-tag argument needs a resin supervisor tag name (if this option is not used, the default value is __ignore__)"
+				echo "--supervisor-version argument needs a balena supervisor release version (if this option is not used, the default value is __ignore__)"
 				exit 1
 			fi
-			supervisorTag="${supervisorTag:-$2}"
+			supervisorVersion="${supervisorVersion:-$2}"
 			;;
 		--esr)
 			ESR="true"
@@ -114,8 +114,8 @@ while [[ $# -ge 1 ]]; do
 	shift
 done
 
-metaResinBranch=${metaResinBranch:-__ignore__}
-supervisorTag=${supervisorTag:-__ignore__}
+metaBalenaBranch=${metaBalenaBranch:-__ignore__}
+supervisorVersion=${supervisorVersion:-__ignore__}
 
 # Sanity checks
 if [ -z "$MACHINE" ] || [ -z "$JENKINS_PERSISTENT_WORKDIR" ] || [ -z "$buildFlavor" ]; then
@@ -136,20 +136,20 @@ else
 	exit 1
 fi
 
-# When supervisorTag is provided, set the appropiate barys argument
-if [ "$supervisorTag" != "__ignore__" ]; then
-	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --supervisor-tag $supervisorTag"
+# When supervisorVersion is provided, set the appropiate barys argument
+if [ "$supervisorVersion" != "__ignore__" ]; then
+	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --supervisor-version $supervisorVersion"
 fi
 
 # Checkout meta-balena
-if [ "$metaResinBranch" = "__ignore__" ]; then
+if [ "$metaBalenaBranch" = "__ignore__" ]; then
 	echo "[INFO] Using the default meta-balena revision (as configured in submodules)."
 else
 	echo "[INFO] Using special meta-balena revision from build params."
 	pushd $WORKSPACE/layers/meta-balena > /dev/null 2>&1
 	git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
 	git fetch --all
-	git checkout --force $metaResinBranch
+	git checkout --force $metaBalenaBranch
 	popd > /dev/null 2>&1
 fi
 
