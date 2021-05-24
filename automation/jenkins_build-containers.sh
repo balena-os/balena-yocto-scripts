@@ -2,7 +2,7 @@
 
 set -ev
 
-[ -z "${DOCKERFILES}" ] && DOCKERFILES=( Dockerfile_yocto-block-build-env Dockerfile_yocto-build-env Dockerfile_balena-push-env )
+[ -z "${DOCKERFILES}" ] && DOCKERFILES=( Dockerfile_yocto-block-build-env Dockerfile_yocto-build-env Dockerfile_balena-push-env Dockerfile_balena-generate-ami-env )
 
 SCRIPTPATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 REVISION=$(cd "${SCRIPTPATH}" && git rev-parse --short=7 HEAD)

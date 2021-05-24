@@ -19,6 +19,14 @@ if [ "${deployTo}" = 'production' ]; then
     BALENA_ENV='balena-cloud.com'
 fi
 
+NAMESPACE=${NAMESPACE:-resin}
+
+source "${automation_dir}/include/balena-lib.inc"
+
+if ! balena_lib_docker_pull_helper_image "Dockerfile_balena-generate-ami-env" balena_yocto_scripts_revision; then
+    exit 1
+fi
+
 MACHINE=${JOB_NAME#yocto-}
 YOCTO_IMAGES_PATH="${WORKSPACE}/build/tmp/deploy/images/${MACHINE}"
 
@@ -35,7 +43,7 @@ AMI_NAME="balenaOS-${VERSION}-${buildFlavor}-${MACHINE}"
 
 # shellcheck disable=SC1004
 # AWS_SESSION_TOKEN only needed if MFA is enabled for the account
-docker run -it --rm  \
+docker run --rm -t \
     --privileged  \
     --network host  \
     -v "${WORKSPACE}:${WORKSPACE}" \
@@ -51,7 +59,4 @@ docker run -it --rm  \
     -e PRELOAD_SSH_PUBKEY="${BALENA_PRELOAD_SSH_PUBKEY}" \
     -e IMAGE="${IMAGE}" \
     -w "${WORKSPACE}" \
-    resin/balena-push-env /bin/bash -c 'apt update \
-      && apt install -y python3-pip \
-      && pip3 install awscli \
-      ./generate_ami.sh'
+    "${NAMESPACE}/balena-generate-ami-env:${balena_yocto_scripts_revision}" /balena-generate-ami.sh

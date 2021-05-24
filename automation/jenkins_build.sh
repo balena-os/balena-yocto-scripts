@@ -199,6 +199,7 @@ fi
 
 if [ "$AMI" = "true" ]; then
 	echo "[INFO] Generating AMI"
+	export automation_dir
 	"${automation_dir}"/jenkins_generate_ami.sh
 fi
 
