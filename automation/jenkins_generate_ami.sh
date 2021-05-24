@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # Publish to staging by default
 S3_ACCESS_KEY=${STAGING_S3_ACCESS_KEY}
 S3_SECRET_KEY=${STAGING_S3_SECRET_KEY}
@@ -24,7 +23,7 @@ MACHINE=${JOB_NAME#yocto-}
 YOCTO_IMAGES_PATH="${WORKSPACE}/build/tmp/deploy/images/${MACHINE}"
 
 # TODO: Replace the default value with the value read from the CoffeeScript file once available
-IMAGE_NAME=${IMAGE_NAME:-resin-image-genericx86-64-ext.resinos-img}
+IMAGE_NAME=${IMAGE_NAME:-balena-image-${MACHINE}.balenaos-img}
 
 IMAGE="${YOCTO_IMAGES_PATH}/${IMAGE_NAME}"
 VERSION=$(cat "${YOCTO_IMAGES_PATH}/VERSION_HOSTOS")

@@ -41,6 +41,7 @@ rootdir="$( cd "$( dirname "$0" )" && pwd )/../../"
 WORKSPACE=${WORKSPACE:-$rootdir}
 ENABLE_TESTS=${ENABLE_TESTS:=false}
 ESR=${ESR:-false}
+AMI=${AMI:-false}
 BARYS_ARGUMENTS_VAR="--remove-build"
 REMOVE_CONTAINER="--rm"
 
@@ -110,6 +111,9 @@ while [[ $# -ge 1 ]]; do
 			;;
 		--preserve-container)
 			REMOVE_CONTAINER=""
+			;;
+		--ami)
+			AMI="true"
 			;;
 	esac
 	shift
@@ -193,4 +197,11 @@ if [ "$deploy" = "yes" ]; then
 
 fi
 
-# Do the cleanup in a post-build step
+if [ "$AMI" = "true" ]; then
+	echo "[INFO] Generating AMI"
+	"${automation_dir}"/jenkins_generate_ami.sh
+fi
+
+# Cleanup
+# Keep this after writing all artifacts
+rm -rf $WORKSPACE/build
