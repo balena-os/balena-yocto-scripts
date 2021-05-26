@@ -63,6 +63,115 @@ balena_lib_docker_remove_helper_images() {
 	done
 }
 
+# Find a contract path by slug name
+#
+# Inputs:
+# $1: Slug name to search for
+#
+# Returns:
+#   Contract path in stdout if successful
+__find_contract_by_slug() {
+	local _tslug="${1}"
+	local _contracts
+	local _slug
+
+	_contracts=$(find "${device_dir}/contracts/" -name "contract.json" -print 2>/dev/null)
+	for contract in ${_contracts}; do
+		_slug=$(jq --raw-output .slug < "${contract}")
+		if [ "${_slug}" = "${_tslug}" ]; then
+			echo "${contract}"
+			return 0
+		fi
+	done
+	>&2 echo "Contract not found for ${_tslug}"
+	return 1
+}
+
+# Check contract compatibility with a given device type
+#
+# $1: Contract slug
+# $2: Device type name
+#
+# Output
+#
+# Returns 0 if compatible 1 if not
+balena_lib_contract_is_device_compatible() {
+	local _slug="${1}"
+	local _device_type="${2}"
+	local _contracts
+	local _device_types_depends
+	local _dt
+	local _found=0
+
+	_contract=$(__find_contract_by_slug "${_slug}")
+	if [ -z "${_contract}" ]; then
+		>&2 "${_slug}: No contract found"
+		return 1
+	fi
+
+	_device_types_depends=$(jq --raw-output '.requires[].anyOf[] | select(.type == "hw.device-type") | .slug' "${_contract}")
+	for _dt in ${_device_types_depends}; do
+		if [ "${_dt}" = "${_device_type}" ]; then
+			_found=1
+			break
+		fi
+	done
+	if [ "${_found}" = "0" ]; then
+		>&2 echo "${_slug}: Not compatible device type: ${_device_type}"
+		return 1
+	fi
+	return 0
+}
+
+# Get a package list from an image name
+#
+# Inputs:
+# $1: Contract Slug name to search for
+# $2: Device type
+# $3: OS version (optional)
+#
+# Returns:
+#   Package list in stdout if successful
+balena_lib_fetch_package_list() {
+	local _slug="${1}"
+	local _device_type=${2}
+	local _version=${3}
+	local _contract
+	local _device_types_depends
+	local _version
+	local _sw_package_name
+	local _package_contract
+	local _packages
+
+	# Check device type compatibility
+	if ! balena_lib_contract_is_device_compatible "${_slug}" "${_device_type}"; then
+		>&2 echo "Device type not compatible"
+		return
+	fi
+
+	if [ -z "${_version}" ]; then
+		_version=$(balena_lib_get_os_version)
+	fi
+	_contract=$(__find_contract_by_slug "${_slug}")
+	if [ -z "${_contract}" ]; then
+		>&2 "${_slug}: No contract found"
+		return 1
+	fi
+
+	_sw_package_name=$(jq --raw-output '.requires[].allOf[] | select(.type == "sw.package") | .slug' "${_contract}")
+	_package_contract=$(__find_contract_by_slug "${_sw_package_name}")
+	# Check OS compatibility
+	_version_depends=$(jq --raw-output '.requires[].allOf[] | select(.type == "sw.os") | select(.slug == "balenaos") | .version' "${_contract}")
+	for os in ${_version_depends}; do
+		if ! "${include_dir}/semver2.sh" "${os}" "${_version}" 2&>/dev/null; then
+			>&2 echo "${_slug}: OS version not compatible"
+			return 1
+		fi
+	done
+	_packages=$(jq --raw-output '.composedOf[] | .slug ' "${_package_contract}" | tr "\n" " ")
+	echo "${_packages}"
+}
+
 # Outputs to Balena environment according to Jenkins "deployTo" environment variables
 balena_lib_environment() {
 	local _api_env
@@ -265,4 +374,49 @@ balena_lib_resolve_aliases() {
 		"edison") echo "intel-edison" ;;
 		*) echo "${_device_type}";;
 	esac
+}
+
+# Retrieve device architecture from device type JSON file
+#
+# Inputs:
+# $1: Device type name
+#
+# Returns:
+# 0 on success 1 on failure
+#
+# Outputs:
+# device architecture in stdout if successful
+#
+balena_lib_get_dt_arch() {
+	local _device_type="${1}"
+	local _arch
+	local _device_type_json="${device_dir}/${_device_type}.json"
+
+	if [ ! -f "${_device_type_json}" ]; then
+		>&2 echo "[balena_lib_get_slug]: Device type JSON not found"
+		return 1
+	fi
+
+	_arch=$(jq --raw-output '.arch' "${_device_type_json}")
+	echo "${_arch}"
+	return 0
+}
+
+# Fetch image label
+#
+# Inputs:
+# $1: Image ID
+# $2: Label key to look for
+#
+#
+# Output:
+#  Label value in stdout or null
+#
+balena_lib_get_label_from_image() {
+	local _image_id="${1}"
+	local _label="${2}"
+	local _value
+
+	_value=$(docker inspect "${_image_id}" | jq -r '.[].Config.Labels["'"${_label}"'"]')
+	echo "${_value}"
 }
