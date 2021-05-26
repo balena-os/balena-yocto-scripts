@@ -1,4 +1,58 @@
 - commits:
+    - subject: 'balena-lib: Add function to fetch labels from image'
+      hash: a987a933ad52af6c7935b19f13f4f39f0be157f1
+      body: |
+        Image labels are used to handle the installation of images.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: 'balena-lib: contracts: Add package list fetcher'
+      hash: f2e5ce081f9ef39bcff364ce4a8e9a9d0d806590
+      body: >
+        Add functions to retrieve a package list from a sw.package contract
+        where
+
+        a yocto package based hostos block is defined.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: 'semver: Add bash utility for semantic version comparison'
+      hash: 831c494a1bc1f286a9b95f22cc86ade46f336a89
+      body: >
+        From https://github.com/Ariel-Rodriguez/sh-semversion-2
+
+
+        MIT licensed:
+        https://github.com/Ariel-Rodriguez/sh-semversion-2/blob/main/LICENSE
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: 'balena-docker: Add image retrieval function'
+      hash: 79d8a1b201196e2730bcf1d92c8be19dbd693106
+      body: |
+        Common image retrieval code.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.14.2
+  date: 2021-05-26T09:34:20.890Z
+- commits:
     - subject: Add a parsable representation of the changelog
       hash: 9bbc4207170e8db4e79c0d139653570fdc013f95
       body: >
