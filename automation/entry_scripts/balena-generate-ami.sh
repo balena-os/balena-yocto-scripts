@@ -41,21 +41,43 @@ mount_cleanup() {
         umount "${BOOT_PARTITION}" && \
         rmdir "${BOOT_PARTITION}" && \
         BOOT_PARTITION=''
+
+    [[ -n "${LOOP_DEV}" ]] && \
+        echo "* Detaching loop device" && \
+        losetup -d "${LOOP_DEV}" && \
+        LOOP_DEV=''
 }
 
 
 
 mount_boot_partition() {
     local img=$1
-    local __retvalue=$2
+    local __bootvar=$2
+    local __loopvar=$3
+
+    new_dev=$(mktemp -d)
+    mount -t devtmpfs devtmpfs "${new_dev}"
+    for mnt in console mqueue pts shm
+    do
+      mount --move "/dev/${mnt}" "${new_dev}/${mnt}"
+    done
+
+    umount /dev || :
+
+    mount --move "${new_dev}" /dev
+
+    /lib/systemd/systemd-udevd -d
+    udevadm settle
 
     img_loop_dev=$(losetup -fP --show "${img}")
+    echo "* Image attached to ${img_loop_dev}"
     boot_partition_mountpoint=$(mktemp -d)
 
     mount "${img_loop_dev}p1" "${boot_partition_mountpoint}" > /dev/null 2>&1
 
     echo "* Boot partition mounted on ${boot_partition_mountpoint}"
-    eval "$__retvalue='${boot_partition_mountpoint}'"
+    eval "$__bootvar='${boot_partition_mountpoint}'"
+    eval "$__loopvar='${img_loop_dev}'"
 }
 
 deploy_preload_app_to_image() {
@@ -175,7 +197,7 @@ trap "mount_cleanup" EXIT
 balena login -t "${BALENACLI_TOKEN}"
 
 deploy_preload_app_to_image "${IMAGE}"
-mount_boot_partition "${IMAGE}" BOOT_PARTITION
+mount_boot_partition "${IMAGE}" BOOT_PARTITION LOOP_DEV
 add_ssh_key_to_boot_partition "${PRELOAD_SSH_PUBKEY}"
 create_aws_ebs_snapshot "${IMAGE}" ebs_snapshot_id
 # shellcheck disable=SC2154

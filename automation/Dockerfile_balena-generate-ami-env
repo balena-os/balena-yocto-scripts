@@ -2,7 +2,7 @@ ARG NAMESPACE="resin"
 ARG TAG="latest"
 FROM ${NAMESPACE}/balena-push-env:${TAG}
 
-RUN apt-get update && apt-get install -y python3-pip && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y python3-pip udev && rm -rf /var/lib/apt/lists/*
 RUN pip3 install awscli
 
 COPY include/balena-api.inc include/balena-lib.inc entry_scripts/balena-generate-ami.sh /
