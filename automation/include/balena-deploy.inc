@@ -441,10 +441,10 @@ balena_deploy_build_block() {
 		-e VERBOSE="${VERBOSE}" \
 		-e MACHINE="${_device_type}" \
 		-e TAG="${balena_yocto_scripts_revision}" \
-		-e WORKSPACE=/yocto/resin-board \
+		-e WORKSPACE=/work \
 		-e balenaCloudEmail="${balenaCloudEmail}" \
 		-e balenaCloudPassword="${balenaCloudPassword}" \
-		-v "${WORKSPACE:-"${PWD}"}":/yocto/resin-board \
+		-v "${WORKSPACE:-"${PWD}"}":/work \
 		--privileged \
 		"${NAMESPACE}"/yocto-block-build-env:"${balena_yocto_scripts_revision}" /balena-build-block.sh
 
