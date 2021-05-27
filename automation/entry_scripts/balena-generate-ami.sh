@@ -11,7 +11,6 @@ AMI_EBS_DELETE_ON_TERMINATION=${AMI_EBS_DELETE_ON_TERMINATION:-true}
 AMI_EBS_VOLUME_SIZE=${AMI_EBS_VOLUME_SIZE:-8}
 AMI_EBS_VOLUME_TYPE=${AMI_EBS_VOLUME_TYPE:-gp2}
 
-BALENA_PRELOAD_APP=${BALENA_PRELOAD_APP:-balena-os-config-preload-amd64}
 IMPORT_SNAPSHOT_TIMEOUT_MINS=${IMPORT_SNAPSHOT_TIMEOUT_MINS:-15}
 BOOT_PARTITION=''
 
@@ -23,6 +22,7 @@ ensure_all_env_variables_are_set() {
                          S3_BUCKET
                          IMAGE
                          AMI_NAME
+                         BALENA_PRELOAD_APP
                          BALENARC_BALENA_URL
                          BALENACLI_TOKEN
                          PRELOAD_SSH_PUBKEY"
@@ -98,11 +98,12 @@ create_aws_ebs_snapshot() {
     local secs_waited=0
     # https://github.com/koalaman/shellcheck/wiki/SC2155#correct-code-1
     local s3_key
-    s3_key="$(basename "${img}")"
+    # Randomize to lower the chance of parallel builds colliding.
+    s3_key="tmp-$(basename "${img}")-${RANDOM}"
 
     # Push to s3 and create the AMI
     echo "* Pushing ${img} to s3://${S3_BUCKET}"
-    aws s3 cp "${img}" "s3://${S3_BUCKET}/${s3_key}"
+    aws s3 cp "${img}" "s3://${S3_BUCKET}/preloaded-images/${s3_key}"
 
     import_task_id=$(aws ec2 import-snapshot \
       --description "snapshot-${AMI_NAME}" \

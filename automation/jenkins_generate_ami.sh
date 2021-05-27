@@ -4,6 +4,7 @@
 S3_ACCESS_KEY=${STAGING_S3_ACCESS_KEY}
 S3_SECRET_KEY=${STAGING_S3_SECRET_KEY}
 S3_REGION=${STAGING_S3_REGION:-us-east-1}
+S3_BUCKET=${STAGING_S3_BUCKET:-resin-staging-img/images}
 BALENA_PRELOAD_SSH_PUBKEY=${PRELOAD_SSH_PUBKEY_STAGING}
 BALENACLI_TOKEN=${BALENAOS_STAGING_TOKEN}
 BALENA_ENV='balena-staging.com'
@@ -14,6 +15,7 @@ if [ "${deployTo}" = 'production' ]; then
     S3_ACCESS_KEY=${PRODUCTION_S3_ACCESS_KEY}
     S3_SECRET_KEY=${PRODUCTION_S3_SECRET_KEY}
     S3_REGION=${PRODUCTION_S3_REGION:-us-east-1}
+    S3_BUCKET=${PRODUCTION_S3_BUCKET:-resin-production-img-cloudformation/images}
     BALENA_PRELOAD_SSH_PUBKEY=${PRELOAD_SSH_PUBKEY_PRODUCTION}
     BALENACLI_TOKEN=${BALENAOS_PRODUCTION_TOKEN}
     BALENA_ENV='balena-cloud.com'
@@ -41,6 +43,9 @@ VERSION=$(cat "${YOCTO_IMAGES_PATH}/VERSION_HOSTOS")
 # passed in by Jenkins
 AMI_NAME="balenaOS-${VERSION}-${buildFlavor}-${MACHINE}"
 
+APP_SUFFIX=${MACHINE#generic-}
+BALENA_PRELOAD_APP="cloud-config-${APP_SUFFIX}"
+
 # shellcheck disable=SC1004
 # AWS_SESSION_TOKEN only needed if MFA is enabled for the account
 docker run --rm -t \
@@ -54,6 +59,7 @@ docker run --rm -t \
     -e AWS_SESSION_TOKEN="${S3_SESSION_TOKEN}" \
     -e AMI_NAME="${AMI_NAME}" \
     -e S3_BUCKET="${S3_BUCKET}" \
+    -e BALENA_PRELOAD_APP="${BALENA_PRELOAD_APP}" \
     -e BALENARC_BALENA_URL="${BALENA_ENV}" \
     -e BALENACLI_TOKEN="${BALENACLI_TOKEN}" \
     -e PRELOAD_SSH_PUBKEY="${BALENA_PRELOAD_SSH_PUBKEY}" \
