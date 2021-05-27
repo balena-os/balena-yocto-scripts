@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+[ "${VERBOSE}" = "verbose" ] && set -x
 
 script_name=$(basename "${0}")
 automation_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )

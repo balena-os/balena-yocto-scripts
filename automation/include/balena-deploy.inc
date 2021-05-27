@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+VERBOSE=${VERBOSE:-0}
+[ "${VERBOSE}" = "verbose" ] && set -x
+
 include_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 device_dir=$( if cat /proc/self/cgroup | grep -q docker; then if [ -d "/work" ]; then cd "/work" && pwd; fi; else cd "${include_dir}/../../.." && pwd; fi )
 
@@ -57,6 +60,7 @@ balena_deploy_hostapp() {
 		-e RELEASE_VERSION="${_version}" \
 		-e ESR="${_esr}" \
 		-e MACHINE="${_device_type}" \
+		-e VERBOSE="${VERBOSE}" \
 		-e balenaCloudEmail="${_balenaCloudEmail}" \
 		-e balenaCloudPassword="${_balenaCloudPassword}" \
 		-e META_BALENA_VERSION="${_meta_balena_version}" \
@@ -322,17 +326,22 @@ balena_deploy_to_s3() {
 		-e DEPLOY_ARTIFACT="${_artifact}" \
 		-e BUILD_VERSION="$_s3_version_hostos" \
 		-e DEVELOPMENT_IMAGE="${_variant}" \
+		-e VERBOSE="${VERBOSE}" \
 		-e DEPLOYER_UID="$(id -u)" \
 		-e DEPLOYER_GID="$(id -g)" \
 		-e DEVICE_STATE="${_state}" \
-		-v "$_s3_deploy_dir":/host/images "${_namespace}"/resin-img:master /bin/sh -x -e -c ' \
+		-v "$_s3_deploy_dir":/host/images "${_namespace}"/resin-img:master /bin/sh -e -c ' \
+			VERBOSE=${VERBOSE:-0}
+			[ "${VERBOSE}" = "verbose" ] && set -x
 			apt-get -y update
 			apt-get install -y s4cmd
 			echo "Creating and setting deployer user $DEPLOYER_UID:$DEPLOYER_GID."
 			groupadd -g $DEPLOYER_GID deployer
 			useradd -m -u $DEPLOYER_UID -g $DEPLOYER_GID deployer
 			su deployer<<EOSU
-set -ex
+set -e
+VERBOSE=${VERBOSE:-0}
+[ "${VERBOSE}" = "verbose" ] && set -x
 echo "${BUILD_VERSION}" > "/host/images/${SLUG}/latest"
 if [ "$DEPLOY_ARTIFACT" = "docker-image" ] || [ "$DEVICE_STATE" = "DISCONTINUED" ]; then
 	echo "WARNING: No raw image prepare step for docker images only artifacts or discontinued device types."
@@ -388,6 +397,7 @@ balena_deploy_block() {
 		-e BALENAOS_ACCOUNT="${_balenaos_account}" \
 		-e RELEASE_VERSION="$(balena_lib_get_os_version)" \
 		-e MACHINE="${_device_type}" \
+		-e VERBOSE="${VERBOSE}" \
 		-e BOOTABLE="${_bootable}" \
 		-e balenaCloudEmail="${_balenaCloudEmail}" \
 		-e balenaCloudPassword="${_balenaCloudPassword}" \
@@ -428,6 +438,7 @@ balena_deploy_build_block() {
 		-e BALENAOS_ACCOUNT="${_balenaos_account}" \
 		-e RELEASE_VERSION="$(balena_lib_get_os_version)" \
 		-e PACKAGES="${_packages}" \
+		-e VERBOSE="${VERBOSE}" \
 		-e MACHINE="${_device_type}" \
 		-e TAG="${balena_yocto_scripts_revision}" \
 		-e WORKSPACE=/yocto/resin-board \

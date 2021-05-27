@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+VERBOSE=${VERBOSE:-0}
+[ "${VERBOSE}" = "verbose" ] && set -x
+
 include_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 device_dir=$( if cat /proc/self/cgroup | grep -q docker; then if [ -d "/work" ]; then cd "/work" && pwd; fi; else cd "${include_dir}/../../.." && pwd; fi )
 BALENA_YOCTO_SCRIPTS_REVISION=$(cd "${include_dir}" && git rev-parse --short=7 HEAD || true)
@@ -163,7 +166,7 @@ balena_lib_fetch_package_list() {
 	# Check OS compatibility
 	_version_depends=$(jq --raw-output '.requires[].allOf[] | select(.type == "sw.os") | select(.slug == "balenaos") | .version' "${_contract}")
 	for os in ${_version_depends}; do
-		if ! "${include_dir}/semver2.sh" "${os}" "${_version}" 2&>/dev/null; then
+		if ! "${include_dir}/semver2.sh" "${os}" "${_version}" "${DEBUG:-0}" "${VERBOSE:-0}" 2&>/dev/null; then
 			>&2 echo "${_slug}: OS version not compatible"
 			return 1
 		fi

@@ -2,6 +2,9 @@
 
 CURL="curl -s"
 
+VERBOSE=${VERBOSE:-0}
+[ "${VERBOSE}" = "verbose" ] && set -x
+
 script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 device_dir=$( if cat /proc/self/cgroup | grep -q docker; then if [ -d "/work" ]; then cd "/work" && pwd; fi; else cd "${script_dir}/../../.." && pwd; fi )
 
@@ -795,7 +798,7 @@ done
 	_json=$(${CURL} -XPOST "https://api.${_apiEnv}/${TRANSLATION}/team_application_access" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}" --data "${_post_data}")
 	_id=$(echo "${_json}" | jq -r '.id')
 	if [ "${_id}" = "null" ]; then
-		>&2 echo "Failed to add "${_roleName}" access tole to ${_appName}"
+		>&2 echo "Failed to add ${_roleName} access tole to ${_appName}"
 	else
 		__dlog "[${_appName}] Application ID ${_appID} now has ${_roleName} access"
 	fi

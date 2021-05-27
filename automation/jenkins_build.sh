@@ -1,6 +1,7 @@
 #!/bin/bash
 
-set -ex
+[ "${VERBOSE}" = "verbose" ] && set -x
+set -e
 
 NAMESPACE=${NAMESPACE:-resin}
 
