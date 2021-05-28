@@ -36,7 +36,8 @@ YOCTO_IMAGES_PATH="${WORKSPACE}/build/tmp/deploy/images/${MACHINE}"
 IMAGE_NAME=${IMAGE_NAME:-balena-image-${MACHINE}.balenaos-img}
 
 IMAGE="${YOCTO_IMAGES_PATH}/${IMAGE_NAME}"
-VERSION=$(cat "${YOCTO_IMAGES_PATH}/VERSION_HOSTOS")
+# AMI names must be between 3 and 128 characters long, and may contain letters, numbers, '(', ')', '.', '-', '/' and '_'
+VERSION=$(cat "${YOCTO_IMAGES_PATH}/VERSION_HOSTOS" | sed 's/+/-/g')
 
 # AMI name format: balenaOS-VERSION-VARIANT-DEVICE_TYPE
 # shellcheck disable=SC2154
