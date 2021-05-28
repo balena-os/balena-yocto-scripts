@@ -402,7 +402,7 @@ balena_api_get_release() {
 	fi
 	 __dlog "Fetch release ${_release_version} from ${_appName}"
 	 _json=$(${CURL} -XGET -H "Content-type: application/json" "https://api.${_apiEnv}/${TRANSLATION}/release?\$filter=(belongs_to__application%20eq%20${_appID})%20and%20(release_version%20eq%20%27${_release_version}%27)")
-	 echo "${_json}"
+	 __pp_json "${_json}"
 	_result=$(echo "${_json}" | jq -e '.d[0].id')
 	return "$?"
 }
