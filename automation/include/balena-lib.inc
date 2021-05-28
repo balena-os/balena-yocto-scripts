@@ -126,25 +126,25 @@ balena_lib_contract_is_device_compatible() {
 	return 0
 }
 
-# Get a package list from an image name
+# Get a composedOf list list from an image name
 #
 # Inputs:
 # $1: Contract Slug name to search for
 # $2: Device type
-# $3: OS version (optional)
+# $3: OS version
+# $4: Contract type (i.e sw.recipe.yocto)
 #
 # Returns:
-#   Package list in stdout if successful
-balena_lib_fetch_package_list() {
+#   Recipe list in stdout if successful
+balena_lib_contract_fetch_composedOf_list() {
 	local _slug="${1}"
 	local _device_type=${2}
 	local _version=${3}
+	local _type="${4:-sw.recipe.yocto}"
 	local _contract
 	local _device_types_depends
 	local _version
-	local _sw_package_name
-	local _package_contract
-	local _packages
+	local _list
 
 	# Check device type compatibility
 	if ! balena_lib_contract_is_device_compatible "${_slug}" "${_device_type}"; then
@@ -161,8 +161,6 @@ balena_lib_fetch_package_list() {
 		return 1
 	fi
 
-	_sw_package_name=$(jq --raw-output '.requires[].allOf[] | select(.type == "sw.package") | .slug' "${_contract}")
-	_package_contract=$(__find_contract_by_slug "${_sw_package_name}")
 	# Check OS compatibility
 	_version_depends=$(jq --raw-output '.requires[].allOf[] | select(.type == "sw.os") | select(.slug == "balenaos") | .version' "${_contract}")
 	for os in ${_version_depends}; do
@@ -171,8 +169,8 @@ balena_lib_fetch_package_list() {
 			return 1
 		fi
 	done
-	_packages=$(jq --raw-output '.composedOf[] | .slug ' "${_package_contract}" | tr "\n" " ")
-	echo "${_packages}"
+	_list=$(jq --raw-output '.composedOf[] | select(.type == "'"${_type}"'") | .slug ' "${_contract}" | tr "\n" " ")
+	echo "${_list}"
 }
 
 # Outputs to Balena environment according to Jenkins "deployTo" environment variables
