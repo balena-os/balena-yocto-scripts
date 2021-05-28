@@ -781,8 +781,8 @@ balena_api_add_role_access() {
 		return
 	fi
 
-	_teamID=$(balena_api_get_teamID "${_accessGroup}")
-	_roleID=$(balena_api_get_roleID "${_roleName}")
+	_teamID=$(balena_api_get_teamID "${_accessGroup}" "balena_os" "${_apiEnv}" "${_token}")
+	_roleID=$(balena_api_get_roleID "${_roleName}" "${_apiEnv}" "${_token}")
 
 	while read -r -d '' _post_data <<-EOF
 {
