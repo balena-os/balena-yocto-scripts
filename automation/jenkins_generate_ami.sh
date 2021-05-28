@@ -44,6 +44,14 @@ VERSION=$(cat "${YOCTO_IMAGES_PATH}/VERSION_HOSTOS" | sed 's/+/-/g')
 # passed in by Jenkins
 AMI_NAME="balenaOS-${VERSION}-${buildFlavor}-${MACHINE}"
 
+# TODO: Can get the mapping from somewhere?
+JSON_ARCH=$(jq --raw-output ".arch" "${WORKSPACE}/${MACHINE}.json")
+if [ "${JSON_ARCH}" = "amd64" ]; then
+    AMI_ARCHITECTURE="x86_64"
+elif [ "${JSON_ARCH}" = "aarch64" ]; then
+    AMI_ARCHITECTURE="arm64"
+fi
+
 APP_SUFFIX=${MACHINE#generic-}
 BALENA_PRELOAD_APP="cloud-config-${APP_SUFFIX}"
 
@@ -59,6 +67,7 @@ docker run --rm -t \
     -e AWS_DEFAULT_REGION="${S3_REGION}" \
     -e AWS_SESSION_TOKEN="${S3_SESSION_TOKEN}" \
     -e AMI_NAME="${AMI_NAME}" \
+    -e AMI_ARCHITECTURE="${AMI_ARCHITECTURE}" \
     -e S3_BUCKET="${S3_BUCKET}" \
     -e BALENA_PRELOAD_APP="${BALENA_PRELOAD_APP}" \
     -e BALENARC_BALENA_URL="${BALENA_ENV}" \

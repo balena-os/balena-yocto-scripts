@@ -5,7 +5,6 @@ set -e
 IMAGE="${IMAGE}"
 
 AMI_NAME="${AMI_NAME}"
-AMI_ARCHITECTURE=${AMI_ARCHITECTURE:-x86_64}
 AMI_ROOT_DEVICE_NAME=${AMI_ROOT_DEVICE_NAME:-/dev/sda1}
 AMI_EBS_DELETE_ON_TERMINATION=${AMI_EBS_DELETE_ON_TERMINATION:-true}
 AMI_EBS_VOLUME_SIZE=${AMI_EBS_VOLUME_SIZE:-8}
@@ -22,6 +21,7 @@ ensure_all_env_variables_are_set() {
                          S3_BUCKET
                          IMAGE
                          AMI_NAME
+                         AMI_ARCHITECTURE
                          BALENA_PRELOAD_APP
                          BALENARC_BALENA_URL
                          BALENACLI_TOKEN
