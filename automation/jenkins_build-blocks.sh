@@ -39,6 +39,7 @@ __build_hostos_blocks() {
 	local _appname
 	local _appnames
 	local _release_version
+	local _recipes
 	local _packages
 	local _bitbake_targets
 	local _package_type="${PACKAGE_TYPE:-"ipk"}"
@@ -61,24 +62,25 @@ __build_hostos_blocks() {
 				echo "[INFO] Release ${_release_version} already exists for ${_block}"
 				continue
 			fi
-			_packages=$(balena_lib_fetch_package_list "${_block}" "${_device_type}")
-			if [ "$?" -ne 0 ] || [ -z "${_packages}" ]; then
+			_recipes=$(balena_lib_contract_fetch_composedOf_list "${_block}" "${_device_type}" "${_release_version}" "sw.recipe.yocto")
+			if [ "$?" -ne 0 ] || [ -z "${_recipes}" ]; then
 				echo "No packages found in contract"
 				exit 1
 			fi
-			_bitbake_targets="${_bitbake_targets} ${_packages}"
+			_bitbake_targets="${_bitbake_targets} ${_recipes}"
 		done
 		_hostos_blocks="--additional-variable HOSTOS_BLOCKS=${appnames}"
 
 		if [ -n "${_bitbake_targets}" ]; then
 			_bitbake_targets="${_bitbake_targets} os-release package-index"
-			"${build_dir}"/balena-build.sh -d "${_device_type}" -a "${_api_env}" -b "-k" -s "${_shared_dir}" -v "${_variant}"  -i "${_bitbake_targets}"
+			"${build_dir}"/balena-build.sh -d "${_device_type}" -a "${_api_env}" -s "${_shared_dir}" -v "${_variant}"  -i "${_bitbake_targets}"
 
 			# Deploy package feed
 			local _deploy_dir="${work_dir}/deploy-jenkins/"
 			mkdir -p "${_deploy_dir}"
 			balena_deploy_feed "${_deploy_dir}"
 
+			_packages=$(balena_lib_contract_fetch_composedOf_list "${_block}" "${_device_type}" "${_release_version}" "sw.package.yocto.${_package_type}")
 			for _block in ${_blocks}; do
 				_appname="${_device_type}-${_block}"
 				balena_deploy_build_block "${_appname}" "${_device_type}" "${_packages}" "${_balenaos_account}" "${_api_env}"
