@@ -99,7 +99,7 @@ add_ssh_key_to_boot_partition() {
     cp "${BOOT_PARTITION}/config.json" /tmp/.config.json
     jq --arg keys "${public_key}" '. + {os: {sshKeys: [$keys]}}' "${BOOT_PARTITION}/config.json" > /tmp/.config.json
     mv /tmp/.config.json "${BOOT_PARTITION}/config.json"
-    mount_cleanup
+    mount_cleanup || true
 }
 
 get_value_from_ebs_snapshot_import_task() {
@@ -109,10 +109,27 @@ get_value_from_ebs_snapshot_import_task() {
 }
 
 
+aws_s3_image_cleanup() {
+    [[ -n "${s3_image_url}" ]] && \
+      echo "* Removing img from S3..." && \
+      aws s3 rm "${s3_image_url}" && \
+      s3_image_url=""
+}
+
+
+aws_ebs_snapshot_cleanup() {
+    [[ -n "${ebs_snapshot_id}" ]] && \
+      echo "* Removing snapshot from ebs..." && \
+      aws ec2 delete-snapshot --snapshot-id "${ebs_snapshot_id}" && \
+      ebs_snapshot_id=""
+}
+
+
 create_aws_ebs_snapshot() {
 
     local img=$1
-    local __retvalue=$2
+    local __snapshot_id=$2
+    local __s3_image_url=$3
 
     local snapshot_id
     local status
@@ -125,7 +142,8 @@ create_aws_ebs_snapshot() {
 
     # Push to s3 and create the AMI
     echo "* Pushing ${img} to s3://${S3_BUCKET}"
-    aws s3 cp "${img}" "s3://${S3_BUCKET}/preloaded-images/${s3_key}"
+    s3_url="s3://${S3_BUCKET}/preloaded-images/${s3_key}"
+    aws s3 cp "${img}" "${s3_url}"
 
     import_task_id=$(aws ec2 import-snapshot \
       --description "snapshot-${AMI_NAME}" \
@@ -151,10 +169,8 @@ create_aws_ebs_snapshot() {
     snapshot_id=$(aws ec2 describe-import-snapshot-tasks --import-task-ids "${import_task_id}" | jq -r '.ImportSnapshotTasks[].SnapshotTaskDetail.SnapshotId')
     echo "* AWS import snapshot task complete. SnapshotId: ${snapshot_id}"
 
-    echo "* Removing img from S3..."
-    aws s3 rm "s3://${S3_BUCKET}/preloaded-images/${s3_key}"
-
-    eval "$__retvalue='$snapshot_id'"
+    eval "$__snapshot_id='${snapshot_id}'"
+    eval "$__s3_image_url='${s3_url}'"
 }
 
 
@@ -194,7 +210,17 @@ create_aws_ami() {
 
     aws ec2 create-tags --resources "${image_id}" --tags Key=Name,Value="${AMI_NAME}"
     echo "AMI image created with id ${image_id}"
+
+    aws_s3_image_cleanup || true
+    aws_ebs_snapshot_cleanup || true
+
     eval "$__retvalue='$image_id'"
+}
+
+cleanup () {
+    mount_cleanup || true
+    aws_s3_image_cleanup || true
+    aws_ebs_snapshot_cleanup || true
 }
 
 ## MAIN
@@ -203,14 +229,14 @@ create_aws_ami() {
 
 ensure_all_env_variables_are_set
 
-trap "mount_cleanup" EXIT
+trap "cleanup" EXIT
 
 balena login -t "${BALENACLI_TOKEN}"
 
 deploy_preload_app_to_image "${IMAGE}"
 mount_boot_partition "${IMAGE}" BOOT_PARTITION LOOP_DEV
 add_ssh_key_to_boot_partition "${PRELOAD_SSH_PUBKEY}"
-create_aws_ebs_snapshot "${IMAGE}" ebs_snapshot_id
+create_aws_ebs_snapshot "${IMAGE}" ebs_snapshot_id s3_image_url
 # shellcheck disable=SC2154
 # ebs_snapshot_id defined with eval in create_aws_ebs_snapshot function
 create_aws_ami "${ebs_snapshot_id}" ami_id
