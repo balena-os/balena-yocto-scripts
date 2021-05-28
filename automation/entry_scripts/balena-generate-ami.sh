@@ -164,6 +164,17 @@ create_aws_ami() {
     local __retvalue=$2
     local image_id
 
+    echo "Checking for AMI name conflicts"
+    existing_image_id=$(aws ec2 describe-images \
+        --filters "Name=name,Values=${AMI_NAME}" \
+        --query 'Images[*].[ImageId]' \
+        --output text)
+
+    if [ -n "${existing_image_id}" ]; then
+        echo "Cleaning up ${existing_image_id}"
+        aws ec2 deregister-image --image-id "${existing_image_id}"
+    fi
+
     echo "Creating ${AMI_NAME} AWS AMI image..."
     image_id=$(aws ec2 register-image \
     --name "${AMI_NAME}" \
