@@ -129,7 +129,7 @@ create_aws_ebs_snapshot() {
 
     import_task_id=$(aws ec2 import-snapshot \
       --description "snapshot-${AMI_NAME}" \
-      --disk-container "Description=balenaOs,Format=RAW,UserBucket={S3Bucket=${S3_BUCKET},S3Key=${s3_key}}" | jq -r .ImportTaskId)
+      --disk-container "Description=balenaOs,Format=RAW,UserBucket={S3Bucket=${S3_BUCKET},S3Key=preloaded-images/${s3_key}}" | jq -r .ImportTaskId)
 
     echo "* Created a AWS import snapshot task with id ${import_task_id}. Waiting for completition... (Timeout: $IMPORT_SNAPSHOT_TIMEOUT_MINS mins)"
     while true; do
@@ -152,7 +152,7 @@ create_aws_ebs_snapshot() {
     echo "* AWS import snapshot task complete. SnapshotId: ${snapshot_id}"
 
     echo "* Removing img from S3..."
-    aws s3 rm "s3://${S3_BUCKET}/${s3_key}"
+    aws s3 rm "s3://${S3_BUCKET}/preloaded-images/${s3_key}"
 
     eval "$__retvalue='$snapshot_id'"
 }
