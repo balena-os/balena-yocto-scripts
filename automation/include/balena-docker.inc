@@ -2,7 +2,8 @@
 
 set -e
 
-DOCKER_TIMEOUT=20 # Wait 20 seconds for docker to start
+VERBOSE=${VERBOSE:-0}
+[ "${VERBOSE}" = "verbose" ] && set -x
 
 __dlog() {
 	if [ "${DEBUG}" = "1" ]; then
@@ -48,7 +49,7 @@ balena_docker_start() {
 	[ ! -d "${_rootDir}" ] && mkdir -p "${_rootDir}"
 
 	__dlog "[INFO]: Starting docker: data root ${_data_dir}, base root dir ${_rootDir}"
-	dockerd --data-root="${_data_dir}" --pidfile="${_rootDir}/docker.pid" --host="unix://${_rootDir}/docker.sock" --iptables=${_iptables} --ip-masq=${_ipmasq} --exec-root="${_rootDir}/ds" > "${_logfile}" 2>&1 &
+	dockerd --data-root="${_data_dir}" --pidfile="${_rootDir}/docker.pid" --host="unix://${_rootDir}/docker.sock" --iptables="${_iptables}" --ip-masq="${_ipmasq}" --exec-root="${_rootDir}/ds" > "${_logfile}" 2>&1 &
 	echo "unix://${_rootDir}/docker.sock ${_rootDir}/docker.pid"
 }
 

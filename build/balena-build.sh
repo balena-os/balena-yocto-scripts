@@ -104,6 +104,7 @@ balena_build_run_barys() {
 		-v "${SSH_AUTH_SOCK}":/tmp/ssh-agent \
 		-e SSH_AUTH_SOCK=/tmp/ssh-agent \
 		-e BUILDER_UID="$(id -u)" \
+		-e VERBOSE="${VERBOSE}" \
 		-e BUILDER_GID="$(id -g)" \
 		-e BALENA_TOKEN="${_token}" \
 		--name $BUILD_CONTAINER_NAME \

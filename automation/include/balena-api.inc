@@ -2,6 +2,9 @@
 
 CURL="curl -s"
 
+VERBOSE=${VERBOSE:-0}
+[ "${VERBOSE}" = "verbose" ] && set -x
+
 script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 device_dir=$( if cat /proc/self/cgroup | grep -q docker; then if [ -d "/work" ]; then cd "/work" && pwd; fi; else cd "${script_dir}/../../.." && pwd; fi )
 
@@ -399,7 +402,7 @@ balena_api_get_release() {
 	fi
 	 __dlog "Fetch release ${_release_version} from ${_appName}"
 	 _json=$(${CURL} -XGET -H "Content-type: application/json" "https://api.${_apiEnv}/${TRANSLATION}/release?\$filter=(belongs_to__application%20eq%20${_appID})%20and%20(release_version%20eq%20%27${_release_version}%27)")
-	 echo "${_json}"
+	 __pp_json "${_json}"
 	_result=$(echo "${_json}" | jq -e '.d[0].id')
 	return "$?"
 }
@@ -778,8 +781,8 @@ balena_api_add_role_access() {
 		return
 	fi
 
-	_teamID=$(balena_api_get_teamID "${_accessGroup}")
-	_roleID=$(balena_api_get_roleID "${_roleName}")
+	_teamID=$(balena_api_get_teamID "${_accessGroup}" "balena_os" "${_apiEnv}" "${_token}")
+	_roleID=$(balena_api_get_roleID "${_roleName}" "${_apiEnv}" "${_token}")
 
 	while read -r -d '' _post_data <<-EOF
 {
@@ -795,7 +798,7 @@ done
 	_json=$(${CURL} -XPOST "https://api.${_apiEnv}/${TRANSLATION}/team_application_access" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}" --data "${_post_data}")
 	_id=$(echo "${_json}" | jq -r '.id')
 	if [ "${_id}" = "null" ]; then
-		>&2 echo "Failed to add "${_roleName}" access tole to ${_appName}"
+		>&2 echo "Failed to add ${_roleName} access tole to ${_appName}"
 	else
 		__dlog "[${_appName}] Application ID ${_appID} now has ${_roleName} access"
 	fi
