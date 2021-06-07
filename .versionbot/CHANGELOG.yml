@@ -1,4 +1,95 @@
 - commits:
+    - subject: 'balena-api: Filter out debug output'
+      hash: bbb7ec875bd4b0d56c878187eb1d00e8d450b5d8
+      body: |
+        Change a json dump for a debug function call.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: 'balena-api: Specify API environment and token when setting app roles'
+      hash: c2402322ef608cb207494c37ade33a531734d9ca
+      body: |
+        The defaults only work with the production environment.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: 'jenkins_build-blocks: Separate recipes and packages'
+      hash: 0b7c0a0a14141bbeb6b29171763cac99d68d9830
+      body: >
+        Currently we are reading a package list from the contracts that mixes
+
+        recipe and package names, and we run bitbake with the `-k` flag not to
+
+        stop the build when a package name fails to match a recipe.
+
+
+        The contracts have now been modified to specify either a
+        `sw.recipe.yocto`
+
+        or a `sw.package.yocto` so we can distinguish between them and use
+
+        recipe names to build and package names to install.
+
+
+        We also remove the continue flag from bitbake.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: 'balena-lib: Generalize contract fetcher'
+      hash: 2d01048848734b580b89bfdd41df13ef10a8d31f
+      body: |
+        Instead of fetching a package list, fetch a composedOf list passing a
+        type. This allows to fetch `sw.package` and `sw.recipe` types.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: >-
+        balena-deploy: Shorten installation directory '/yocto/resin-board' to
+        '/work'
+      hash: 20baa1d287d95f95cb84797586afa73ed52f2db1
+      body: |
+        The installation directory is currently "/yocto/resin-board". This is
+        too long for the creation of per-task balena-engine sockets which have
+        a maximum path length of 104 characters.
+
+        This commit replaces the installation directory with "/work".
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: Conditional verbosity mode
+      hash: 6bb1fa2d08c2e3128b5a02588cb009ded98eb0da
+      body: |
+        Also, fix some linter warnings.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.14.3
+  date: 2021-06-01T11:48:30.209Z
+- commits:
     - subject: 'balena-lib: Add function to fetch labels from image'
       hash: a987a933ad52af6c7935b19f13f4f39f0be157f1
       body: |
