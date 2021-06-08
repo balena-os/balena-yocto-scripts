@@ -178,8 +178,6 @@ else
 	VERSION_HOSTOS=$(cat "$WORKSPACE/VERSION")
 fi
 
-PRIVATE_DT=$(balena_api_is_dt_private "${MACHINE}")
-
 # Jenkins artifacts
 echo "[INFO] Starting creating jenkins artifacts..."
 balena_deploy_artifacts "${MACHINE}" "$WORKSPACE/deploy-jenkins" "true"
