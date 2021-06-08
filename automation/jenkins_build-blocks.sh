@@ -15,6 +15,7 @@ Usage: ${script_name} [OPTIONS]
     -d Device type name
     -a Balena API environment
     -b HostOS block names
+    -p Deploy as final version
     -t Balena API token
     -n Registry namespace
     -s Shared build directory
@@ -35,6 +36,7 @@ __build_hostos_blocks() {
 	local _blocks="${3}"
 	local _api_env="${4}"
 	local _balenaos_account="${5}"
+	local _deploy="${6}"
 	local _hostos_blocks=""
 	local _appname
 	local _appnames
@@ -83,7 +85,7 @@ __build_hostos_blocks() {
 			_packages=$(balena_lib_contract_fetch_composedOf_list "${_block}" "${_device_type}" "${_release_version}" "sw.package.yocto.${_package_type}")
 			for _block in ${_blocks}; do
 				_appname="${_device_type}-${_block}"
-				balena_deploy_build_block "${_appname}" "${_device_type}" "${_packages}" "${_balenaos_account}" "${_api_env}"
+				balena_deploy_build_block "${_appname}" "${_device_type}" "${_packages}" "${_balenaos_account}" "${_api_env}" "${_deploy}"
 			done
 
 			# Remove packages folder from deploy directory
@@ -102,13 +104,14 @@ main() {
 	local _shared_dir
 	local _hostos_blocks
 	local _balenaos_account
+	local _final
 	local _esr=0
 	## Sanity checks
 	if [ ${#} -lt 1 ] ; then
 		usage
 		exit 1
 	else
-		while getopts "hd:a:t:n:s:b:v:c:e" c; do
+		while getopts "hd:a:t:n:s:b:v:c:ep" c; do
 			case "${c}" in
 				d) _device_type="${OPTARG}";;
 				a) _api_env="${OPTARG}";;
@@ -119,6 +122,7 @@ main() {
 				v) _variant="${OPTARG}" ;;
 				c) _balenaos_account="${OPTARG}" ;;
 				e) _esr=1 ;;
+				p) _final=1 ;;
 				h) usage;;
 				*) usage;exit 1;;
 			esac
@@ -136,7 +140,7 @@ main() {
 		[ -n "${_namespace}" ] && echo "Setting dockerhub account to ${_namespace}" && export NAMESPACE=${_namespace}
 		_balenaos_account=${_balenaos_account:-balena_os}
 
-		_hostos_blocks=$(__build_hostos_blocks "${_device_type}" "${_shared_dir}" "${_blocks}" "${_api_env}" "${_balenaos_account}")
+		_hostos_blocks=$(__build_hostos_blocks "${_device_type}" "${_shared_dir}" "${_blocks}" "${_api_env}" "${_balenaos_account}" "${_final}")
 	fi
 }
 
