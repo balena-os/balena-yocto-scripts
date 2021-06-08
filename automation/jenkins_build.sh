@@ -143,8 +143,33 @@ else
 	popd > /dev/null 2>&1
 fi
 
-"${automation_dir}"/../build/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -g "${BARYS_ARGUMENTS_VAR}"
+"${automation_dir}"/../build/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -g "${BARYS_ARGUMENTS_VAR}" -b "-c image_docker" -i "balena-image"
 # Do not check for artifacts as when discontinuing device types build artifacts are not created, but device-type.json needs to be deployed to mark the device as discontinued
+
+image_path=$(find "${WORKSPACE}/build/tmp/work/" -name "balena-image-${MACHINE}*.docker" -type l)
+if [ -L "${_image_path}" ]; then
+	echo "[ERROR]:balena_deploy_hostapp: No hostapp to release"
+	exit 1
+fi
+balena_deploy_block "$(balena_lib_get_slug "${MACHINE}")" "${MACHINE}" "${_bootable:-1}" "${deploy}" "${image_path}"
+
+# Build and release blocks
+if [ -n "${blocks}" ]; then
+	[ "${deploy}" = "no" ] && _final=""
+	"${automation_dir}/jenkins_build-blocks.sh" -d "${MACHINE}" -a "$(balena_lib_environment)" -b "${blocks}" -t "$(balena_lib_token)" -s "${JENKINS_PERSISTENT_WORKDIR}" "${_final:+"-p"}"
+fi
+
+# Release hostos
+osapp="${MACHINE}-hostos"
+blocks_apps="${MACHINE}"
+for block in ${blocks}; do
+	blocks_apps="${blocks_apps} ${MACHINE}-${block}"
+done
+balena_deploy_hostos "${osapp}" "${blocks_apps}" "${MACHINE}" "${deploy}"
+BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a HOSTOS_APPS=${osapp}"
+
+# Build image
+"${automation_dir}"/../build/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -g "${BARYS_ARGUMENTS_VAR}"
 
 if [ "$ENABLE_TESTS" = true ]; then
 	# Run the test script in the device specific repository
