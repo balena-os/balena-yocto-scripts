@@ -15,6 +15,7 @@ Usage: ${script_name} [OPTIONS]
     -d Device type name
     -a Balena API environment
     -b HostOS block names
+    -p Deploy as final version
     -t Balena API token
     -n Registry namespace
     -s Shared build directory
@@ -35,10 +36,11 @@ __build_hostos_blocks() {
 	local _blocks="${3}"
 	local _api_env="${4}"
 	local _balenaos_account="${5}"
+	local _final="${6:-"no"}"
 	local _hostos_blocks=""
 	local _appname
 	local _appnames
-	local _release_version
+	local _version
 	local _recipes
 	local _packages
 	local _bitbake_targets
@@ -57,8 +59,8 @@ __build_hostos_blocks() {
 			else
 				_appnames="${_appnames} ${_appname}"
 			fi
-			_release_version=$(balena_lib_get_os_version)
-			_recipes=$(balena_lib_contract_fetch_composedOf_list "${_block}" "${_device_type}" "${_release_version}" "sw.recipe.yocto")
+			_version=$(balena_lib_get_os_version)
+			_recipes=$(balena_lib_contract_fetch_composedOf_list "${_block}" "${_device_type}" "${_version}" "sw.recipe.yocto")
 			if [ "$?" -ne 0 ] || [ -z "${_recipes}" ]; then
 				echo "No packages found in contract"
 				exit 1
@@ -76,10 +78,13 @@ __build_hostos_blocks() {
 			mkdir -p "${_deploy_dir}"
 			balena_deploy_feed "${_deploy_dir}"
 
-			_packages=$(balena_lib_contract_fetch_composedOf_list "${_block}" "${_device_type}" "${_release_version}" "sw.package.yocto.${_package_type}")
+			_packages=$(balena_lib_contract_fetch_composedOf_list "${_block}" "${_device_type}" "${_version}" "sw.package.yocto.${_package_type}")
 			for _block in ${_blocks}; do
+				local _release_version
 				_appname="${_device_type}-${_block}"
-				balena_deploy_build_block "${_appname}" "${_device_type}" "${_packages}" "${_balenaos_account}" "${_api_env}"
+				balena_build_block "${_appname}" "${_device_type}" "${_packages}" "${_balenaos_account}" "${_api_env}"
+				_release_version=$(balena_lib_get_os_version)
+				balena_deploy_block "${_appname}"  "${_device_type}" "${_bootable:-0}" "${_image_path:-"${WORKSPACE}/deploy-jenkins/${_appName}-${_release_version}.docker"}"
 			done
 
 			# Remove packages folder from deploy directory
@@ -98,13 +103,14 @@ main() {
 	local _shared_dir
 	local _hostos_blocks
 	local _balenaos_account
+	local _final
 	local _esr=0
 	## Sanity checks
 	if [ ${#} -lt 1 ] ; then
 		usage
 		exit 1
 	else
-		while getopts "hd:a:t:n:s:b:v:c:e" c; do
+		while getopts "hd:a:t:n:s:b:v:c:ep" c; do
 			case "${c}" in
 				d) _device_type="${OPTARG}";;
 				a) _api_env="${OPTARG}";;
@@ -115,6 +121,7 @@ main() {
 				v) _variant="${OPTARG}" ;;
 				c) _balenaos_account="${OPTARG}" ;;
 				e) _esr=1 ;;
+				p) _final="yes";;
 				h) usage;;
 				*) usage;exit 1;;
 			esac
@@ -132,7 +139,7 @@ main() {
 		[ -n "${_namespace}" ] && echo "Setting dockerhub account to ${_namespace}" && export NAMESPACE=${_namespace}
 		_balenaos_account=${_balenaos_account:-balena_os}
 
-		_hostos_blocks=$(__build_hostos_blocks "${_device_type}" "${_shared_dir}" "${_blocks}" "${_api_env}" "${_balenaos_account}")
+		_hostos_blocks=$(__build_hostos_blocks "${_device_type}" "${_shared_dir}" "${_blocks}" "${_api_env}" "${_balenaos_account}" "${_final}")
 	fi
 }
 
