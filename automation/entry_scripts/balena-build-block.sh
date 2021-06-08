@@ -17,6 +17,7 @@ source "${script_dir}/balena-lib.inc"
 
 [ -z "${PACKAGE_TYPE}" ] && PACKAGE_TYPE="ipk"
 [ -z "${BALENAOS_ACCOUNT}" ] && BALENAOS_ACCOUNT="balena_os"
+[ -z "${FINAL}" ] && FINAL="false"
 
 DEVICE_TYPE_JSON="$WORKSPACE/$MACHINE.json"
 if [ -e "${DEVICE_TYPE_JSON}" ]; then
@@ -103,8 +104,7 @@ if balena build --logs --nocache --deviceType "${MACHINE}" --arch "${ARCH}" --bu
 	image_id=$(docker images --filter "label=${BALENA_HOSTOS_BLOCK_CLASS}" --format "{{.ID}}")
 	mkdir -p "${WORKSPACE}/deploy-jenkins"
 	docker save "${image_id}" > "${WORKSPACE}/deploy-jenkins/${APPNAME}-${RELEASE_VERSION}.docker"
-	_releaseID=$(balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" "${image_id}" | sed -n 's/.*Release: //p')
-	balena_api_set_release_version "${_releaseID}" "${API_ENV}" "${BALENAOS_TOKEN}" "${RELEASE_VERSION}"
+	_releaseID=$(balena_lib_release "${BALENAOS_ACCOUNT}/${APPNAME}" "${RELEASE_VERSION}" "${FINAL}" $(pwd) "${API_ENV}" "${image_id}")
 else
 	echo "[ERROR] Fail to build"
 	exit 1
