@@ -158,6 +158,39 @@ else
 	popd > /dev/null 2>&1
 fi
 
+# Build hostapp
+"${automation_dir}"/../build/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -v "${buildFlavor}" -g "${BARYS_ARGUMENTS_VAR}" -b "-c image_docker" -i "balena-image"
+
+_final=""
+[ "${deploy}" = "yes" ] && _final=1
+
+# Artifacts
+
+# Deploy hostapp
+image_path=$(find "${WORKSPACE}/build/tmp/work/" -name "balena-image-${MACHINE}*.docker" -type l)
+if [ -L "${image_path}" ]; then
+	_slug=$(balena_lib_get_slug "${MACHINE}")
+	balena_deploy_block "${_slug}" "${MACHINE}" "1" "${_final}" "${image_path}"
+else
+	echo "no hostapp to deploy"
+	exit 1
+fi
+
+# Build and deploy blocks
+if [ -n "${blocks}" ]; then
+	"${automation_dir}/jenkins_build-blocks.sh" -d "${MACHINE}" -a "$(balena_lib_environment)" -b "${blocks}" -t "$(balena_lib_token)" -v "${buildFlavor}" -s "${JENKINS_PERSISTENT_WORKDIR}" "${_final:+"-p"}"
+fi
+
+# Deploy hostos
+osapp="${MACHINE}-hostos"
+blocks_apps="${MACHINE}"
+for block in ${blocks}; do
+	blocks_apps="${blocks_apps} ${MACHINE}-${block}"
+done
+balena_deploy_hostos "${osapp}" "${blocks_apps}" "${MACHINE}" "${_final}"
+BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a HOSTOS_APPS=${osapp}"
+
+# Build image
 "${automation_dir}"/../build/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -v "${buildFlavor}" -g "${BARYS_ARGUMENTS_VAR}"
 
 if [ "$ENABLE_TESTS" = true ]; then
@@ -168,14 +201,6 @@ if [ "$ENABLE_TESTS" = true ]; then
 	else
 		echo "No custom test file exists - Continuing ahead"
 	fi
-fi
-
-# Artifacts
-DEVICE_STATE=$(balena_lib_get_dt_state "${MACHINE}")
-if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
-	VERSION_HOSTOS=$(balena_lib_get_os_version)
-else
-	VERSION_HOSTOS=$(cat "$WORKSPACE/VERSION")
 fi
 
 # Jenkins artifacts
@@ -190,7 +215,6 @@ if [ "$deploy" = "yes" ]; then
 
 	if [ "${_state}" != "DISCONTINUED" ]; then
 		balena_deploy_to_dockerhub "${MACHINE}"
-		balena_deploy_hostapp "${MACHINE}"
 	fi
 
 	if [ "$AMI" = "true" ]; then
