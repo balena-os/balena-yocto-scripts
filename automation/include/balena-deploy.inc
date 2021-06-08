@@ -11,70 +11,6 @@ source "${include_dir}/balena-api.inc"
 source "${include_dir}/balena-lib.inc"
 source "${include_dir}/balena-docker.inc"
 
-# Deploys to passed container image to BalenaCloud
-# Input arguments:
-#  $1: Device type (defaults to MACHINE environmental variable)
-#  $2: Balena environment
-#  $3: Balena API token
-#  $4: ESR release flag (default to "ESR" environment variable)
-#  $5: Build variant (defaults to buildFlavor environment variable)
-#  $6: BalenaOS account (defaults to balena_os)
-#  $7: App name to deploy to (defaults to specified device type's slug)
-#
-balena_deploy_hostapp() {
-	local _device_type="${1:-"${MACHINE}"}"
-	local _api_env="${2:-$(balena_lib_environment)}"
-	local _token="${3:-$(balena_lib_token "${_api_env}")}"
-	local _esr="${4}"
-	local _variant="${5}"
-	local _balenaos_account="${6}"
-	local _app="${7}"
-	local _balenaCloudEmail="${8:-"${balenaCloudEmail}"}"
-	local _balenaCloudPassword="${9:-"${balenaCloudPassword}"}"
-	local _version
-	local _image_path
-	local _slug
-	[ -z "${_device_type}" ] && echo "[balena_deploy_hostapp] A device type is required" && return 1
-	_image_path="$(readlink --canonicalize "${device_dir}/build/tmp/deploy/images/${_device_type}/balena-image-${_device_type}.docker")"
-	_slug=$(balena_lib_get_slug "${_device_type}")
-	if ! balena_lib_docker_pull_helper_image "Dockerfile_balena-push-env" balena_yocto_scripts_revision; then
-		return 1
-	fi
-
-	[ -z "${_token}" ] && echo "A Balena token is required" && return 1
-	[ -z "${_api_env}" ] && echo "A Balena environment is required" && return 1
-
-	_version=${VERSION_HOSTOS:-$(balena_lib_get_os_version)}
-	_app=${_app:-"${_slug}"}
-	_esr=${_esr:-"${ESR}"}
-	_variant=${_variant:-"${buildFlavor}"}
-	_meta_balena_version=${META_BALENA_VERSION:-$(balena_lib_get_meta_balena_version)}
-	NAMESPACE=${NAMESPACE:-resin}
-	_balenaos_account="${_balenaos_account:-"balena_os"}"
-
-	# shellcheck disable=SC2154
-	docker run --rm -t \
-		-e BALENAOS_TOKEN="${_token}" \
-		-e API_ENV="${_api_env}" \
-		-e APPNAME="${_app}" \
-		-e BALENAOS_ACCOUNT="${_balenaos_account}" \
-		-e VARIANT="${_variant}" \
-		-e RELEASE_VERSION="${_version}" \
-		-e ESR="${_esr}" \
-		-e MACHINE="${_device_type}" \
-		-e VERBOSE="${VERBOSE}" \
-		-e balenaCloudEmail="${_balenaCloudEmail}" \
-		-e BOOTABLE="1" \
-		-e balenaCloudPassword="${_balenaCloudPassword}" \
-		-e META_BALENA_VERSION="${_meta_balena_version}" \
-		-v "${_image_path}":/host/appimage.docker \
-		-v "${device_dir}":/work \
-		--privileged \
-		"${NAMESPACE}"/balena-push-env:"${balena_yocto_scripts_revision}" /balena-deploy-block.sh
-
-	balena_lib_docker_remove_helper_images "balena-push-env"
-}
-
 # Deploy Jenkins build artifacts
 #
 # Inputs:
@@ -389,23 +325,44 @@ EOSU
 # Builds and deploys the specified block to BalenaCloud
 # Input arguments;
 #  $1: App name to deploy into
-#  $2: Path to the image to deploy
-#  $3: Device type for the app
-#  $4: BalenaCloud email address (defaults to the balenaCloudEmail enviromental variable)
-#  $5: BalenaCloud password (defaults to the balenaCloudPassword enviromental variable)
+#  $2: Device type for the app
+#  $3: Bootable flag
+#  $4: Deploy as final release
+#  $5: Path to the image to deploy
+#  $6: Path to the working directory (defaults to device repository root)
+#  $7: BalenaCloud admin account (defaults to balena_os)
+#  $8: BalenaCloud email address (defaults to the balenaCloudEmail enviromental variable)
+#  $9: BalenaCloud password (defaults to the balenaCloudPassword enviromental variable)
+#  $10: Build variant (only for hostapps, default to "buildFlavor" environment variable)
+#  $11: ESR release flag (default to "ESR" environment variable)
 #
 balena_deploy_block() {
 	local _appName="$1"
-	local _image_path="${2}"
-	local _device_type="${3:-${MACHINE}}"
-	local _bootable=${4:-"0"}
-	local _balenaos_account="${5:-"balena_os"}"
-	local _balenaCloudEmail="${6:-"${balenaCloudEmail}"}"
-	local _balenaCloudPassword="${7:-"${balenaCloudPassword}"}"
+	local _device_type="${2:-${MACHINE}}"
+	local _bootable=${3:-"0"}
+	local _image_path="${4:-""}"
+	local _deploy="${5:-no}"
+	local _final="${6:-no}"
+	local _work_dir="${7:-"${device_dir}"}"
+	local _balenaos_account="${8:-"balena_os"}"
+	local _balenaCloudEmail="${9:-"${balenaCloudEmail}"}"
+	local _balenaCloudPassword="${10:-"${balenaCloudPassword}"}"
+	local _variant="${11}"
+	local _esr="${12}"
 
 	[ -z "${_appName}" ] && echo "App name is required" && return
-	[ -z "${_image_path}" ] && echo "Image path is required" && return
+	if [ -f "${_image_path}" ]; then
+		_image_path="$(readlink --canonicalize "${_image_path}")"
+	fi
 	[ -z "${_device_type}" ] && echo "Device type is required" && return
+	_esr=${_esr:-"${ESR}"}
+	_variant=${_variant:-"${buildFlavor}"}
+
+	if [ ! -f "${_work_dir}/balena.yml" ]; then
+		if [ -f "${device_dir}/balena.yml" ]; then
+			cp "${device_dir}/balena.yml" "${_work_dir}"
+		fi
+	fi
 
 	NAMESPACE=${NAMESPACE:-resin}
 	if ! balena_lib_docker_pull_helper_image "Dockerfile_balena-push-env" balena_yocto_scripts_revision; then
@@ -416,13 +373,19 @@ balena_deploy_block() {
 		-e API_ENV="$(balena_lib_environment)" \
 		-e BALENAOS_TOKEN="$(balena_lib_token "${API_ENV}")" \
 		-e BALENAOS_ACCOUNT="${_balenaos_account}" \
-		-e RELEASE_VERSION="$(balena_lib_get_os_version)" \
+		-e META_BALENA_VERSION="$(balena_lib_get_meta_balena_version)" \
 		-e MACHINE="${_device_type}" \
 		-e VERBOSE="${VERBOSE}" \
 		-e BOOTABLE="${_bootable}" \
+		-e DEPLOY="${_deploy}" \
+		-e FINAL="${_final}" \
 		-e balenaCloudEmail="${_balenaCloudEmail}" \
 		-e balenaCloudPassword="${_balenaCloudPassword}" \
+		-e VARIANT="${_variant}" \
+		-e ESR="${_esr}" \
 		-v "${_image_path}":/host/appimage.docker \
+		-v "${device_dir}":/work \
+		-v "${_work_dir}":/deploy \
 		--privileged \
 		"${NAMESPACE}"/balena-push-env:"${balena_yocto_scripts_revision}" /balena-deploy-block.sh
 
@@ -437,7 +400,7 @@ balena_deploy_block() {
 #  $4: Balena cloud account (defaults to balena_os)
 #  $5: Balena API environment
 #
-balena_deploy_build_block() {
+balena_build_block() {
 	local _appName="$1"
 	local _device_type="${2:-${MACHINE}}"
 	local _packages="${3:-${PACKAGES}}"
@@ -453,18 +416,13 @@ balena_deploy_build_block() {
 	fi
 	docker run --rm -t \
 		-e APPNAME="${_appName}" \
-		-e API_ENV="${_api_env}" \
-		-e BALENAOS_TOKEN="$(balena_lib_token "${API_ENV}")" \
 		-e NAMESPACE="${NAMESPACE:-resin}" \
-		-e BALENAOS_ACCOUNT="${_balenaos_account}" \
 		-e RELEASE_VERSION="$(balena_lib_get_os_version)" \
 		-e PACKAGES="${_packages}" \
 		-e VERBOSE="${VERBOSE}" \
 		-e MACHINE="${_device_type}" \
 		-e TAG="${balena_yocto_scripts_revision}" \
 		-e WORKSPACE=/work \
-		-e balenaCloudEmail="${balenaCloudEmail}" \
-		-e balenaCloudPassword="${balenaCloudPassword}" \
 		-v "${WORKSPACE:-"${PWD}"}":/work \
 		--privileged \
 		"${NAMESPACE}"/yocto-block-build-env:"${balena_yocto_scripts_revision}" /balena-build-block.sh
@@ -587,7 +545,7 @@ __create_compose_file() {
 	local _bootable
 
 	[ -z "${_device_type}" ] && return
-	_version=${version:-$(balena_lib_get_os_version)}
+	_version=${_version:-$(balena_lib_get_os_version)}
 	_apiEnv=${_apiEnv:-"balena-cloud.com"}
 	[ -z "${_path}" ] && _path=$(mktemp -d)
 
@@ -599,9 +557,14 @@ __create_compose_file() {
 			>&2 echo "[${_block}] No such image for ${_version} in ${_apiEnv}"
 			continue
 		fi
+		# Container images created by importing a tarball and saving (like the Yocto docker image class does) do not contain labels
+		# Hence, if no labels are found default to hostapp values, class service, root store and bootable.
 		_class=$(balena_lib_get_label_from_image "${_image_id}" "${BALENA_HOSTOS_BLOCK_CLASS}")
+		[ -z "${_class}" ] && class="service"
 		_store=$(balena_lib_get_label_from_image "${_image_id}" "${BALENA_HOSTOS_BLOCK_STORE}")
+		[ -z "${_store}" ] && _store="root"
 		_reboot_required=$(balena_lib_get_label_from_image "${_image_id}" "${BALENA_HOSTOS_BLOCK_REQUIRES_REBOOT}")
+		[ -z "${_reboot_required}" ] && _reboot_required="1"
 		_bootable=$(balena_api_is_bootable "${_block}" "${_apiEnv}" "${_token}")
 		__add_compose_service "${_path}" "${_block}" "${_block_image}" "${_class}" "${_reboot_required}" "${_store}" "${_bootable}"
 	done
@@ -614,10 +577,11 @@ __create_compose_file() {
 # $1: Application name
 # $2: HostOS blocks - required
 # $3: Device type for the application
-# $4: Balena API environment (default to balena-cloud.com)
-# $5: Balena API token (defaults to ~/.balena/token)
-# $6: Balena cloud account (defaults to balena_os)
-# $7: Bootable 0 or 1 (default)
+# $4: Release final version
+# $5: Balena API environment (default to balena-cloud.com)
+# $6: Balena API token (defaults to ~/.balena/token)
+# $7: Balena cloud account (defaults to balena_os)
+# $8: Bootable 0 or 1 (default)
 #
 # Outputs:
 #    None
@@ -626,11 +590,13 @@ balena_deploy_hostos() {
 	local _appName="$1"
 	local _blocks="$2"
 	local _device_type="$3"
-	local _apiEnv="$4"
-	local _token="$5"
-	local _account="$6"
-	local _bootable="${7:-1}"
+	local _final="${4:-no}"
+	local _apiEnv="$5"
+	local _token="$6"
+	local _account="$7"
+	local _bootable="${8:-1}"
 	local _path
+	local _version
 
 	_apiEnv=${_apiEnv:-"$(balena_lib_environment)"}
 	_account=${_account:-"balena_os"}
@@ -639,22 +605,9 @@ balena_deploy_hostos() {
 	[ -z "${_version}" ] && >&2 echo "Invalid version" && return
 	[ -z "${_device_type}" ] && >&2 echo "Required device type" && return
 	_path=$(__create_compose_file "${_device_type}" "${_apiEnv}" "${_version}" "${_token}" "${_blocks}")
-	if [ -n "${balenaCloudEmail}" ] && [ -n "${balenaCloudPassword}" ]; then
-		balena_api_create_public_app "${_appName}" "${_apiEnv}" "${_device_type}" "${balenaCloudEmail}" "${balenaCloudPassword}" "${_bootable}"
-	else
-		>&2 echo "Balena credentials need to be available in the environment to create public apps"
-	fi
-
-	if balena_api_get_release "${_appName}" "${_version}" "${_apiEnv}"; then
-		>&2 echo "[INFO] Release ${_version} already exists for ${_appName}"
-		return
-	fi
-	balena_lib_login "${_apiEnv}" "${_token}"
 	if [ ! -f "${_path}/docker-compose.yml" ]; then
 		>&2 echo "No compose file in ${_path}"
 		return
 	fi
-	_releaseID=$(BALENARC_BALENA_URL="${_apiEnv}" balena deploy "${_appName}" --build --source "${_path}" | sed -n 's/.*Release: //p')
-	echo "${_releaseID} deployed to ${_appName}"
-	balena_api_set_release_version "${_releaseID}" "${_apiEnv}" "${_token}" "${_version}"
+	balena_deploy_block "${_appName}" "${_device_type}" "${_bootable}" "${_path}"
 }
