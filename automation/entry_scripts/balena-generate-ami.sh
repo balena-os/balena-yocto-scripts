@@ -9,6 +9,7 @@ AMI_ROOT_DEVICE_NAME=${AMI_ROOT_DEVICE_NAME:-/dev/sda1}
 AMI_EBS_DELETE_ON_TERMINATION=${AMI_EBS_DELETE_ON_TERMINATION:-true}
 AMI_EBS_VOLUME_SIZE=${AMI_EBS_VOLUME_SIZE:-8}
 AMI_EBS_VOLUME_TYPE=${AMI_EBS_VOLUME_TYPE:-gp2}
+AMI_BOOT_MODE=${AMI_BOOT_MODE:-uefi}
 
 IMPORT_SNAPSHOT_TIMEOUT_MINS=${IMPORT_SNAPSHOT_TIMEOUT_MINS:-15}
 BOOT_PARTITION=''
@@ -198,6 +199,7 @@ create_aws_ami() {
     --virtualization-type hvm \
     --ena-support \
     --root-device-name "${AMI_ROOT_DEVICE_NAME}" \
+    --boot-mode "${AMI_BOOT_MODE}" \
     --block-device-mappings "DeviceName=${AMI_ROOT_DEVICE_NAME},Ebs={
                                 DeleteOnTermination=${AMI_EBS_DELETE_ON_TERMINATION},
                                 SnapshotId=${snapshot_id},
