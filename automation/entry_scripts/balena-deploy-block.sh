@@ -2,6 +2,7 @@
 set -e
 
 source /balena-docker.inc
+source /balena-lib.inc
 source /balena-api.inc
 
 trap 'balena_docker_stop fail' SIGINT SIGTERM
