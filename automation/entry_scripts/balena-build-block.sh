@@ -3,8 +3,8 @@
 set -e
 
 script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-source "${script_dir}/balena-api.inc"
-source "${script_dir}/balena-lib.inc"
+source "${script_dir}/../include/balena-api.inc"
+source "${script_dir}/../include/balena-lib.inc"
 
 # Input checks
 [ -z "${APPNAME}" ] && echo "The block's app name needs to be defined" && exit 1

@@ -1,8 +1,9 @@
 #!/bin/bash
 set -e
 
-source /balena-docker.inc
-source /balena-api.inc
+script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+source "${script_dir}/../include/balena-api.inc"
+source "${script_dir}/../include/balena-lib.inc"
 
 trap 'balena_docker_stop fail' SIGINT SIGTERM
 
