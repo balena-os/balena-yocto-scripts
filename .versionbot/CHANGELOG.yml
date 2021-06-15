@@ -1,4 +1,22 @@
 - commits:
+    - subject: 'entry_scripts: Fix source path for includes'
+      hash: 1ff3dda9ad7e47f6b8f1fef2fb544b52e53b2d67
+      body: |
+        Change the path of the included bash scripts
+        as jenkins deploys currently fail with:
+
+            balena-api.inc: line 306: balena_lib_resolve_aliases: command not found
+            Build step 'Execute shell' marked build as failure
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alexandru Costache <alexandru@balena.io>
+        signed-off-by: Alexandru Costache <alexandru@balena.io>
+      author: Alexandru Costache
+      nested: []
+  version: 1.14.4
+  date: 2021-06-15T07:59:23.702Z
+- commits:
     - subject: 'balena-api: Filter out debug output'
       hash: bbb7ec875bd4b0d56c878187eb1d00e8d450b5d8
       body: |
