@@ -1,4 +1,29 @@
 - commits:
+    - subject: 'Dockerfile_balena-push-env: Add balena-lib to image'
+      hash: 937026182287183bffbdc6836c707d34532bc509
+      body: |
+        The balena-api library requires functions in balena-lib.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: 'balena-deploy-block: source balena-lib script library'
+      hash: 4b05b3ea6b3d42add1926547809e29213ce84890
+      body: |
+        Some functions in balena-api require this library.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.14.4
+  date: 2021-06-16T10:37:10.537Z
+- commits:
     - subject: 'balena-api: Filter out debug output'
       hash: bbb7ec875bd4b0d56c878187eb1d00e8d450b5d8
       body: |
