@@ -65,6 +65,7 @@ balena_deploy_hostapp() {
 		-e balenaCloudPassword="${_balenaCloudPassword}" \
 		-e META_BALENA_VERSION="${_meta_balena_version}" \
 		-v "${_image_path}":/host/appimage.docker \
+		-v "${device_dir}":/work \
 		--privileged \
 		"${NAMESPACE}"/balena-push-env:"${balena_yocto_scripts_revision}" /balena-deploy-block.sh
 
