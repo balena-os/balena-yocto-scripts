@@ -36,8 +36,8 @@ if [ -n "${VARIANT}" ]; then
 	else
 		variant_str="production"
 	fi
-	echo "[INFO] Tagging release ${_releaseID} with version ${release_version} and variant ${variant_str}"
-	balena tag set version "${release_version}" --release "${_releaseID}"
+	echo "[INFO] Tagging release ${_releaseID} with version ${RELEASE_VERSION} and variant ${variant_str}"
+	balena tag set version "${RELEASE_VERSION}" --release "${_releaseID}"
 	balena tag set variant "${variant_str}" --release "${_releaseID}"
 	if [ "$ESR" = "true" ]; then
 		balena tag set meta-balena-base "${META_BALENA_VERSION}" --release "${_releaseID}"
