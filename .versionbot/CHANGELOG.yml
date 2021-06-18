@@ -1,4 +1,30 @@
 - commits:
+    - subject: 'balena-deploy: Flag hostapps as bootable apps'
+      hash: 4093fe7397b52cc58d676f2d7b3db3699c8a8b92
+      body: |
+        This will mark the app as isHost.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: 'balena-deploy: Provide working directory when deploying hostapp'
+      hash: c20241cdf161ca8f438c38e84f504dadfaeeadc0
+      body: |
+        When creating a public app, the workdir is used to retrieve the URL
+        used in the public app creation.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.14.6
+  date: 2021-06-18T10:49:05.763Z
+- commits:
     - subject: 'balena-deploy-block: Do not add variant suffix to release tag'
       hash: 084154ac3c3d0d6d3ec4c7d2a21590815a61bb2f
       body: |
