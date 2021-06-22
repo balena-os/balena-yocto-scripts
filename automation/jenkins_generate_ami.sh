@@ -37,7 +37,11 @@ YOCTO_IMAGES_PATH="${WORKSPACE}/build/tmp/deploy/images/${MACHINE}"
 # TODO: Replace the default value with the value read from the CoffeeScript file once available
 IMAGE_NAME=${IMAGE_NAME:-balena-image-${MACHINE}.balenaos-img}
 
-IMAGE="${YOCTO_IMAGES_PATH}/${IMAGE_NAME}"
+ORIG_IMAGE="${YOCTO_IMAGES_PATH}/${IMAGE_NAME}"
+PRELOADED_IMAGE="${ORIG_IMAGE}.preloaded"
+
+cp "${ORIG_IMAGE}" "${PRELOADED_IMAGE}"
+
 # AMI names must be between 3 and 128 characters long, and may contain letters, numbers, '(', ')', '.', '-', '/' and '_'
 VERSION=$(cat "${YOCTO_IMAGES_PATH}/VERSION_HOSTOS" | sed 's/+/-/g')
 
@@ -76,6 +80,8 @@ docker run --rm -t \
     -e BALENARC_BALENA_URL="${BALENA_ENV}" \
     -e BALENACLI_TOKEN="${BALENACLI_TOKEN}" \
     -e PRELOAD_SSH_PUBKEY="${BALENA_PRELOAD_SSH_PUBKEY}" \
-    -e IMAGE="${IMAGE}" \
+    -e IMAGE="${PRELOADED_IMAGE}" \
     -w "${WORKSPACE}" \
     "${NAMESPACE}/balena-generate-ami-env:${balena_yocto_scripts_revision}" /balena-generate-ami.sh
+
+rm -f "${PRELOADED_IMAGE}"
