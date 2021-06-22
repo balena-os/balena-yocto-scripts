@@ -214,7 +214,6 @@ create_aws_ami() {
     echo "AMI image created with id ${image_id}"
 
     aws_s3_image_cleanup || true
-    aws_ebs_snapshot_cleanup || true
 
     eval "$__retvalue='$image_id'"
 }
