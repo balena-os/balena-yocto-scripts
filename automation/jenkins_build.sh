@@ -195,12 +195,12 @@ if [ "$deploy" = "yes" ]; then
 		balena_deploy_hostapp "${MACHINE}"
 	fi
 
-fi
+	if [ "$AMI" = "true" ]; then
+		echo "[INFO] Generating AMI"
+		export automation_dir
+		"${automation_dir}"/jenkins_generate_ami.sh
+	fi
 
-if [ "$AMI" = "true" ]; then
-	echo "[INFO] Generating AMI"
-	export automation_dir
-	"${automation_dir}"/jenkins_generate_ami.sh
 fi
 
 # Cleanup
