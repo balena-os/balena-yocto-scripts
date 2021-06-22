@@ -1,5 +1,7 @@
 #!/bin/bash
 
+[ "${VERBOSE}" = "verbose" ] && set -x
+
 set -e
 
 IMAGE="${IMAGE}"

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+[ "${VERBOSE}" = "verbose" ] && set -x
+
 # Publish to staging by default
 S3_ACCESS_KEY=${STAGING_S3_ACCESS_KEY}
 S3_SECRET_KEY=${STAGING_S3_SECRET_KEY}
@@ -62,6 +64,7 @@ docker run --rm -t \
     --network host  \
     -v "${WORKSPACE}:${WORKSPACE}" \
     -v /var/run/docker.sock:/var/run/docker.sock \
+    -e VERBOSE="${VERBOSE}" \
     -e AWS_ACCESS_KEY_ID="${S3_ACCESS_KEY}" \
     -e AWS_SECRET_ACCESS_KEY="${S3_SECRET_KEY}" \
     -e AWS_DEFAULT_REGION="${S3_REGION}" \
