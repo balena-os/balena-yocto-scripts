@@ -347,7 +347,7 @@ balena_lib_get_dt_state() {
 	local _device_type_json="${device_dir}/${_device_type}.json"
 
 	if [ ! -f "${_device_type_json}" ]; then
-		>&2 echo "[balena_lib_get_slug]: Device type JSON not found"
+		>&2 echo "[balena_lib_get_dt_state]: Device type JSON not found"
 		return 1
 	fi
 
@@ -394,7 +394,7 @@ balena_lib_get_dt_arch() {
 	local _device_type_json="${device_dir}/${_device_type}.json"
 
 	if [ ! -f "${_device_type_json}" ]; then
-		>&2 echo "[balena_lib_get_slug]: Device type JSON not found"
+		>&2 echo "[balena_lib_get_dt_arch]: Device type JSON not found"
 		return 1
 	fi
 
