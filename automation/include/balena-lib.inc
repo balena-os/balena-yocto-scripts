@@ -5,7 +5,7 @@ VERBOSE=${VERBOSE:-0}
 [ "${VERBOSE}" = "verbose" ] && set -x
 
 include_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-device_dir=$( if cat /proc/self/cgroup | grep -q docker; then if [ -d "/work" ]; then cd "/work" && pwd; fi; else cd "${include_dir}/../../.." && pwd; fi )
+device_dir=$( if cat /proc/self/cgroup | grep -q docker && [ -d "/work" ]; then cd "/work" && pwd; else cd "${include_dir}/../../.." && pwd; fi )
 BALENA_YOCTO_SCRIPTS_REVISION=$(cd "${include_dir}" && git rev-parse --short=7 HEAD || true)
 
 NAMESPACE="${NAMESPACE:-"resin"}"
@@ -347,7 +347,7 @@ balena_lib_get_dt_state() {
 	local _device_type_json="${device_dir}/${_device_type}.json"
 
 	if [ ! -f "${_device_type_json}" ]; then
-		>&2 echo "[balena_lib_get_slug]: Device type JSON not found"
+		>&2 echo "[balena_lib_get_dt_state]: Device type JSON not found"
 		return 1
 	fi
 
@@ -394,7 +394,7 @@ balena_lib_get_dt_arch() {
 	local _device_type_json="${device_dir}/${_device_type}.json"
 
 	if [ ! -f "${_device_type_json}" ]; then
-		>&2 echo "[balena_lib_get_slug]: Device type JSON not found"
+		>&2 echo "[balena_lib_get_dt_arch]: Device type JSON not found"
 		return 1
 	fi
 
