@@ -128,15 +128,6 @@ Run with -h or --help for a complete list of arguments.\n"
 	exit 1
 fi
 
-if [ "$buildFlavor" = "dev" ]; then
-	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --development-image"
-elif [ "$buildFlavor" = "prod" ]; then
-	:
-else
-	echo "[ERROR] No such build flavor: $buildFlavor."
-	exit 1
-fi
-
 # When supervisorVersion is provided, set the appropiate barys argument
 if [ "$supervisorVersion" != "__ignore__" ]; then
 	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --supervisor-version $supervisorVersion"
@@ -154,7 +145,7 @@ else
 	popd > /dev/null 2>&1
 fi
 
-"${automation_dir}"/../build/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -v "${buildFlavor}" -g "${BARYS_ARGUMENTS_VAR}"
+"${automation_dir}"/../build/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -g "${BARYS_ARGUMENTS_VAR}"
 
 if [ "$ENABLE_TESTS" = true ]; then
 	# Run the test script in the device specific repository
