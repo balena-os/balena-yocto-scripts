@@ -21,7 +21,6 @@ COMPRESS_TOOL="xz"
 BUILD_DIR=build
 REMOVEBUILD=no
 COMPRESS=no
-DEVELOPMENT_IMAGE=no
 SUPERVISOR_VERSION=
 SHARED_DOWNLOADS=
 SHARED_SSTATE=
@@ -57,10 +56,6 @@ function help {
     echo -e "\t-c | --compress"
     echo -e "\t\t Run build with compress variable (BALENA_SDIMG_COMPRESSION)"
     echo -e "\t\t using $COMPRESS_TOOL."
-    echo -e "\t\t Default: no."
-
-    echo -e "\t-d | --development-image"
-    echo -e "\t\t Set images to include development tweaks."
     echo -e "\t\t Default: no."
 
     echo -e "\t--bitbake-target"
@@ -238,9 +233,6 @@ while [[ $# -ge 1 ]]; do
         -c|--compress)
             COMPRESS=yes
             ;;
-        -d|--development-image)
-            DEVELOPMENT_IMAGE=yes
-            ;;
         --bitbake-target)
             if [ -z "$2" ]; then
                 log ERROR "\"$1\" argument needs a value."
@@ -335,11 +327,6 @@ while [[ $# -ge 1 ]]; do
                 [Yy]* ) COMPRESS=yes;;
             esac
 
-            read -p "Development image? yes/[no] " yn
-            case $yn in
-                [Yy]* ) DEVELOPMENT_IMAGE=yes;;
-            esac
-
             read -p "Supervisor version? [$SUPERVISOR_VERSION] " yn
             if [ -n "$yn" ]; then
                 SUPERVISOR_VERSION=$yn
@@ -422,7 +409,6 @@ if [ "z$LOG" == "zyes" ]; then
     echo "Compressed image? $COMPRESS" >> $LOGFILE
     echo "Shared downloads directory: $SHARED_DOWNLOADS" >> $LOGFILE
     echo "Shared sstate directory: $SHARED_SSTATE" >> $LOGFILE
-    echo "Development image? $DEVELOPMENT_IMAGE" >> $LOGFILE
     echo "Forced supervisor image release version: $SUPERVISOR_VERSION" >> $LOGFILE
     echo "Inherit rm_work? $RM_WORK" >> $LOGFILE
     echo "Enable build history? $BUILD_HISTORY" >> $LOGFILE
@@ -443,13 +429,6 @@ $SCRIPTPATH/generate-conf-notes.sh $SCRIPTPATH/../../layers/${BALENA_MACHINE_LAY
 
 export TEMPLATECONF=${SCRIPTPATH}/../../layers/${BALENA_MACHINE_LAYER}/conf/samples
 source ${SCRIPTPATH}/../../layers/poky/oe-init-build-env ${SCRIPTPATH}/../../${BUILD_DIR}
-if [ "x$DEVELOPMENT_IMAGE" == "xyes" ]; then
-    sed -i "s/.*DEVELOPMENT_IMAGE =.*/DEVELOPMENT_IMAGE = \"1\"/g" conf/local.conf
-else
-    sed -i "s/.*DEVELOPMENT_IMAGE =.*/DEVELOPMENT_IMAGE = \"0\"/g" conf/local.conf
-    # Always activate resinhup bundles in production builds
-    sed -i "s/.*RESINHUP ?=.*/RESINHUP ?= \"yes\"/g" conf/local.conf
-fi
 if [ "x$COMPRESS" == "xyes" ]; then
     sed -i "s/.*BALENA_RAW_IMG_COMPRESSION ?=.*/BALENA_RAW_IMG_COMPRESSION ?= \"${COMPRESS_TOOL}\"/g" conf/local.conf
 fi
