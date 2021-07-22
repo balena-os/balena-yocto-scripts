@@ -1,4 +1,17 @@
 - commits:
+    - subject: Use slug when setting deviceType for leviathan
+      hash: bc628771aa0014e86e649e3312b48e1c7ae4968c
+      body: ''
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.14.8
+  date: 2021-07-22T14:51:50.560Z
+- commits:
     - subject: 'balena-lib: Fix print statements helper functions'
       hash: 45ccecc6945a06c3975c4ffc782bef5770f30ae7
       body: ''
