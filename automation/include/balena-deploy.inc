@@ -19,7 +19,7 @@ source "${include_dir}/balena-docker.inc"
 #  $4: ESR release flag (default to "ESR" environment variable)
 #  $5: Build variant (defaults to buildFlavor environment variable)
 #  $6: BalenaOS account (defaults to balena_os)
-#  $7: App name to deploy to (defaults to specified device type)
+#  $7: App name to deploy to (defaults to specified device type's slug)
 #
 balena_deploy_hostapp() {
 	local _device_type="${1:-"${MACHINE}"}"
@@ -33,8 +33,10 @@ balena_deploy_hostapp() {
 	local _balenaCloudPassword="${9:-"${balenaCloudPassword}"}"
 	local _version
 	local _image_path
+	local _slug
 	[ -z "${_device_type}" ] && echo "[balena_deploy_hostapp] A device type is required" && return 1
 	_image_path="$(readlink --canonicalize "${device_dir}/build/tmp/deploy/images/${_device_type}/balena-image-${_device_type}.docker")"
+	_slug=$(balena_lib_get_slug "${_device_type}")
 	if ! balena_lib_docker_pull_helper_image "Dockerfile_balena-push-env" balena_yocto_scripts_revision; then
 		return 1
 	fi
@@ -43,7 +45,7 @@ balena_deploy_hostapp() {
 	[ -z "${_api_env}" ] && echo "A Balena environment is required" && return 1
 
 	_version=${VERSION_HOSTOS:-$(balena_lib_get_os_version)}
-	_app=${_app:-"${_device_type}"}
+	_app=${_app:-"${_slug}"}
 	_esr=${_esr:-"${ESR}"}
 	_variant=${_variant:-"${buildFlavor}"}
 	_meta_balena_version=${META_BALENA_VERSION:-$(balena_lib_get_meta_balena_version)}
