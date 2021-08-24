@@ -303,7 +303,7 @@ balena_api_create_public_app() {
 	local _url="https://github.com/balena-os"
 	local _family
 
-	_device_type=$(balena_lib_resolve_aliases "${_device_type}")
+	_device_type=$(balena_lib_get_slug "${_device_type}")
 
 	# Admin named API keys have normal user privileges, need to use credentials based  session token instead
 	BALENARC_BALENA_URL=${_apiEnv} balena login --credentials --email "${_balenaCloudEmail}" --password "${_balenaCloudPassword}"

@@ -295,7 +295,7 @@ balena_lib_get_slug() {
 
 	if [ ! -f "${_device_type_json}" ]; then
 		>&2 echo "[balena_lib_get_slug]: Device type JSON not found - assuming equal to device type"
-		echo "${_device_type}"
+		resolve_aliases "${_device_type}"
 		return 1
 	fi
 
@@ -364,7 +364,7 @@ balena_lib_get_dt_state() {
 # Output:
 # Contract slug in srdout
 #
-balena_lib_resolve_aliases() {
+resolve_aliases() {
 	local _device_type="${1}"
 
 	case "${_device_type}" in
