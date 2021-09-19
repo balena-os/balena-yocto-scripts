@@ -128,7 +128,7 @@ rootdir="$( cd "$( dirname "$0" )" && pwd )/../../"
 WORKSPACE=${WORKSPACE:-$rootdir}
 ENABLE_TESTS=${ENABLE_TESTS:=false}
 ESR=${ESR:-false}
-BARYS_ARGUMENTS_VAR="--remove-build --bitbake-target popt-native"
+BARYS_ARGUMENTS_VAR="--remove-build --bitbake-target popt"
 REMOVE_CONTAINER="--rm"
 
 # process script arguments
