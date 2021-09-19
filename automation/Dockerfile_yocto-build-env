@@ -1,7 +1,7 @@
 FROM ubuntu:xenial-20171201
 
 # Install the following utilities (required by poky)
-RUN apt-get update && apt-get install -y build-essential chrpath curl diffstat gcc-multilib gawk git-core locales \
+RUN apt-get update && apt-get install -y build-essential chrpath curl diffstat gcc-multilib gawk git-core locales binutils \
                                          texinfo unzip wget xterm cpio file python python3 openssh-client iputils-ping iproute2 \
                                          && rm -rf /var/lib/apt/lists/*
 
