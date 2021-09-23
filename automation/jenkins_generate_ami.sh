@@ -62,7 +62,7 @@ elif [ "${JSON_ARCH}" = "aarch64" ]; then
     AMI_ARCHITECTURE="arm64"
 fi
 
-APP_SUFFIX=${MACHINE#generic-}
+APP_SUFFIX="${JSON_ARCH}"
 BALENA_PRELOAD_APP="cloud-config-${APP_SUFFIX}"
 
 # shellcheck disable=SC1004
