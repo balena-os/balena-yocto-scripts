@@ -28,21 +28,21 @@ ensure_all_env_variables_are_set() {
                          PRELOAD_SSH_PUBKEY"
 
     for env in $env_variables; do
-        [[ -z "${!env}" ]] && echo "ERROR: Missing env variable: $env" && env_not_set=true
+        [ -z "${!env}" ] && echo "ERROR: Missing env variable: $env" && env_not_set=true
     done
 
-    if [[ "$env_not_set" ]]; then exit 1; fi
+    if [ "$env_not_set" = "true" ]; then exit 1; fi
 }
 
 
 mount_cleanup() {
-    [[ -n "${BOOT_PARTITION}" ]] && \
+    [ -n "${BOOT_PARTITION}" ] && \
         echo "* Unmounting boot partition" && \
         umount "${BOOT_PARTITION}" && \
         rmdir "${BOOT_PARTITION}" && \
         BOOT_PARTITION=''
 
-    [[ -n "${LOOP_DEV}" ]] && \
+    [ -n "${LOOP_DEV}" ] && \
         echo "* Detaching loop device" && \
         losetup -d "${LOOP_DEV}" && \
         LOOP_DEV=''
@@ -110,7 +110,7 @@ get_value_from_ebs_snapshot_import_task() {
 
 
 aws_s3_image_cleanup() {
-    [[ -n "${s3_image_url}" ]] && \
+    [ -n "${s3_image_url}" ] && \
       echo "* Removing img from S3..." && \
       aws s3 rm "${s3_image_url}" && \
       s3_image_url=""
@@ -118,7 +118,7 @@ aws_s3_image_cleanup() {
 
 
 aws_ebs_snapshot_cleanup() {
-    [[ -n "${ebs_snapshot_id}" ]] && \
+    [ -n "${ebs_snapshot_id}" ] && \
       echo "* Removing snapshot from ebs..." && \
       aws ec2 delete-snapshot --snapshot-id "${ebs_snapshot_id}" && \
       ebs_snapshot_id=""
@@ -152,8 +152,8 @@ create_aws_ebs_snapshot() {
     echo "* Created a AWS import snapshot task with id ${import_task_id}. Waiting for completition... (Timeout: $IMPORT_SNAPSHOT_TIMEOUT_MINS mins)"
     while true; do
         status="$(get_value_from_ebs_snapshot_import_task "${import_task_id}" Status)"
-        [[ "$status" == "completed" ]] && break
-        [[ "$status" == "deleting" ]]  && \
+        [ "$status" = "completed" ] && break
+        [ "$status" = "deleting" ]  && \
             error_msg="$(get_value_from_ebs_snapshot_import_task "${import_task_id}" StatusMessage)" && \
             echo "ERROR: Error on import task id ${import_task_id}: '${error_msg}'" && exit 1
 
@@ -162,8 +162,8 @@ create_aws_ebs_snapshot() {
         mins_elapsed=$((secs_waited / 60))
 
         # Show progress every 2 mins (120 secs)
-        [[ $((secs_waited % 120)) == 0 ]] && echo "-> Mins elapsed: $mins_elapsed. Progress: $(get_value_from_ebs_snapshot_import_task "${import_task_id}" Progress)%"
-        [[ "$mins_elapsed" -ge "$IMPORT_SNAPSHOT_TIMEOUT_MINS" ]] && echo "ERROR: Timeout on import snapshot taksk id ${import_task_id}" && exit 1
+        [ $((secs_waited % 120)) = 0 ] && echo "-> Mins elapsed: $mins_elapsed. Progress: $(get_value_from_ebs_snapshot_import_task "${import_task_id}" Progress)%"
+        [ "$mins_elapsed" -ge "$IMPORT_SNAPSHOT_TIMEOUT_MINS" ] && echo "ERROR: Timeout on import snapshot taksk id ${import_task_id}" && exit 1
     done
 
     snapshot_id=$(aws ec2 describe-import-snapshot-tasks --import-task-ids "${import_task_id}" | jq -r '.ImportSnapshotTasks[].SnapshotTaskDetail.SnapshotId')
@@ -207,7 +207,7 @@ create_aws_ami() {
     | jq -r .ImageId)
 
     # If the AMI creation fails, aws-cli will show the error message to the user and we won't get any imageId
-    [[ -z "${image_id}" ]] && exit 1
+    [ -z "${image_id}" ] && exit 1
 
     aws ec2 create-tags --resources "${image_id}" --tags Key=Name,Value="${AMI_NAME}"
     echo "AMI image created with id ${image_id}"
@@ -225,7 +225,7 @@ cleanup () {
 
 ## MAIN
 
-[[ $(id -u) != 0 ]] && echo "ERROR: This script should be run as root" && exit 1
+[ $(id -u) != 0 ] && echo "ERROR: This script should be run as root" && exit 1
 
 ensure_all_env_variables_are_set
 
