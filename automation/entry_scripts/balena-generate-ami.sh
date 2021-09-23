@@ -188,8 +188,8 @@ create_aws_ami() {
         --output text)
 
     if [ -n "${existing_image_id}" ]; then
-        echo "Cleaning up ${existing_image_id}"
-        aws ec2 deregister-image --image-id "${existing_image_id}"
+        echo "Image ${AMI_NAME} (${existing_image_id}) already exists, this should not happen"
+        exit 1
     fi
 
     echo "Creating ${AMI_NAME} AWS AMI image..."
