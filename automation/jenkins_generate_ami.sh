@@ -31,7 +31,11 @@ if ! balena_lib_docker_pull_helper_image "Dockerfile_balena-generate-ami-env" ba
     exit 1
 fi
 
-MACHINE=${JOB_NAME#yocto-}
+if [ -z "${MACHINE}" ]; then
+    echo "MACHINE is required"
+    exit 1
+fi
+
 YOCTO_IMAGES_PATH="${WORKSPACE}/build/tmp/deploy/images/${MACHINE}"
 
 # TODO: Replace the default value with the value read from the CoffeeScript file once available
