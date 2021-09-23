@@ -99,6 +99,7 @@ add_ssh_key_to_boot_partition() {
     cp "${BOOT_PARTITION}/config.json" /tmp/.config.json
     jq --arg keys "${public_key}" '. + {os: {sshKeys: [$keys]}}' "${BOOT_PARTITION}/config.json" > /tmp/.config.json
     mv /tmp/.config.json "${BOOT_PARTITION}/config.json"
+    sync "${BOOT_PARTITION}"
     mount_cleanup || true
 }
 
