@@ -1,4 +1,162 @@
 - commits:
+    - subject: 'jenkins_generate_ami.sh: Use lib function to get arch from config.json'
+      hash: fffe9ffb363c9eed783a5055e69847c81eb68bcd
+      body: ''
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Michal Toman <michalt@balena.io>
+        signed-off-by: Michal Toman <michalt@balena.io>
+      author: Michal Toman
+      nested: []
+    - subject: >-
+        balena-generate-ami.sh: Look for boot partition by label rather than
+        hardcoding p1
+      hash: 45786e701d05811f96d0aeef20481442bb1d0f1c
+      body: ''
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Michal Toman <michalt@balena.io>
+        signed-off-by: Michal Toman <michalt@balena.io>
+      author: Michal Toman
+      nested: []
+    - subject: 'balena-generate-ami.sh: Fail if AMI already exists'
+      hash: 9e9a792aed2a659c1ed7327237a61594033b308a
+      body: |
+        This was only ignored for development purposes, we should not replace
+        released images.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Michal Toman <michalt@balena.io>
+        signed-off-by: Michal Toman <michalt@balena.io>
+      author: Michal Toman
+      nested: []
+    - subject: 'balena-generate-ami.sh: sync after writing config.json'
+      hash: f0838aaee9751a6fb60558a7646d597b1f99b1c3
+      body: ''
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Michal Toman <michalt@balena.io>
+        signed-off-by: Michal Toman <michalt@balena.io>
+      author: Michal Toman
+      nested: []
+    - subject: 'balena-generate-ami.sh: Stick to POSIX-compliant [ instead of [['
+      hash: 2c6a97c263a71c63387290fca29ba5b01eba8db4
+      body: ''
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Michal Toman <michalt@balena.io>
+        signed-off-by: Michal Toman <michalt@balena.io>
+      author: Michal Toman
+      nested: []
+    - subject: 'balena-generate-ami.sh: Remove useless statements'
+      hash: 9d4ac02f3ad8eadaed79703dbc859c4950449810
+      body: ''
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Michal Toman <michalt@balena.io>
+        signed-off-by: Michal Toman <michalt@balena.io>
+      author: Michal Toman
+      nested: []
+    - subject: >-
+        jenkins_generate_ami.sh: Use architecture as suffix instead of machine
+        name
+      hash: 7d2e3911defedc500b3b1ded3268dbe74bb523b0
+      body: >
+        This removes the necessity for the DT being named generic-*. It also
+        means
+
+        all the DTs of the same architecture will preload the same app.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Michal Toman <michalt@balena.io>
+        signed-off-by: Michal Toman <michalt@balena.io>
+      author: Michal Toman
+      nested: []
+    - subject: 'jenkins_build.sh: pass MACHINE to jenkins_generate_ami.sh'
+      hash: 0e33582e2860474e1c6aff5275539b1333aef6b9
+      body: |
+        This removes the dependency on JOB_NAME from jenkins_generate_ami.sh
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Michal Toman <michalt@balena.io>
+        signed-off-by: Michal Toman <michalt@balena.io>
+      author: Michal Toman
+      nested: []
+    - subject: 'AMI automation: Adjust AMI names to be compatible with AWS API'
+      hash: bc91b7036b32aa57c053c115ac87b7f21fa634c8
+      body: ''
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: ab77
+      nested: []
+    - subject: 'AMI automation: Correct S3 bucket name and key'
+      hash: 8864adcb20c1f4cbfd48e422dbae44b885c8ca06
+      body: ''
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: ab77
+      nested: []
+    - subject: 'AMI automation: Add a separate container for generaing AMI'
+      hash: d7d91ff4c3ea655dfa9a483a020d2d16aa5e0f49
+      body: ''
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Michal Toman <michalt@balena.io>
+        signed-off-by: Michal Toman <michalt@balena.io>
+      author: Michal Toman
+      nested: []
+    - subject: 'AMI automation: shellcheck and resolve violations'
+      hash: 6b11dd26bc1229aafed98c5933f23e892811f49f
+      body: ''
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: ab77
+      nested: []
+    - subject: 'AMI automation: Use staging env by default'
+      hash: 21fa55a6f73faf59fe5fc3b1e6e8bc4084e17c01
+      body: ''
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Tomás Tormo <tomast@balena.io>
+        signed-off-by: Tomás Tormo <tomast@balena.io>
+      author: Tomás Tormo
+      nested: []
+    - subject: 'AMI automation: Simplify public ssh addition. Do not use sudo'
+      hash: dd96771607f79620a241e4dee99879542643f55f
+      body: ''
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Tomás Tormo <tomast@balena.io>
+        signed-off-by: Tomás Tormo <tomast@balena.io>
+      author: Tomás Tormo
+      nested: []
+    - subject: 'automation: Generate and publish AMI from the raw balenaOS image'
+      hash: efe2b5beb5ea6b00fff07372a312c7e0c690654b
+      body: ''
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Tomás Tormo <tomast@balena.io>
+        signed-off-by: Tomás Tormo <tomast@balena.io>
+      author: Tomás Tormo
+      nested: []
+  version: 1.15.0
+  date: 2021-09-23T12:25:29.517Z
+- commits:
     - subject: 'balena-deploy: When deploying hostapp default to using slug as name'
       hash: d9ee5fa5f5a97de9c41c2acc13b6c7335e2b043f
       body: >
