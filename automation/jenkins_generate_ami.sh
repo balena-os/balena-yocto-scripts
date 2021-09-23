@@ -55,7 +55,7 @@ VERSION=$(cat "${YOCTO_IMAGES_PATH}/VERSION_HOSTOS" | sed 's/+/-/g')
 AMI_NAME="balenaOS-${VERSION}-${buildFlavor}-${MACHINE}"
 
 # TODO: Can get the mapping from somewhere?
-JSON_ARCH=$(jq --raw-output ".arch" "${WORKSPACE}/${MACHINE}.json")
+JSON_ARCH=$(balena_lib_get_dt_arch)
 if [ "${JSON_ARCH}" = "amd64" ]; then
     AMI_ARCHITECTURE="x86_64"
 elif [ "${JSON_ARCH}" = "aarch64" ]; then
