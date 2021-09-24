@@ -41,6 +41,7 @@ rootdir="$( cd "$( dirname "$0" )" && pwd )/../../"
 WORKSPACE=${WORKSPACE:-$rootdir}
 ENABLE_TESTS=${ENABLE_TESTS:=false}
 ESR=${ESR:-false}
+AMI=${AMI:-false}
 BARYS_ARGUMENTS_VAR="--remove-build"
 REMOVE_CONTAINER="--rm"
 
@@ -110,6 +111,9 @@ while [[ $# -ge 1 ]]; do
 			;;
 		--preserve-container)
 			REMOVE_CONTAINER=""
+			;;
+		--ami)
+			AMI="true"
 			;;
 	esac
 	shift
@@ -189,6 +193,13 @@ if [ "$deploy" = "yes" ]; then
 	if [ "${_state}" != "DISCONTINUED" ]; then
 		balena_deploy_to_dockerhub "${MACHINE}"
 		balena_deploy_hostapp "${MACHINE}"
+	fi
+
+	if [ "$AMI" = "true" ]; then
+		echo "[INFO] Generating AMI"
+		export automation_dir
+		export MACHINE
+		"${automation_dir}"/jenkins_generate_ami.sh
 	fi
 
 fi
