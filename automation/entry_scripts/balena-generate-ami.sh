@@ -75,7 +75,7 @@ mount_boot_partition() {
 
     boot_partition=$(lsblk "${img_loop_dev}" -nlo kname,label | grep "resin-boot" | cut -d " " -f 1)
 
-    mount "${boot_partition}" "${boot_partition_mountpoint}" > /dev/null 2>&1
+    mount "/dev/${boot_partition}" "${boot_partition_mountpoint}" > /dev/null 2>&1
 
     echo "* Boot partition mounted on ${boot_partition_mountpoint}"
     eval "$__bootvar='${boot_partition_mountpoint}'"
