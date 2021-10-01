@@ -421,3 +421,52 @@ balena_lib_get_label_from_image() {
 	_value=$(docker inspect "${_image_id}" | jq -r '.[].Config.Labels["'"${_label}"'"]')
 	echo "${_value}"
 }
+
+
+# Deploy a release to balenaCloud
+#
+# Inputs:
+# $1: Application name
+# $2: Final flag (boolean, defaults to false)
+# $3: Working directory path
+# $4: Balena API environment (defaults to balena-cloud.com)
+# $5: Image ID to deploy, builds if not provided
+#
+# Output:
+#  Release ID or null on error
+#
+balena_lib_release() {
+	local _appName="${1}"
+	local _final="${2:-"no"}"
+	local _path="${3}"
+	local _apiEnv="${4}"
+	local _image_id="${5}"
+	local _releaseID=""
+	local _status=""
+	local _debug=""
+
+	[ -z "${_appName}" ] && >&2 echo "balena_lib_release: Application name is required" && exit 1
+	_apiEnv=${_apiEnv:-"$(balena_lib_environment)"}
+	_path=${_path:-"$(pwd)"}
+	[ ! -f "${_path}/balena.yml" ] && >&2 echo "balena_lib_release: balena.yml contract file not present" && exit 1
+	_contract_version=$(awk '/version:/ {print $2}' "${_path}/balena.yml")
+	_version=$(balena_lib_get_os_version)
+	if [ "${_contract_version}" != "${_version}" ]; then
+		>&2 echo "balena_lib_release: Version mismatch, contract ${_contract_version} os ${_version}"
+		return 1
+	fi
+
+	if [ "${_final}" = "no" ]; then
+		_status="--draft"
+	fi
+	[ "${VERBOSE}" = "verbose" ] && _debug="--debug"
+
+	balena_lib_login "${_apiEnv}"
+	if [ -n "${_image_id}" ]; then
+		_releaseID=$(BALENARC_BALENA_URL="${_apiEnv}" balena deploy "${_appName}" "${_image_id}" --source "${_path}" ${_status} ${_debug} | sed -n 's/.*Release: //p')
+	else
+		_releaseID=$(BALENARC_BALENA_URL="${_apiEnv}" balena deploy "${_appName}" --build --source "${_path}" ${_status} ${_debug} | sed -n 's/.*Release: //p')
+	fi
+	[ -n "${_releaseID}" ] && >&2 echo "Deployed ${_image_id} to ${_appName} as ${_status##--} at ${_releaseID}"
+	echo "${_releaseID}"
+}
