@@ -131,7 +131,7 @@ balena_lib_contract_is_device_compatible() {
 # Inputs:
 # $1: Contract Slug name to search for
 # $2: Device type
-# $3: OS version
+# $3: OS semantic version
 # $4: Contract type (i.e sw.recipe.yocto)
 #
 # Returns:
@@ -139,12 +139,11 @@ balena_lib_contract_is_device_compatible() {
 balena_lib_contract_fetch_composedOf_list() {
 	local _slug="${1}"
 	local _device_type=${2}
-	local _version=${3}
+	local _semver=${3}
 	local _type="${4:-sw.recipe.yocto}"
 	local _contract
-	local _device_types_depends
-	local _version
 	local _list
+	local _depends
 
 	# Check device type compatibility
 	if ! balena_lib_contract_is_device_compatible "${_slug}" "${_device_type}"; then
@@ -152,8 +151,8 @@ balena_lib_contract_fetch_composedOf_list() {
 		return
 	fi
 
-	if [ -z "${_version}" ]; then
-		_version=$(balena_lib_get_os_version)
+	if [ -z "${_semver}" ]; then
+		_semver=$(balena_lib_get_meta_balena_version)
 	fi
 	_contract=$(__find_contract_by_slug "${_slug}")
 	if [ -z "${_contract}" ]; then
@@ -162,9 +161,9 @@ balena_lib_contract_fetch_composedOf_list() {
 	fi
 
 	# Check OS compatibility
-	_version_depends=$(jq --raw-output '.requires[].allOf[] | select(.type == "sw.os") | select(.slug == "balenaos") | .version' "${_contract}")
-	for os in ${_version_depends}; do
-		if ! "${include_dir}/semver2.sh" "${os}" "${_version}" "${DEBUG:-0}" "${VERBOSE:-0}" 2&>/dev/null; then
+	_depends=$(jq --raw-output '.requires[].allOf[] | select(.type == "sw.os") | select(.slug == "balenaos") | .externalVersion' "${_contract}")
+	for os in ${_depends}; do
+		if ! "${include_dir}/semver2.sh" "${os}" "${_semver}" "${DEBUG:-0}" "${VERBOSE:-0}" 2&>/dev/null; then
 			>&2 echo "${_slug}: OS version not compatible"
 			return 1
 		fi
@@ -420,4 +419,50 @@ balena_lib_get_label_from_image() {
 
 	_value=$(docker inspect "${_image_id}" | jq -r '.[].Config.Labels["'"${_label}"'"]')
 	echo "${_value}"
+}
+
+
+# Deploy a release to balenaCloud
+#
+# Inputs:
+# $1: Application name
+# $2: Final flag (boolean, defaults to false)
+# $3: Working directory path
+# $4: Balena API environment (defaults to balena-cloud.com)
+# $5: Image ID to deploy, builds if not provided
+#
+# Output:
+#  Release ID or null on error
+#
+balena_lib_release() {
+	local _appName="${1}"
+	local _final="${2:-"false"}"
+	local _path="${3}"
+	local _apiEnv="${4}"
+	local _image_id="${5}"
+	local _releaseID=""
+	local _status=""
+
+	[ -z "${_appName}" ] && >&2 echo "balena_lib_release: Application name is required" && exit 1
+	_apiEnv=${_apiEnv:-"$(balena_lib_environment)"}
+	_path=${_path:-"$(pwd)"}
+	[ ! -f "${_path}/balena.yml" ] && >&2 echo "balena_lib_release: balena.yml contract file not present" && exit 1
+	_contract_semver=$(awk '/version:/ {print $2}' "${_path}/balena.yml")
+	_semver=$(balena_lib_get_meta_balena_version)
+	if [ "${_contract_semver}" != "${_semver}" ]; then
+		>&2 echo "balena_lib_release: Version mismatch, contract ${_contract_semver} meta-balena ${_semver}"
+		return 1
+	fi
+
+	if [ "${_final}" = "false" ]; then
+		_status="--draft"
+	fi
+
+	if [ -n "${_image_id}" ]; then
+		_releaseID=$(BALENARC_BALENA_URL="${_apiEnv}" balena deploy "${_appName}" "${_image_id}" --source "${_path}" "${_status}" | sed -n 's/.*Release: //p')
+	else
+		_releaseID=$(BALENARC_BALENA_URL="${_apiEnv}" balena deploy "${_appName}" --build --source "${_path}" "${_status}" | sed -n 's/.*Release: //p')
+	fi
+	[ -n "${_releaseID}" ] && >&2 echo "Deployed ${_image_id} to ${_appName} as ${_status##--} at ${_releaseID}"
+	echo "${_releaseID}"
 }
