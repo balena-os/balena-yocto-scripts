@@ -1,4 +1,19 @@
 - commits:
+    - subject: >-
+        balena-generate-ami.sh: correctly mount boot partition when injecting
+        SSH key
+      hash: c0f6da3e4fe3f9c51ba8b279986a6f4baffe6d96
+      body: ''
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Michal Toman <michalt@balena.io>
+        signed-off-by: Michal Toman <michalt@balena.io>
+      author: Michal Toman
+      nested: []
+  version: 1.15.2
+  date: 2021-10-01T14:45:58.407Z
+- commits:
     - subject: Update balena-cli to 12.50.1
       hash: 700ebe6d06385440488a42c42179d19434376209
       body: |
