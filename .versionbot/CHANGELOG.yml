@@ -1,4 +1,21 @@
 - commits:
+    - subject: Update balena-cli to 12.50.1
+      hash: 700ebe6d06385440488a42c42179d19434376209
+      body: |
+        This is necessary for AMI preloading to work, additionally
+        it has been more than a year since the last update, we should keep up.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Changelog-entry: Update balena-cli to 12.50.1
+        changelog-entry: Update balena-cli to 12.50.1
+        Signed-off-by: Michal Toman <michalt@balena.io>
+        signed-off-by: Michal Toman <michalt@balena.io>
+      author: Michal Toman
+      nested: []
+  version: 1.15.1
+  date: 2021-10-01T10:11:14.438Z
+- commits:
     - subject: 'jenkins_generate_ami.sh: Use lib function to get arch from config.json'
       hash: fffe9ffb363c9eed783a5055e69847c81eb68bcd
       body: ''
