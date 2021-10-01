@@ -36,7 +36,7 @@ RUN apt-get update && apt-get install -y docker-ce=${DOCKER_VERSION} docker-ce-c
 VOLUME /var/lib/docker
 
 # Install balena-cli
-ENV BALENA_CLI_VERSION 11.35.4
+ENV BALENA_CLI_VERSION 12.50.1
 RUN curl -sSL https://github.com/balena-io/balena-cli/releases/download/v$BALENA_CLI_VERSION/balena-cli-v$BALENA_CLI_VERSION-linux-x64-standalone.zip > balena-cli.zip && \
   unzip balena-cli.zip && \
   mv balena-cli/* /usr/bin && \
