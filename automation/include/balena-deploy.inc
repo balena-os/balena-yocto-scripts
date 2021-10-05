@@ -34,9 +34,6 @@ balena_deploy_artifacts () {
 	local _device_state
 	local _yocto_build_deploy
 	local _slug
-	local _blocks
-	local _block_file
-	local _block_files
 
 
 	[ ! -f "${_device_type_json}" ] && echo "[balena_deploy_artifacts] Device type JSON not found" && return
@@ -50,20 +47,8 @@ balena_deploy_artifacts () {
 	_yocto_build_deploy="${device_dir}/build/tmp/deploy/images/${_device_type}"
 	_slug=$(jq --raw-output '.slug' "${_device_type_json}")
 
-	if [ -z "${_preserve_build}" ]; then
-		if [ -n "${blocks}" ]; then
-			_tmp_dir=$(mktemp -d)
-			for _block in ${blocks}; do
-				find "${_deploy_dir}" -name "${_device_type}-${_block}-*.docker" -exec mv -v {} "${_tmp_dir}" \;
-			done
-		fi
-		rm -rf "${_deploy_dir}"
-	fi
+	[ -z "${_preserve_build}" ] && rm -rf "${_deploy_dir}"
 	mkdir -p "${_deploy_dir}/image"
-	if [ -d "${_tmp_dir}" ]; then
-		mv "${_tmp_dir}"/* "${_deploy_dir}"
-		rm -rf "${_tmp_dir}"
-	fi
 
 	cp -v "$_device_type_json" "$_deploy_dir/device-type.json"
 	if [ "${_device_state}" = "DISCONTINUED" ]; then
