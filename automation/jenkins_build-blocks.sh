@@ -58,10 +58,6 @@ __build_hostos_blocks() {
 				_appnames="${_appnames} ${_appname}"
 			fi
 			_release_version=$(balena_lib_get_os_version)
-			if balena_api_get_release "${_device_type}-${_block}" "${_release_version}" "${_api_env}"; then
-				echo "[INFO] Release ${_release_version} already exists for ${_block}"
-				continue
-			fi
 			_recipes=$(balena_lib_contract_fetch_composedOf_list "${_block}" "${_device_type}" "${_release_version}" "sw.recipe.yocto")
 			if [ "$?" -ne 0 ] || [ -z "${_recipes}" ]; then
 				echo "No packages found in contract"
