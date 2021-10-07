@@ -352,7 +352,24 @@ balena_api_is_dt_private() {
 	echo "${_is_private}"
 }
 
-# Gets a release
+# Check if function exists
+#
+# Inputs:
+# $1: Function name
+#
+# Output:
+# None
+#
+# Returns:
+# 0 if exists, 1 otherwise
+#
+balena_api_fcn_exists() {
+	if [ "$(type -t "${1}")" != function ]; then
+		return 1
+	fi
+}
+
+# Returns the last release revision for a given version
 # Arguments:
 #
 # $1: Application name
@@ -360,25 +377,70 @@ balena_api_is_dt_private() {
 # $3: Balena target environment
 # $4: Balena API token
 #
+# Return:
+# 	Release object JSON if successful or null if failure.
 # Result:
-# 	Success or failed.
-balena_api_get_release() {
+# 	Success or failure
+balena_api_fetch_release_json() {
 	local _appName=$1
-	local _release_version=$2
-	local _apiEnv=$3
-	local _token=$4
+	local _release_semver=$2
+	local _apiEnv=${3:-}
+	local _token=${4:-}
 	local _appID
 	local _json
+	local _auth
 	_appID=$(balena_api_appID_from_appName "${_appName}" "${_apiEnv}" "${_token}")
 	if [ "${_appID}" = "null" ]; then
 		>&2 echo "[${_appName}] No such application"
 		return 1
 	fi
-	 __dlog "Fetch release ${_release_version} from ${_appName}"
-	 _json=$(${CURL} -XGET -H "Content-type: application/json" "https://api.${_apiEnv}/${TRANSLATION}/release?\$filter=(belongs_to__application%20eq%20${_appID})%20and%20(release_version%20eq%20%27${_release_version}%27)")
-	 __pp_json "${_json}"
-	_result=$(echo "${_json}" | jq -e '.d[0].id')
+
+	if balena_api_fcn_exists balena_lib_environment; then
+		_apiEnv=${_apiEnv:-$(balena_lib_environment)}
+	fi
+	if balena_api_fcn_exists balena_lib_token; then
+		_token=${_token:-$(balena_lib_token)}
+	fi
+	if [ -n "${_token}" ]; then
+		_auth="-H \"Authorization: Bearer ${_token}\""
+	fi
+	__dlog "[${_appName}] Fetching last revision for release semver ${_release_semver}"
+	_json=$(${CURL} -XGET -H "Content-type: application/json" ${_auth:-} "https://api.${_apiEnv}/${TRANSLATION}/release?\$filter=(belongs_to__application%20eq%20${_appID})%20and%20(semver%20eq%20%27${_release_semver}%27)&%24orderby=created_at%20desc")
+	__pp_json "${_json}"
+	echo "${_json}" | jq -e '.d[0]'
 	return "$?"
+}
+
+# Returns the last final revision for a given version
+# Arguments:
+#
+# $1: Application name
+# $2: Release version string (typically a semver of the form M.m.p)
+# $3: Balena target environment
+# $4: Balena API token
+#
+# Return:
+# 	Release object JSON if successful or null if failure.
+# Result:
+# 	Success or failure
+balena_api_get_final_release() {
+    local _appName="${1}"
+    local _release_semver="${2}"
+    local _apiEnv="${3}"
+    local _token="${4}"
+    local _json
+    local _version
+    local _revision
+
+    _apiEnv=${_apiEnv:-$(balena_lib_environment)}
+    _token=${_token:-$(balena_lib_token)}
+    _json=$(balena_api_fetch_release_json "${BALENAOS_ACCOUNT}/$APPNAME" ${RELEASE_VERSION} "${API_ENV}" ${BALENAOS_TOKEN})
+    _version=$(echo "${_json}" | jq -r '.semver')
+    _revision=$(echo "${_json}" | jq -r '.revision')
+    if [ "${_revision}" != "null" ]; then
+        _version="${_version}+rev${_revision}"
+    fi
+    echo "${_version}"
 }
 
 # Output a space separated list of images labelled for the given store
@@ -386,26 +448,26 @@ balena_api_get_release() {
 # Inputs:
 #
 # $1: Application name
-# $2: Release version
+# $2: Release semantic version
 # $3: Store type
 # $4: Balena API environment (defaults to balena-cloud.com)
 # $5: Balena API token
 #
 balena_api_get_images_for_store() {
 	local _app_name="${1}"
-	local _release_version="${2}"
+	local _release_semver="${2}"
 	local _store="${3}"
 	local _api_env="${4:-"balena-cloud.com"}"
 	local _token="${5}"
 	local _release
 
-	if [ -z "${_app_name}" ] || [ -z "${_release_version}" ] || [ -z "${_store}" ]; then
+	if [ -z "${_app_name}" ] || [ -z "${_release_semver}" ] || [ -z "${_store}" ]; then
 		return
 	fi
 
-	_release=$(balena_api_get_release "${_app_name}" "${_release_version}" "${_api_env}" "${_token}")
+	_release=$(balena_api_fetch_release_json "${_app_name}" "${_release_semver}" "${_api_env}" "${_token}")
 	[ "${_release}" = "null " ] && return
-	_images=$(echo "${_release}" | jq -r '.d[0].composition.services[] | select(.labels["'${BALENA_HOSTOS_BLOCK_STORE}'"] == "'"${_store}"'") | .image' 2> /dev/null | tr "\n" " ")
+	_images=$(echo "${_release}" | jq -r '.composition.services[] | select(.labels["'${BALENA_HOSTOS_BLOCK_STORE}'"] == "'"${_store}"'") | .image' 2> /dev/null | tr "\n" " ")
 	echo "${_images}"
 }
 
@@ -414,26 +476,26 @@ balena_api_get_images_for_store() {
 # Inputs:
 #
 # $1: Application name
-# $2: Release version
+# $2: Release semantic version
 # $3: Class type
 # $4: Balena API environment (defaults to balena-cloud.com)
 # $5: Balena API environment token
 #
 balena_api_get_images_with_class() {
 	local _app_name="${1}"
-	local _release_version="${2}"
+	local _release_semver="${2}"
 	local _class="${3}"
 	local _api_env="${4:-"balena-cloud.com"}"
 	local _token="${5}"
 	local _release
 
-	if [ -z "${_app_name}" ] || [ -z "${_release_version}" ] || [ -z "${_class}" ] || [ -z "${_token}" ]; then
+	if [ -z "${_app_name}" ] || [ -z "${_release_semver}" ] || [ -z "${_class}" ] || [ -z "${_token}" ]; then
 		return
 	fi
 
-	_release=$(balena_api_get_release "${_app_name}" "${_release_version}" "${_api_env}" "${_token}")
+	_release=$(balena_api_fetch_release_json "${_app_name}" "${_release_semver}" "${_api_env}" "${_token}")
 	[ "${_release}" = "null " ] && return
-	_images=$(echo "${_release}" | jq -r '.d[0].composition.services[] | select(.labels["'${BALENA_HOSTOS_BLOCK_CLASS}'"] == "'"${_class}"'") | .image' 2> /dev/null | tr "\n" " ")
+	_images=$(echo "${_release}" | jq -r '.composition.services[] | select(.labels["'${BALENA_HOSTOS_BLOCK_CLASS}'"] == "'"${_class}"'") | .image' 2> /dev/null | tr "\n" " ")
 	echo "${_images}"
 }
 
@@ -442,7 +504,7 @@ balena_api_get_images_with_class() {
 # Inputs:
 #
 # $1: Application name
-# $2: Release version
+# $2: Release semantic version
 # $3: Class type
 # $4: Store type
 # $5: Balena API environment (defaults to balena-cloud.com)
@@ -451,7 +513,7 @@ balena_api_get_images_with_class() {
 #
 balena_api_get_images_for_store_with_class() {
 	local _app_name="${1}"
-	local _release_version="${2}"
+	local _release_semver="${2}"
 	local _class="${3}"
 	local _store="${4}"
 	local _api_env="${5:-"balena-cloud.com"}"
@@ -461,13 +523,13 @@ balena_api_get_images_for_store_with_class() {
 	local _images
 	local _json
 
-	if [ -z "${_app_name}" ] || [ -z "${_release_version}" ] || [ -z "${_class}" ] || [ -z "${_store}" ]; then
+	if [ -z "${_app_name}" ] || [ -z "${_release_semver}" ] || [ -z "${_class}" ] || [ -z "${_store}" ]; then
 		return
 	fi
 
-	_release=$(balena_api_get_release "${_app_name}" "${_release_version}" "${_api_env}" "${_token}")
+	_release=$(balena_api_fetch_release_json "${_app_name}" "${_release_semver}" "${_api_env}" "${_token}")
 	[ "${_release}" = "null " ] && return
-	_json=$(echo "${_release}" | jq -r '.d[0].composition.services[] | select(.labels["'${BALENA_HOSTOS_BLOCK_CLASS}'"] == "'"${_class}"'") | select(.labels["'"${BALENA_HOSTOS_BLOCK_STORE}"'"] == "'"${_store}"'")' 2> /dev/null)
+	_json=$(echo "${_release}" | jq -r '.composition.services[] | select(.labels["'${BALENA_HOSTOS_BLOCK_CLASS}'"] == "'"${_class}"'") | select(.labels["'"${BALENA_HOSTOS_BLOCK_STORE}"'"] == "'"${_store}"'")' 2> /dev/null)
 	if [ -n "${_bootable}" ]; then
 		_json=$(echo "${_json}" | jq -r '. | select(.labels["'"${BALENA_HOSTOS_BLOCK_BOOTABLE}"'"] == "'"${_bootable}"'")' 2> /dev/null)
 	fi
@@ -486,18 +548,18 @@ balena_api_get_images_for_store_with_class() {
 #
 balena_api_get_image_labels() {
 	local _app_name="${1}"
-	local _release_version="${2}"
+	local _release_semver="${2}"
 	local _api_env="${3:-"balena-cloud.com"}"
 	local _token="${4}"
 	local _labels
 
-	if [ -z "${_app_name}" ] || [ -z "${_release_version}" ]; then
+	if [ -z "${_app_name}" ] || [ -z "${_release_semver}" ]; then
 		return
 	fi
 
-	_release=$(balena_api_get_release "${_app_name}" "${_release_version}" "${_api_env}" "${_token}")
+	_release=$(balena_api_fetch_release_json "${_app_name}" "${_release_semver}" "${_api_env}" "${_token}")
 	[ "${_release}" = "null " ] && return
-	_labels=$(echo "${_release}" | jq -r '.d[0].composition.services[].labels' | tr "\n" " ")
+	_labels=$(echo "${_release}" | jq -r '.composition.services[].labels' | tr "\n" " ")
 	echo "${_labels}"
 }
 
@@ -573,31 +635,6 @@ balena_api_appUUID_from_appName() {
 	echo "${_appUUID}"
 }
 
-# Fetch the releases at a specific release version
-# Arguments:
-#
-# $1: Public application name
-# $2: Balena target environment
-# $3: Release version string
-#
-# Result:
-# Prints the release metadata in JSON format
-balena_api_fetch_release_json() {
-	local _appName="$1"
-	local _apiEnv="$2"
-	local _version="$3"
-	local _json=""
-	local _selector=""
-
-	# Get application ID from application name
-	_appID=$(balena_api_appID_from_appName "${_appName}" "${_apiEnv}")
-
-	_selector="%20and%20(release_version%20eq%20%27${_version}%27)"
-	_json=$(${CURL} -XGET -H "Content-Type: application/json" "https://api.${_apiEnv}/${TRANSLATION}/release?\$filter=(belongs_to__application%20eq%20${_appID})${_selector}")
-	__pp_json "${_json}"
-	echo "${_json}"
-}
-
 # Get release database ID from public application name for a specific release
 # Arguments:
 #
@@ -609,15 +646,15 @@ balena_api_fetch_release_json() {
 # Prints the release database ID in stdout
 __get_dbid_from_app_name() {
 	local _appName="${1}"
-	local _version="${2}"
+	local _semver="${2}"
 	local _apiEnv="${3}"
 	local _appID=""
 	local _dbID=""
 
-	__dlog "[__get_dbid_from_app_name] Fetching images from ${_appName}, release ${_version}"
+	__dlog "[__get_dbid_from_app_name] Fetching images from ${_appName}, semver ${_semver}"
 
-	# Fetch release database identifier from application with specified release version
-	_dbID=$(balena_api_fetch_release_json "${_appName}" "${_apiEnv}" "${_version}" | jq --raw-output '.d[0].id')
+	# Fetch release database identifier from application with specified release semver
+	_dbID=$(balena_api_fetch_release_json "${_appName}" "${_semver}" "${_apiEnv}" | jq --raw-output '.id')
 	echo "${_dbID}"
 }
 
@@ -626,24 +663,37 @@ __get_dbid_from_app_name() {
 #
 # $1: Application name
 # $2: Balena target environment
-# $3: BalenaOS version
+# $3: BalenaOS semantic version
+# $3: Balena environment token
 #
 # Result:
 # Prints the releases metadata in JSON format
 balena_api_fetch_image_json() {
 	local _appName="$1"
-	local _apiEnv="$2"
-	local _version="$3"
+	local _apiEnv="${2:-}"
+	local _semver="$3"
+	local _token="${4:-}"
 	local _json=""
 	local _dbID
+	local _auth
 
-	_dbID=$(__get_dbid_from_app_name "${_appName}" "${_version}" "${_apiEnv}")
+	_dbID=$(__get_dbid_from_app_name "${_appName}" "${_semver}" "${_apiEnv}")
 	if [ "${_dbID}" = "null" ]; then
-		>&2 echo "[${_appName}] No such release ${_version} in ${_apiEnv}"
+		>&2 echo "[${_appName}] No such release ${_semver} in ${_apiEnv}"
 		return
 	fi
 
-	_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/image?%24expand=is_part_of__release(%24expand=release)&%24filter=is_part_of__release/release%20eq%20${_dbID}" -H "Content-Type:application/json")
+	if balena_api_fcn_exists balena_lib_environment; then
+		_apiEnv=${_apiEnv:-$(balena_lib_environment)}
+	fi
+	if balena_api_fcn_exists balena_lib_token; then
+		_token=${_token:-$(balena_lib_token)}
+	fi
+	if [ -n "${_token}" ]; then
+		_auth="-H \"Authorization: Bearer ${_token}\""
+	fi
+
+	_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/image?%24expand=is_part_of__release(%24expand=release)&%24filter=is_part_of__release/release%20eq%20${_dbID}" -H "Content-Type:application/json" ${_auth:-})
 	__pp_json "${_json}"
 	echo "${_json}"
 }
@@ -659,16 +709,16 @@ balena_api_fetch_image_json() {
 # Prints the image location in stdout
 balena_api_fetch_image_from_app() {
 	local _appName="${1}"
-	local _version="${2}"
+	local _semver="${2}"
 	local _apiEnv="${3}"
 	local _imageLocation=""
 	local _imageDigest=""
 	local _json=""
 
-	_json=$(balena_api_fetch_image_json "${_appName}" "${_apiEnv}" "${_version}")
-        [ -z "${_json}" ] && return
+	_json=$(balena_api_fetch_image_json "${_appName}" "${_apiEnv}" "${_semver}")
+	[ -z "${_json}" ] && return
 	if ! echo "${_json}" | jq -e '.d[0].id' > /dev/null 2>&1; then
-		>&2 echo "[${_appName}]: ${_version} not found in ${_apiEnv}"
+		>&2 echo "[${_appName}]: ${_semver} not found in ${_apiEnv}"
 		return
 	fi
 
