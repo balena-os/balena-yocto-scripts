@@ -36,11 +36,11 @@ __build_hostos_blocks() {
 	local _blocks="${3}"
 	local _api_env="${4}"
 	local _balenaos_account="${5}"
-	local _deploy="${6}"
+	local _final="${6}"
 	local _hostos_blocks=""
 	local _appname
 	local _appnames
-	local _release_version
+	local _semver
 	local _recipes
 	local _packages
 	local _bitbake_targets
@@ -59,8 +59,8 @@ __build_hostos_blocks() {
 			else
 				_appnames="${_appnames} ${_appname}"
 			fi
-			_release_version=$(balena_lib_get_os_version)
-			_recipes=$(balena_lib_contract_fetch_composedOf_list "${_block}" "${_device_type}" "${_release_version}" "sw.recipe.yocto")
+			_semver=$(balena_lib_get_meta_balena_version)
+			_recipes=$(balena_lib_contract_fetch_composedOf_list "${_block}" "${_device_type}" "${_semver}" "sw.recipe.yocto")
 			if [ "$?" -ne 0 ] || [ -z "${_recipes}" ]; then
 				echo "No packages found in contract"
 				exit 1
@@ -78,10 +78,13 @@ __build_hostos_blocks() {
 			mkdir -p "${_deploy_dir}"
 			balena_deploy_feed "${_deploy_dir}"
 
-			_packages=$(balena_lib_contract_fetch_composedOf_list "${_block}" "${_device_type}" "${_release_version}" "sw.package.yocto.${_package_type}")
+			_packages=$(balena_lib_contract_fetch_composedOf_list "${_block}" "${_device_type}" "${_semver}" "sw.package.yocto.${_package_type}")
 			for _block in ${_blocks}; do
+				local _release_version
 				_appname="${_device_type}-${_block}"
-				balena_deploy_build_block "${_appname}" "${_device_type}" "${_packages}" "${_balenaos_account}" "${_api_env}" "${_deploy}"
+				balena_build_block "${_appname}" "${_device_type}" "${_packages}" "${_balenaos_account}" "${_api_env}"
+				_release_version=$(balena_lib_get_os_version)
+				balena_deploy_block "${_appname}"  "${_device_type}" "${_bootable:-0}" "${_final}" "${_image_path:-"${WORKSPACE}/deploy-jenkins/${_appName}-${_release_version}.docker"}"
 			done
 
 			# Remove packages folder from deploy directory
