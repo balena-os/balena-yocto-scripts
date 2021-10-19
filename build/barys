@@ -444,9 +444,9 @@ $SCRIPTPATH/generate-conf-notes.sh $SCRIPTPATH/../../layers/${BALENA_MACHINE_LAY
 export TEMPLATECONF=${SCRIPTPATH}/../../layers/${BALENA_MACHINE_LAYER}/conf/samples
 source ${SCRIPTPATH}/../../layers/poky/oe-init-build-env ${SCRIPTPATH}/../../${BUILD_DIR}
 if [ "x$DEVELOPMENT_IMAGE" == "xyes" ]; then
-    sed -i "s/.*DEVELOPMENT_IMAGE =.*/DEVELOPMENT_IMAGE = \"1\"/g" conf/local.conf
+    sed -i "s/.*OS_DEVELOPMENT =.*/OS_DEVELOPMENT = \"1\"/g" conf/local.conf
 else
-    sed -i "s/.*DEVELOPMENT_IMAGE =.*/DEVELOPMENT_IMAGE = \"0\"/g" conf/local.conf
+    sed -i "s/.*OS_DEVELOPMENT =.*/OS_DEVELOPMENT = \"0\"/g" conf/local.conf
     # Always activate resinhup bundles in production builds
     sed -i "s/.*RESINHUP ?=.*/RESINHUP ?= \"yes\"/g" conf/local.conf
 fi
