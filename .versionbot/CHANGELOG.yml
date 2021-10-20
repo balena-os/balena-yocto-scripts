@@ -1,4 +1,27 @@
 - commits:
+    - subject: 'jenkins_generate_ami.sh: Preload outside of yocto cache'
+      hash: fb1763984d76218adc2510da6cb673fbad7197be
+      body: >
+        Since the file name is hardcoded at this moment, this fails when two
+
+        builds are running in parallel (e.g. dev and prod variants during
+        deploy)
+
+        because they try to preload the same file at pretty much the same
+        moment.
+
+        Having a separate copy for each outside of yocto cache should fix the
+        issue.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Michal Toman <michalt@balena.io>
+        signed-off-by: Michal Toman <michalt@balena.io>
+      author: Michal Toman
+      nested: []
+  version: 1.15.3
+  date: 2021-10-20T05:12:57.093Z
+- commits:
     - subject: >-
         balena-generate-ami.sh: correctly mount boot partition when injecting
         SSH key
