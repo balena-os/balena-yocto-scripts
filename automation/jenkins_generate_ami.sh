@@ -42,7 +42,7 @@ YOCTO_IMAGES_PATH="${WORKSPACE}/build/tmp/deploy/images/${MACHINE}"
 IMAGE_NAME=${IMAGE_NAME:-balena-image-${MACHINE}.balenaos-img}
 
 ORIG_IMAGE="${YOCTO_IMAGES_PATH}/${IMAGE_NAME}"
-PRELOADED_IMAGE="${ORIG_IMAGE}.preloaded"
+PRELOADED_IMAGE="$(mktemp)"
 
 cp "${ORIG_IMAGE}" "${PRELOADED_IMAGE}"
 
