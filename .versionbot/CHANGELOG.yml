@@ -1,4 +1,21 @@
 - commits:
+    - subject: 'barys: update development image variables'
+      hash: 427510332026ca8636dedb6630632a740b481374
+      body: |
+        Update the DEVELOPMENT_IMAGE references to use OS_DEVELOPMENT
+        following the changes to the handling of OS variants.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Changelog-entry: 'barys: update development image variables'
+        changelog-entry: 'barys: update development image variables'
+        Signed-off-by: Mark Corbin mark@balena.io
+        signed-off-by: Mark Corbin mark@balena.io
+      author: Mark Corbin
+      nested: []
+  version: 1.15.4
+  date: 2021-10-20T09:40:14.890Z
+- commits:
     - subject: 'jenkins_generate_ami.sh: Preload outside of yocto cache'
       hash: fb1763984d76218adc2510da6cb673fbad7197be
       body: >
