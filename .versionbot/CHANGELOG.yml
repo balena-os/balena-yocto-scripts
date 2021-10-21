@@ -1,4 +1,27 @@
 - commits:
+    - subject: 'jenkins_generate_ami.sh: Use a shared directory for preloaded image'
+      hash: 9b032f2fddc970db13147b4e637abd1bada1f234
+      body: >
+        The previous commit moved the preloaded image out of yocto cache, which
+
+        made it unreachable from the balena-generate-ami-env container.
+
+
+        This patch makes mktemp create the file back within yocto cache to
+        ensure
+
+        this is shared yet still each concurrent process can safely have its own
+        copy.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Michal Toman <michalt@balena.io>
+        signed-off-by: Michal Toman <michalt@balena.io>
+      author: Michal Toman
+      nested: []
+  version: 1.15.5
+  date: 2021-10-21T04:50:17.146Z
+- commits:
     - subject: 'barys: update development image variables'
       hash: 427510332026ca8636dedb6630632a740b481374
       body: |
