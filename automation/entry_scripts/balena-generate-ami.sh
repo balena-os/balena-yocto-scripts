@@ -67,19 +67,47 @@ mount_boot_partition() {
     mount --move "${new_dev}" /dev
 
     /lib/systemd/systemd-udevd -d
-    udevadm settle
 
     img_loop_dev=$(losetup -fP --show "${img}")
     echo "* Image attached to ${img_loop_dev}"
+
+    # Do this ASAP so that cleanup can detach it if boot partition mount fails
+    eval "$__loopvar='${img_loop_dev}'"
+
+    udevadm settle
+
     boot_partition_mountpoint=$(mktemp -d)
 
-    boot_partition=$(lsblk "${img_loop_dev}" -nlo kname,label | grep "resin-boot" | cut -d " " -f 1)
+    boot_partition=""
+    I=0
+    while [ -z "${boot_partition}" ] && [ "$I" -lt "3" ]; do
+        I=$["$I" + 1]
 
-    mount "/dev/${boot_partition}" "${boot_partition_mountpoint}" > /dev/null 2>&1
+        boot_partition_name=$(lsblk "${img_loop_dev}" -nlo kname,label | grep "resin-boot" | cut -d " " -f 1)
+        if [ -z "${boot_partition_name}" ]; then
+            echo "* Unable to detect boot partition on ${img_loop_dev}, giving it some more time to come up"
+            sleep 1
+            continue
+        fi
+
+        boot_partition="/dev/${boot_partition_name}"
+        if [ ! -e "${boot_partition}" ]; then
+            echo "* Though boot partition has been detected on ${img_loop_dev}, the dev node does not exist yet, giving it some more time to come up"
+            boot_partition=""
+            sleep 1
+            continue
+        fi
+    done
+
+    if [ -z "${boot_partition}" ]; then
+        echo "* Failed to detect boot partition on ${img_loop_dev} even after several attempts"
+        exit 1
+    fi
+
+    mount "${boot_partition}" "${boot_partition_mountpoint}"
 
     echo "* Boot partition mounted on ${boot_partition_mountpoint}"
     eval "$__bootvar='${boot_partition_mountpoint}'"
-    eval "$__loopvar='${img_loop_dev}'"
 }
 
 deploy_preload_app_to_image() {
