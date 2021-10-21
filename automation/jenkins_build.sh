@@ -194,6 +194,7 @@ if [ "$deploy" = "yes" ]; then
 		balena_deploy_to_dockerhub "${MACHINE}"
 		balena_deploy_hostapp "${MACHINE}"
 	fi
+fi
 
 	if [ "$AMI" = "true" ]; then
 		echo "[INFO] Generating AMI"
@@ -202,7 +203,6 @@ if [ "$deploy" = "yes" ]; then
 		"${automation_dir}"/jenkins_generate_ami.sh
 	fi
 
-fi
 
 # Cleanup
 # Keep this after writing all artifacts
