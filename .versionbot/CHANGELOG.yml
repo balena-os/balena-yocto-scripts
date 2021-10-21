@@ -1,4 +1,17 @@
 - commits:
+    - subject: 'balena-generate-ami.sh: wait for boot partition when preloading AMI'
+      hash: d2ea170a86810a782eeb241e178d4ad72c4939b0
+      body: ''
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Michal Toman <michalt@balena.io>
+        signed-off-by: Michal Toman <michalt@balena.io>
+      author: Michal Toman
+      nested: []
+  version: 1.15.6
+  date: 2021-10-21T15:04:37.774Z
+- commits:
     - subject: 'jenkins_generate_ami.sh: Use a shared directory for preloaded image'
       hash: 9b032f2fddc970db13147b4e637abd1bada1f234
       body: >
