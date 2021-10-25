@@ -188,7 +188,7 @@ if [ "$deploy" = "yes" ]; then
 
 	balena_deploy_to_s3 "$MACHINE" "${buildFlavor}" "${ESR}" "${deployTo}"
 
-	if [ "${_state}" != "DISCONTINUED" ]; then
+	if [ "${DEVICE_STATE}" != "DISCONTINUED" ]; then
 		balena_deploy_to_dockerhub "${MACHINE}"
 		balena_deploy_hostapp "${MACHINE}"
 	fi
