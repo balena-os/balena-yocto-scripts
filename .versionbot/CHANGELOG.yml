@@ -1,4 +1,40 @@
 - commits:
+    - subject: 'jenkins_build.sh: Fix deployment for discontinued device types'
+      hash: 84e65e937fef38625277fb8330ebd3179c466d04
+      body: |
+        Do not deploy dockerhub or hostapp images for discontinued device types.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: 'jenkins_build.sh: Remove PRIVATE_DT as it is unused'
+      hash: 35fd54620ff5eb487b1323a1ead5fef9c157e385
+      body: |
+        The private device types status is checked with the API when required.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: 'jenkins_build.sh: Fix lint warnings'
+      hash: 068a4197101a2db4aba60793e01564b67d14f820
+      body: |
+        Fix some minor lint warnings.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.15.7
+  date: 2021-10-25T16:57:03.955Z
+- commits:
     - subject: 'balena-generate-ami.sh: wait for boot partition when preloading AMI'
       hash: d2ea170a86810a782eeb241e178d4ad72c4939b0
       body: ''
