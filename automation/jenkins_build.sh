@@ -151,10 +151,10 @@ if [ "$metaBalenaBranch" = "__ignore__" ]; then
 	echo "[INFO] Using the default meta-balena revision (as configured in submodules)."
 else
 	echo "[INFO] Using special meta-balena revision from build params."
-	pushd $WORKSPACE/layers/meta-balena > /dev/null 2>&1
+	pushd "$WORKSPACE/layers/meta-balena" > /dev/null 2>&1
 	git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
 	git fetch --all
-	git checkout --force $metaBalenaBranch
+	git checkout --force "$metaBalenaBranch"
 	popd > /dev/null 2>&1
 fi
 
@@ -162,9 +162,9 @@ fi
 
 if [ "$ENABLE_TESTS" = true ]; then
 	# Run the test script in the device specific repository
-	if [ -f $WORKSPACE/tests/start.sh ]; then
+	if [ -f "$WORKSPACE/tests/start.sh" ]; then
 		echo "Custom test file exists - Beginning test"
-		/bin/bash $WORKSPACE/tests/start.sh
+		/bin/bash "$WORKSPACE/tests/start.sh"
 	else
 		echo "No custom test file exists - Continuing ahead"
 	fi
@@ -178,8 +178,6 @@ else
 	VERSION_HOSTOS=$(cat "$WORKSPACE/VERSION")
 fi
 
-PRIVATE_DT=$(balena_api_is_dt_private "${MACHINE}")
-
 # Jenkins artifacts
 echo "[INFO] Starting creating jenkins artifacts..."
 balena_deploy_artifacts "${MACHINE}" "$WORKSPACE/deploy-jenkins" "true"
@@ -190,7 +188,7 @@ if [ "$deploy" = "yes" ]; then
 
 	balena_deploy_to_s3 "$MACHINE" "${buildFlavor}" "${ESR}" "${deployTo}"
 
-	if [ "${_state}" != "DISCONTINUED" ]; then
+	if [ "${DEVICE_STATE}" != "DISCONTINUED" ]; then
 		balena_deploy_to_dockerhub "${MACHINE}"
 		balena_deploy_hostapp "${MACHINE}"
 	fi
