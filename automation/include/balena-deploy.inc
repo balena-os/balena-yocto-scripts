@@ -152,9 +152,16 @@ balena_deploy_to_dockerhub () {
 	local _slug
 	local _tag
 	local _hostapp_image
+	local _discontinued
+
+	[ -z "${_device_type}" ] && echo "[balena_deploy_to_dockerhub] Device type is required" && return 1
+	_discontinued=$(balena_lib_get_dt_state "${_device_type}")
+	if [ "${_discontinued}" = "DISCONTINUED" ]; then
+		echo "[INFO]: balena_deploy_to_dockerhub: Not deploying discontinued device type."
+		return
+	fi
 
 	_version=$(balena_lib_get_os_version)
-	[ -z "${_device_type}" ] && echo "[balena_deploy_to_dockerhub] Device type is required" && return 1
 	[ -z "${_variant}" ] && echo "[balena_deploy_to_dockerhub] OS variant is required" && return 1
 
 	_private=$(balena_api_is_dt_private "${_device_type}")
@@ -353,12 +360,19 @@ balena_deploy_block() {
 	local _balenaCloudPassword="${10:-"${balenaCloudPassword}"}"
 	local _variant="${11}"
 	local _esr="${12}"
+	local _discontinued
+
+	[ -z "${_device_type}" ] && echo "Device type is required" && return
+	_discontinued=$(balena_lib_get_dt_state "${_device_type}")
+	if [ "${_discontinued}" = "DISCONTINUED" ]; then
+		echo "[INFO]: balena_deploy_block: Not deploying discontinued device type."
+		return
+	fi
 
 	[ -z "${_appName}" ] && echo "App name is required" && return
 	if [ -f "${_image_path}" ]; then
 		_image_path="$(readlink --canonicalize "${_image_path}")"
 	fi
-	[ -z "${_device_type}" ] && echo "Device type is required" && return
 	_esr=${_esr:-"${ESR}"}
 	_variant=${_variant:-"${buildFlavor}"}
 
