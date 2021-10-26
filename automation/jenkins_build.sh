@@ -159,6 +159,7 @@ else
 fi
 
 "${automation_dir}"/../build/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -v "${buildFlavor}" -g "${BARYS_ARGUMENTS_VAR}"
+# Do not check for artifacts as when discontinuing device types build artifacts are not created, but device-type.json needs to be deployed to mark the device as discontinued
 
 if [ "$ENABLE_TESTS" = true ]; then
 	# Run the test script in the device specific repository
@@ -179,9 +180,17 @@ if [ "$deploy" = "yes" ]; then
 	echo "[INFO] Starting deployment..."
 
 	balena_deploy_to_s3 "$MACHINE" "${buildFlavor}" "${ESR}" "${deployTo}"
-
-		balena_deploy_to_dockerhub "${MACHINE}"
-		balena_deploy_hostapp "${MACHINE}"
+	balena_deploy_to_dockerhub "${MACHINE}"
+	_image_path=$(find "${WORKSPACE}/build/tmp/deploy/" -name "balena-image-${MACHINE}.docker" -type l || true)
+	if [ -n "${_image_path}" ] && [ -f "${_image_path}" ]; then
+		balena_deploy_block "$(balena_lib_get_slug "${MACHINE}")" "${MACHINE}" "${_bootable:-1}" "${_image_path}" "${deploy}"
+	else
+		_state=$(balena_lib_get_dt_state "${MACHINE}")
+		if [ "${_state}" != "DISCONTINUED" ]; then
+			echo "[ERROR]:balena_deploy_hostapp: No hostapp to release"
+			exit 1
+		fi
+	fi
 
 	if [ "$AMI" = "true" ]; then
 		echo "[INFO] Generating AMI"
