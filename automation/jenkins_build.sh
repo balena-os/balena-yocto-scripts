@@ -170,14 +170,6 @@ if [ "$ENABLE_TESTS" = true ]; then
 	fi
 fi
 
-# Artifacts
-DEVICE_STATE=$(balena_lib_get_dt_state "${MACHINE}")
-if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
-	VERSION_HOSTOS=$(balena_lib_get_os_version)
-else
-	VERSION_HOSTOS=$(cat "$WORKSPACE/VERSION")
-fi
-
 # Jenkins artifacts
 echo "[INFO] Starting creating jenkins artifacts..."
 balena_deploy_artifacts "${MACHINE}" "$WORKSPACE/deploy-jenkins" "true"
@@ -188,10 +180,8 @@ if [ "$deploy" = "yes" ]; then
 
 	balena_deploy_to_s3 "$MACHINE" "${buildFlavor}" "${ESR}" "${deployTo}"
 
-	if [ "${DEVICE_STATE}" != "DISCONTINUED" ]; then
 		balena_deploy_to_dockerhub "${MACHINE}"
 		balena_deploy_hostapp "${MACHINE}"
-	fi
 
 	if [ "$AMI" = "true" ]; then
 		echo "[INFO] Generating AMI"
