@@ -77,7 +77,7 @@ for exp in shortvars:
 
 package_re = {}
 for exp in packagevars:
-    package_re[exp] = (re.compile('(^|[#\'"\s\-\+]+)' + exp + ':' + '([$a-z"\'\s%\[<{\\\*].)'), r"\1" + exp + r"_\2")
+    package_re[exp] = (re.compile('(^|[#\'"${\s\-\+]+)' + exp + ':' + '([$a-z"\'\s%\[<{\\\*].)'), r"\1" + exp + r"_\2")
 
 # Other substitutions to make
 subs = {
