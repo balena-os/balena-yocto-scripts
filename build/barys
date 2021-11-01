@@ -34,6 +34,8 @@ MACHINES=
 BITBAKEARGS=
 EXIT_CODE=0
 SKIP_DISCONTINUED=no
+USE_OLD_SYNTAX=yes
+NEW_SYNTAX_RELEASES=("honister" "kirkstone")
 
 function help {
     echo
@@ -479,6 +481,30 @@ for pair in $ADDITIONAL_VARIABLES; do
     value=$(echo "$pair" | awk -F= '{print $2}')
     echo "$variable=\"$value\"" >> conf/local.conf
 done
+
+DEVICE_LAYER_CONF=$(ls ${SCRIPTPATH}/../../layers/meta-balena-*/conf/layer.conf)
+if [[ -d "${SCRIPTPATH}/../../layers/meta-balena/meta-balena-${NEW_SYNTAX_RELEASES[0]}" ]]; then
+    for poky_release in ${NEW_SYNTAX_RELEASES[@]}; do
+        if grep -q -i "LAYERSERIES_COMPAT.*$poky_release" ${DEVICE_LAYER_CONF}; then
+            log "Release $poky_release already supported by device integration layer, will not revert meta-balena-common syntax."
+            USE_OLD_SYNTAX=no
+            break;
+        fi
+    done
+else
+    USE_OLD_SYNTAX=no
+fi
+
+if [ "$USE_OLD_SYNTAX" == "yes" ]; then
+    BALENA_COMMON_LAYER="${SCRIPTPATH}/../../layers/meta-balena/meta-balena-common"
+    if ! command -v python3 &> /dev/null ; then
+        log ERROR "Python3 needs to be installed to perform conversion from the new bitbake syntax to the old one."
+    else
+        python3 ${SCRIPTPATH}/../automation/conversion_scripts/revert-overrides.py ${BALENA_COMMON_LAYER}
+        sed -i 's/.*LAYERSERIES_COMPAT_balena-common.*/LAYERSERIES_COMPAT_balena-common = "pyro rocko sumo thud warrior dunfell"/g' ${BALENA_COMMON_LAYER}/conf/layer.conf
+        log "Reverted to the old bitbake syntax in meta-balena-common layer."
+    fi
+fi
 
 log "BalenaOS build initialized in directory: $BUILD_DIR."
 
