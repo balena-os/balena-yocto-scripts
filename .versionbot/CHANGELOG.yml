@@ -1,4 +1,19 @@
 - commits:
+    - subject: 'Dockerfile_yocto-build-env: Install Honister host deps'
+      hash: efc069c609431965394912d3ffd34362a1108852
+      body: >
+        See
+        http://docs.yoctoproject.org/next/migration-guides/migration-3.4.html#new-host-dependencies
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alexandru Costache <alexandru@balena.io>
+        signed-off-by: Alexandru Costache <alexandru@balena.io>
+      author: Alexandru Costache
+      nested: []
+  version: 1.15.8
+  date: 2021-11-03T10:01:44.980Z
+- commits:
     - subject: 'jenkins_build.sh: Fix deployment for discontinued device types'
       hash: 84e65e937fef38625277fb8330ebd3179c466d04
       body: |
