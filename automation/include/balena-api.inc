@@ -83,6 +83,38 @@ balena_api_appID_from_appName() {
 	echo "${_appID}"
 }
 
+__set_esr_policy() {
+	local _appName="${1}"
+	local _apiEnv="${2}"
+	local _token="${3}"
+	local _json
+
+	_appID=$(balena_api_appID_from_appName "${_appName}" "${_apiEnv}" "${_token}")
+	if [ "${_appID}" = "null" ]; then
+		>&2 echo "[${_appName}] No such application in ${_apiEnv}"
+		return
+	fi
+	while read -r -d '' _post_data <<-EOF
+{
+	"application": "${_appID}",
+	"tag_key": "release-policy",
+	"value": "esr"
+}
+EOF
+do
+	# This avoid read returning error from not finding a newline termination
+	:
+done
+	_json=$(${CURL} -XPOST "https://api.${_apiEnv}/${TRANSLATION}/application_tag" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}" --data "${_post_data}")
+	_id=$(echo "${_json}" | jq -r '.id')
+	if [ "${_id}" = "null" ]; then
+		>&2 echo "Failed to add ESR release policy to ${_appName}"
+	else
+		__dlog "[${_appName}] Application ID ${_appID} now has ESR release policy"
+	fi
+	echo "${_appID}"
+}
+
 # Creates an  application
 # Arguments:
 #
@@ -298,7 +330,8 @@ balena_api_create_public_app() {
 	local _device_type=$3
 	local _balenaCloudEmail=$4
 	local _balenaCloudPassword=$5
-	local _bootable=$6
+	local _esr=${6:-false}
+	local _bootable=${7:-0}
 	local _token
 	local _appID
 	local _url="https://github.com/balena-os"
@@ -321,6 +354,9 @@ balena_api_create_public_app() {
 		fi
 		if [ "${_bootable}" = "1" ]; then
 			__set_bootable_app "${_appName}" "${_apiEnv}" "${_token}"
+		fi
+		if [ "${_esr}" = "true" ]; then
+			__set_esr_policy "${_appName}" "${_apiEnv}" "${_token}"
 		fi
 	else
 	    >&2 echo "[${_appName}] Application ${_appID} already exists."
