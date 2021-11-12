@@ -26,6 +26,14 @@ balena_lib_get_meta_balena_version() {
 	echo "${_version#v*}"
 }
 
+# Return the latest meta-balena version (not the latest tag which can be an ESR)
+balena_lib_get_meta_balena_base_version() {
+	pushd "${device_dir}" > /dev/null 2>&1 || return
+	_version=$(cat "${device_dir}/VERSION")
+	popd > /dev/null 2>&1 || return
+	echo "${_version%+*}"
+}
+
 # Pull a helper image building a matching version if required
 # Inputs:
 # $1: Dockerfile name
