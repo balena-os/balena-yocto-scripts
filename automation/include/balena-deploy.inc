@@ -172,7 +172,22 @@ balena_deploy_artifacts () {
 		# package all leviathan/testbot tests from meta-balena to the deploy dir
 		# make sure they are compressed so a flattened unzip of artifacts does not fail
 		(cd "${device_dir}/layers/meta-balena/tests" || return
-			[ -f suites/config.js ] && sed "s/deviceType: .*/deviceType: '${_slug:-$_device_type}',/g" -i suites/config.js
+			if [ -f suites/config.js ]
+			then
+				# substitute the device type slug
+				perl -i~ -0777 -pe "s/deviceType: [^,]+,/deviceType: '${_slug:-$_device_type}',/g" suites/config.js
+				if [[ "${_slug:-$_device_type}" = generic* ]]
+				then
+					# if the device type is generic we need to use localhost workers
+					perl -i~ -0777 -pe "s/workers: ({|\[)[^}\]]+(}|\]),/workers: ['http:\/\/localhost'],/g" suites/config.js
+				else
+					# otherwise we need to use testbot workers
+					perl -i~ -0777 -pe "s/workers: ({|\[)[^}\]]+(}|\]),/workers: {
+		balenaApplication: process.env.BALENA_CLOUD_APP_NAME,
+		apiKey: process.env.BALENA_CLOUD_API_KEY,
+	},/g" suites/config.js
+				fi
+			fi
 			tar -czvf "$_deploy_dir/tests.tar.gz" .
 		)
 	fi
