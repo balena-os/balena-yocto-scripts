@@ -195,4 +195,4 @@ fi
 
 # Cleanup
 # Keep this after writing all artifacts
-rm -rf $WORKSPACE/build
+##rm -rf $WORKSPACE/build
