@@ -131,7 +131,7 @@ balena_lib_contract_is_device_compatible() {
 # Inputs:
 # $1: Contract Slug name to search for
 # $2: Device type
-# $3: OS version
+# $3: OS semantic version
 # $4: Contract type (i.e sw.recipe.yocto)
 #
 # Returns:
@@ -142,9 +142,8 @@ balena_lib_contract_fetch_composedOf_list() {
 	local _version=${3}
 	local _type="${4:-sw.recipe.yocto}"
 	local _contract
-	local _device_types_depends
-	local _version
 	local _list
+	local _depends
 
 	# Check device type compatibility
 	if ! balena_lib_contract_is_device_compatible "${_slug}" "${_device_type}"; then
@@ -162,8 +161,8 @@ balena_lib_contract_fetch_composedOf_list() {
 	fi
 
 	# Check OS compatibility
-	_version_depends=$(jq --raw-output '.requires[].allOf[] | select(.type == "sw.os") | select(.slug == "balenaos") | .version' "${_contract}")
-	for os in ${_version_depends}; do
+	_depends=$(jq --raw-output '.requires[].allOf[] | select(.type == "sw.os") | select(.slug == "balenaos") | .externalVersion' "${_contract}")
+	for os in ${_depends}; do
 		if ! "${include_dir}/semver2.sh" "${os}" "${_version}" "${DEBUG:-0}" "${VERBOSE:-0}" 2&>/dev/null; then
 			>&2 echo "${_slug}: OS version not compatible"
 			return 1
