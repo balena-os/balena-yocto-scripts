@@ -232,7 +232,11 @@ balena_deploy_to_s3() {
 		echo "[balena_deploy_to_s3] Invalid variant ${_variant}"
 		return 1
 	fi
-	_s3_version_hostos="$(balena_lib_get_os_version).${_variant}"
+	if [ "${_state}" != "DISCONTINUED" ]; then
+		_s3_version_hostos="$(balena_lib_get_os_version).${_variant}"
+	else
+		_s3_version_hostos="$(balena_lib_get_meta_balena_version).${_variant}"
+	fi
 
 	[ -z "${_namespace}" ] && _namespace=${NAMESPACE:-"resin"}
 	[ -z "${_esr}" ] && _esr="${_esr:-"${ESR:-false}"}"
