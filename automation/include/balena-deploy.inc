@@ -180,12 +180,14 @@ balena_deploy_artifacts () {
 				then
 					# if the device type is generic we need to use localhost workers
 					perl -i~ -0777 -pe "s/workers: ({|\[)[^}\]]+(}|\]),/workers: ['http:\/\/localhost'],/g" suites/config.js
+					perl -i~ -0777 -pe "s/networkWireless: [^,]+,/networkWireless: false,/g" suites/config.js
 				else
 					# otherwise we need to use testbot workers
 					perl -i~ -0777 -pe "s/workers: ({|\[)[^}\]]+(}|\]),/workers: {
 		balenaApplication: process.env.BALENA_CLOUD_APP_NAME,
 		apiKey: process.env.BALENA_CLOUD_API_KEY,
 	},/g" suites/config.js
+					perl -i~ -0777 -pe "s/networkWireless: [^,]+,/networkWireless: true,/g" suites/config.js
 				fi
 			fi
 			tar -czvf "$_deploy_dir/tests.tar.gz" .
