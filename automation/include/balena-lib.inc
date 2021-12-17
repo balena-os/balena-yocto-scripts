@@ -447,12 +447,15 @@ balena_lib_release() {
 	[ -z "${_appName}" ] && >&2 echo "balena_lib_release: Application name is required" && exit 1
 	_apiEnv=${_apiEnv:-"$(balena_lib_environment)"}
 	_path=${_path:-"$(pwd)"}
-	[ ! -f "${_path}/balena.yml" ] && >&2 echo "balena_lib_release: balena.yml contract file not present" && exit 1
-	_contract_version=$(awk '/version:/ {print $2}' "${_path}/balena.yml")
-	_version=$(balena_lib_get_os_version)
-	if [ "${_contract_version}" != "${_version}" ]; then
-		>&2 echo "balena_lib_release: Version mismatch, contract ${_contract_version} os ${_version}"
-		return 1
+	if [ -f "${_path}/balena.yml" ]; then
+		_contract_version=$(awk '/version:/ {print $2}' "${_path}/balena.yml")
+		_version=$(balena_lib_get_os_version)
+		if [ "${_contract_version}" != "${_version}" ]; then
+			>&2 echo "balena_lib_release: Version mismatch, contract ${_contract_version} os ${_version}"
+			return 1
+		fi
+	else
+		>&2 echo "balena_lib_release: balena.yml contract file not present"
 	fi
 
 	if [ "${_final}" = "no" ]; then
