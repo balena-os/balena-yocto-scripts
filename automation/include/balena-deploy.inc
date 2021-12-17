@@ -136,15 +136,13 @@ balena_deploy_artifacts () {
 # Inputs:
 #
 # $1: Device type name
-# $2: Build variant (prod | dev) (defaults to buildFlavor environmental variable)
-# $3: Account to deploy to (production | staging) (defaults to deployTo enviromental variable)
-# $4: Account namespace to use (defaults to resin)
+# $2: Account to deploy to (production | staging) (defaults to deployTo enviromental variable)
+# $3: Account namespace to use (defaults to resin)
 #
 balena_deploy_to_dockerhub () {
 	local _device_type="${1:-${MACHINE}}"
-	local _variant="${2:-"${buildFlavor}"}"
-	local _deploy_to="${3:-"${deployTo}"}"
-	local _namespace="${4:-resin}"
+	local _deploy_to="${2:-"${deployTo}"}"
+	local _namespace="${3:-resin}"
 	local _version
 	local _private
 	local _docker_repo
@@ -162,7 +160,6 @@ balena_deploy_to_dockerhub () {
 	fi
 
 	_version=$(balena_lib_get_os_version)
-	[ -z "${_variant}" ] && echo "[balena_deploy_to_dockerhub] OS variant is required" && return 1
 
 	_private=$(balena_api_is_dt_private "${_device_type}")
 
@@ -175,14 +172,9 @@ balena_deploy_to_dockerhub () {
 	if [ "${_deploy_to}" = "staging" ]; then
 		_docker_repo="${_namespace}/resinos-staging"
 	fi
-	if [ "${_variant}" = "dev" ]; then
-		_variant=".dev"
-	else
-		_variant=""
-	fi
 	# Make sure the tags are valid
 	# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
-	_tag="$(echo "${_version}${_variant}-${_slug}" | sed 's/[^a-z0-9A-Z_.-]/_/g')"
+	_tag="$(echo "${_version}-${_slug}" | sed 's/[^a-z0-9A-Z_.-]/_/g')"
 
 	balena_lib_dockerhub_login
 
@@ -209,17 +201,15 @@ balena_deploy_to_dockerhub () {
 # Inputs:
 #
 # $1: Device type name
-# $2: Build variant (prod | dev )
-# $3: ESR flag
-# $4: S3 environmennt to deploy to (production | staging ) (defaults to production)
-# $5: S3 account namespace to use (defaults to resin)
+# $2: ESR flag
+# $3: S3 environmennt to deploy to (production | staging ) (defaults to production)
+# $4: S3 account namespace to use (defaults to resin)
 #
 balena_deploy_to_s3() {
 	local _device_type="${1}"
-	local _variant="${2}"
-	local _esr=${3}
-	local _deploy_to="${4:-"production"}"
-	local _namespace="${5}"
+	local _esr=${2}
+	local _deploy_to="${3:-"production"}"
+	local _namespace="${4}"
 	local _slug
 	local _artifact
 	local _state
@@ -234,15 +224,10 @@ balena_deploy_to_s3() {
 	_state=$(balena_lib_get_dt_state "${_device_type}")
 
 	[ -z "${_device_type}" ] && echo "[balena_deploy_to_s3] Device type is required" && return 1
-	[ -z "${_variant}" ] && echo "[balena_deploy_to_s3] Variant is required" && return 1
-	if [ "${_variant}" != "prod" ] && [ "${_variant}" != "dev" ]; then
-		echo "[balena_deploy_to_s3] Invalid variant ${_variant}"
-		return 1
-	fi
 	if [ "${_state}" != "DISCONTINUED" ]; then
-		_s3_version_hostos="$(balena_lib_get_os_version).${_variant}"
+		_s3_version_hostos="$(balena_lib_get_os_version)"
 	else
-		_s3_version_hostos="$(balena_lib_get_meta_balena_version).${_variant}"
+		_s3_version_hostos="$(balena_lib_get_meta_balena_version)"
 	fi
 
 	[ -z "${_namespace}" ] && _namespace=${NAMESPACE:-"resin"}
@@ -293,7 +278,6 @@ balena_deploy_to_s3() {
 		-e SLUG="$_slug" \
 		-e DEPLOY_ARTIFACT="${_artifact}" \
 		-e BUILD_VERSION="$_s3_version_hostos" \
-		-e DEVELOPMENT_IMAGE="${_variant}" \
 		-e VERBOSE="${VERBOSE}" \
 		-e DEPLOYER_UID="$(id -u)" \
 		-e DEPLOYER_GID="$(id -g)" \
@@ -321,9 +305,7 @@ if [ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ] || [ -n "$
 	$S3_CMD del -rf s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}
 	$S3_CMD put /host/images/${SLUG}/${BUILD_VERSION}/IGNORE s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
 	$S3_CMD $S3_SYNC_OPTS dsync /host/images/${SLUG}/${BUILD_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
-	if [ "${DEVELOPMENT_IMAGE}" = "prod" ]; then
-		$S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/ --API-ACL=public-read -f
-	fi
+	$S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/ --API-ACL=public-read -f
 	$S3_CMD put /host/images/${SLUG}/${BUILD_VERSION}/logo.svg s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/ --API-ACL=public-read -f --API-ContentType=image/svg+xml
 	$S3_CMD del s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/IGNORE
 else
@@ -344,8 +326,7 @@ EOSU
 #  $7: BalenaCloud admin account (defaults to balena_os)
 #  $8: BalenaCloud email address (defaults to the balenaCloudEmail enviromental variable)
 #  $9: BalenaCloud password (defaults to the balenaCloudPassword enviromental variable)
-#  $10: Build variant (only for hostapps, default to "buildFlavor" environment variable)
-#  $11: ESR release flag (default to "ESR" environment variable)
+#  $10: ESR release flag (default to "ESR" environment variable)
 #
 balena_deploy_block() {
 	local _appName="$1"
@@ -358,8 +339,7 @@ balena_deploy_block() {
 	local _balenaos_account="${8:-"balena_os"}"
 	local _balenaCloudEmail="${9:-"${balenaCloudEmail}"}"
 	local _balenaCloudPassword="${10:-"${balenaCloudPassword}"}"
-	local _variant="${11}"
-	local _esr="${12}"
+	local _esr="${11}"
 	local _discontinued
 
 	[ -z "${_device_type}" ] && echo "Device type is required" && return
@@ -374,7 +354,6 @@ balena_deploy_block() {
 		_image_path="$(readlink --canonicalize "${_image_path}")"
 	fi
 	_esr=${_esr:-"${ESR}"}
-	_variant=${_variant:-"${buildFlavor}"}
 
 	if [ ! -f "${_work_dir}/balena.yml" ]; then
 		if [ -f "${device_dir}/balena.yml" ]; then
@@ -399,7 +378,6 @@ balena_deploy_block() {
 		-e FINAL="${_final}" \
 		-e balenaCloudEmail="${_balenaCloudEmail}" \
 		-e balenaCloudPassword="${_balenaCloudPassword}" \
-		-e VARIANT="${_variant}" \
 		-e ESR="${_esr}" \
 		-v "${_image_path}":/host/appimage.docker \
 		-v "${device_dir}":/work \
