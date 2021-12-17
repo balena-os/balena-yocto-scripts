@@ -11,7 +11,6 @@ usage() {
 Usage: ${script_name} [OPTIONS]
     -d Device type name
     -s Shared build directory
-    -v BalenaOS variant (dev | prod)
     -i Bitbake targets (defaults to the device type default, balena-image or balena-image-flasher)
     -b Bitbake arguments (optional, for example '-b "-c cleanall"')
     -g Barys extra arguments (optional, for example '-g "-a VARIABLE=value"')
@@ -51,22 +50,19 @@ trap 'docker_build_cleanup fail' SIGINT SIGTERM
 balena_build_run_barys() {
 	local _device_type="${1}"
 	local _shared_dir="${2}"
-	local _variant="${3}"
-	local _api_env="${4:-"balena-cloud.com"}"
-	local _token="${5}"
-	local _keep_helpers="${6}"
-	local _bitbake_args="${7}"
-	local _bitbake_targets="${8}"
-	local _barys_args="${9}"
-	local _docker_run_args="${10:-"--rm"}"
+	local _api_env="${3:-"balena-cloud.com"}"
+	local _token="${4}"
+	local _keep_helpers="${5}"
+	local _bitbake_args="${6}"
+	local _bitbake_targets="${7}"
+	local _barys_args="${8}"
+	local _docker_run_args="${9:-"--rm"}"
 	local _dl_dir
 	local _sstate_dir
 	local _namespace="${NAMESPACE:-"resin"}"
-	local _development_image
 
 	[ -z "${_device_type}" ] && echo "Device type is required"  && exit 1
 	[ -z "${_shared_dir}" ] && echo "Shared directory path is required"  && exit 1
-	[ -z "${_variant}" ] && echo "Variant is required"  && exit 1
 	[ -z "${_bitbake_args}" ] && _bitbake_args=""
 	[ -z "${_bitbake_targets}" ] && _bitbake_targets=""
 	_dl_dir="${_shared_dir}/shared-downloads"
@@ -75,9 +71,6 @@ balena_build_run_barys() {
 	mkdir -p "${_sstate_dir}"
 	[ -n "${_bitbake_args}" ] && _bitbake_args="--bitbake-args ${_bitbake_args}"
 	[ -n "${_bitbake_targets}" ] && _bitbake_targets="--bitbake-target ${_bitbake_targets}"
-	if [ "${_variant}" = "dev" ]; then
-		_development_image="-d"
-	fi
 
 	_token=${_token:-"$(balena_lib_token)"}
 
@@ -113,7 +106,6 @@ balena_build_run_barys() {
 		/prepare-and-start.sh \
 		--log \
 		--machine "${_device_type}" \
-		${_development_image} \
 		${_bitbake_args} \
 		${_bitbake_targets} \
 		${_barys_args} \
@@ -133,7 +125,6 @@ main() {
 	local _api_env
 	local _token="none"
 	local _shared_dir
-	local _variant
 	local _bitbake_args
 	local _bitbake_targets
 	local _barys_args
@@ -143,13 +134,12 @@ main() {
 		usage
 		exit 1
 	else
-		while getopts "hd:a:t:s:v:b:i:g:k" c; do
+		while getopts "hd:a:t:s:b:i:g:k" c; do
 			case "${c}" in
 				d) _device_type="${OPTARG}";;
 				a) _api_env="${OPTARG}";;
 				t) _token="${OPTARG}";;
 				s) _shared_dir="${OPTARG}" ;;
-				v) _variant="${OPTARG}" ;;
 				b) _bitbake_args="${OPTARG}" ;;
 				i) _bitbake_targets="${OPTARG}" ;;
 				g) _barys_args="${OPTARG}" ;;
@@ -166,10 +156,8 @@ main() {
 		_token="${_token:-$(balena_lib_token "${_api_env}")}"
 		_shared_dir="${_shared_dir:-"${YOCTO_DIR}"}"
 		[ -z "${_shared_dir}" ] && echo "Shared directory is required" && exit 1
-		_variant="${_variant:-"${buildFlavor}"}"
-		[ -z "${_variant}" ] && echo "Variant is required" && exit 1
 
-		balena_build_run_barys "${_device_type}" "${_shared_dir}" "${_variant}" "${_api_env}" "${_token}" "${_keep_helpers}" "${_bitbake_args}" "${_bitbake_targets}" "${_barys_args}"
+		balena_build_run_barys "${_device_type}" "${_shared_dir}" "${_api_env}" "${_token}" "${_keep_helpers}" "${_bitbake_args}" "${_bitbake_targets}" "${_barys_args}"
 	fi
 }
 
