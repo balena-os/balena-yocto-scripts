@@ -34,21 +34,16 @@ if [ -z "${_releaseID}" ]; then
 fi
 
 # Legacy hostapp tagging
-if [ "${DEPLOY}" = "yes" ] && [ -n "${VARIANT}" ]; then
-	if [ "${VARIANT}" = "dev" ]; then
-		variant_str="development"
-	else
-		variant_str="production"
-	fi
+if [ "${DEPLOY}" = "yes" ]; then
 	_version=$(balena_api_get_version "${_releaseID}" "${API_ENV}" "${BALENAOS_TOKEN}")
 	_os_version=$(balena_lib_get_os_version)
-	if [ "${_version}" != "${_os_version}" ]; then
+	# 0.0.0 is a reserved version used when the semver is not set
+	if [ "${_version%-*}" != "0.0.0" ] && [ "${_version}" != "${_os_version}" ]; then
 		echo "balena-deploy-block: Version mismatch, OS version is ${_os_version} and deployed version is ${_version}"
 		exit 1
 	fi
-	echo "[INFO] Tagging release ${_releaseID} with version ${_version} and variant ${variant_str}"
-	balena tag set version "${_version}" --release "${_releaseID}"
-	balena tag set variant "${variant_str}" --release "${_releaseID}"
+	echo "[INFO] Tagging release ${_releaseID} with version ${_os_version}"
+	balena tag set version "${_os_version}" --release "${_releaseID}"
 	if [ "$ESR" = "true" ]; then
 		balena tag set meta-balena-base "${META_BALENA_VERSION}" --release "${_releaseID}"
 	fi
