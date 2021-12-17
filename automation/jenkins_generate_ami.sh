@@ -49,10 +49,10 @@ cp "${ORIG_IMAGE}" "${PRELOADED_IMAGE}"
 # AMI names must be between 3 and 128 characters long, and may contain letters, numbers, '(', ')', '.', '-', '/' and '_'
 VERSION=$(cat "${YOCTO_IMAGES_PATH}/VERSION_HOSTOS" | sed 's/+/-/g')
 
-# AMI name format: balenaOS-VERSION-VARIANT-DEVICE_TYPE
+# AMI name format: balenaOS-VERSION-DEVICE_TYPE
 # shellcheck disable=SC2154
 # passed in by Jenkins
-AMI_NAME="balenaOS-${VERSION}-${buildFlavor}-${MACHINE}"
+AMI_NAME="balenaOS-${VERSION}-${MACHINE}"
 
 # TODO: Can get the mapping from somewhere?
 JSON_ARCH=$(balena_lib_get_dt_arch "${MACHINE}")
