@@ -19,7 +19,6 @@ Usage: ${script_name} [OPTIONS]
     -t Balena API token
     -n Registry namespace
     -s Shared build directory
-    -v BalenaOS variant (dev | prod)
     -c Balena account (defaults to balena_os)
     -h Display usage
 EOF
@@ -71,7 +70,7 @@ __build_hostos_blocks() {
 
 		if [ -n "${_bitbake_targets}" ]; then
 			_bitbake_targets="${_bitbake_targets} os-release package-index"
-			"${build_dir}"/balena-build.sh -d "${_device_type}" -a "${_api_env}" -s "${_shared_dir}" -v "${_variant}"  -i "${_bitbake_targets}"
+			"${build_dir}"/balena-build.sh -d "${_device_type}" -a "${_api_env}" -s "${_shared_dir}"  -i "${_bitbake_targets}"
 
 			# Deploy package feed
 			local _deploy_dir="${work_dir}/deploy-jenkins/"
@@ -110,7 +109,7 @@ main() {
 		usage
 		exit 1
 	else
-		while getopts "hd:a:t:n:s:b:v:c:ep" c; do
+		while getopts "hd:a:t:n:s:b:c:ep" c; do
 			case "${c}" in
 				d) _device_type="${OPTARG}";;
 				a) _api_env="${OPTARG}";;
@@ -118,7 +117,6 @@ main() {
 				t) _token="${OPTARG}";;
 				n) _namespace="${OPTARG}" ;;
 				s) _shared_dir="${OPTARG}" ;;
-				v) _variant="${OPTARG}" ;;
 				c) _balenaos_account="${OPTARG}" ;;
 				e) _esr=1 ;;
 				p) _final="yes";;
