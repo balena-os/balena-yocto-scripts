@@ -831,3 +831,40 @@ done
 	fi
 	echo "${_appID}"
 }
+
+# Check if a release tag exists
+# Arguments:
+#
+# $1: Release ID
+# $2: Tag name
+# $3: Tag value
+# $4: Balena target environment (defaults to production)
+# $5: Balena API token (without it only public apps are accessible)
+#
+# Returns:
+#
+# 0 on match, non-zero otherwise
+#
+balena_api_tag_exists() {
+  local _tagName=${1}
+  local _tagValue=${2}
+	local _apiEnv="${3:-"balena-cloud.com"}"
+	local _token="${4:-""}"
+	[ -z "${_tagName}" ] && >&2 echo "Tag name is required" && return 1
+	[ -z "${_tagValue}" ] && >&2 echo "Tag value is required" && return 1
+
+	local _json=""
+	# Unauthenticated only shows public apps
+	if [ -z "${_token}" ]; then
+		if [ -f "${HOME}/.balena/token" ]; then
+			_token=$(cat "${HOME}/.balena/token")
+		fi
+	fi
+	if [ -n "${_token}" ]; then
+		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/release_tag?\$filter=(tag_key%20eq%20%27${_tagName}%27)%20and%20(value%20eq%20%27${_tagValue}%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}")
+	else
+		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/release_tag?\$filter=(tag_key%20eq%20%27${_tagName}%27)%20and%20(value%20eq%20%27${_tagValue}%27)" -H "Content-Type: application/json")
+	fi
+	__pp_json "${_json}"
+	echo "${_json}" | jq -e '.d[0].id'
+}
