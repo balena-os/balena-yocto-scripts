@@ -44,6 +44,7 @@ if [ "${DEPLOY}" = "yes" ]; then
 	fi
 	echo "[INFO] Tagging release ${_releaseID} with version ${_os_version}"
 	balena tag set version "${_os_version}" --release "${_releaseID}"
+	balena release finalize "${_releaseID}"
 	if [ "$ESR" = "true" ]; then
 		balena tag set meta-balena-base "${META_BALENA_VERSION}" --release "${_releaseID}"
 	fi
