@@ -11,8 +11,10 @@ trap 'balena_docker_stop fail' SIGINT SIGTERM
 balena_docker_start "/scratch/docker" "/var/run" "/var/log/docker.log"
 balena_docker_wait
 
-_local_image=$(docker load -i /host/appimage.docker | cut -d: -f1 --complement | tr -d " " )
 BALENAOS_ACCOUNT="${BALENAOS_ACCOUNT:-"balena_os"}"
+if [ -f "/host/appimage.docker" ]; then
+	_local_image=$(docker load -i /host/appimage.docker | cut -d: -f1 --complement | tr -d " " )
+fi
 
 echo "[INFO] Logging into $API_ENV as ${BALENAOS_ACCOUNT}"
 export BALENARC_BALENA_URL=${API_ENV}
@@ -23,28 +25,34 @@ if [ "$ESR" = "true" ]; then
 	APPNAME="${APPNAME}-esr"
 fi
 
-echo "[INFO] Pushing $_local_image to ${BALENAOS_ACCOUNT}/$APPNAME"
+echo "[INFO] Deploying  to ${BALENAOS_ACCOUNT}/$APPNAME"
 balena_api_create_public_app "${APPNAME}" "${BALENARC_BALENA_URL}" "${MACHINE}" "${balenaCloudEmail}" "${balenaCloudPassword}" "${BOOTABLE}"
-_releaseID=$(balena deploy "${BALENAOS_ACCOUNT}/$APPNAME" "$_local_image" | sed -n 's/.*Release: //p')
+_releaseID=$(balena_lib_release "${BALENAOS_ACCOUNT}/$APPNAME" "${FINAL}" "/deploy" "${API_ENV}" "$_local_image")
+if [ -z "${_releaseID}" ]; then
+	echo "[INFO] Failed to deploy to ${BALENAOS_ACCOUNT}/$APPNAME"
+	exit 1
+fi
 
 # Legacy hostapp tagging
-release_version="${RELEASE_VERSION}"
-if [ -n "${VARIANT}" ]; then
-	if [ "${VARIANT}" = "dev" ]; then
-		release_version="${release_version}.dev"
-		variant_str="development"
-	else
-		variant_str="production"
+if [ "${DEPLOY}" = "yes" ]; then
+	_version=$(balena_api_get_version "${_releaseID}" "${API_ENV}" "${BALENAOS_TOKEN}")
+	_os_version=$(balena_lib_get_os_version)
+	# 0.0.0 is a reserved version used when the semver is not set
+	if [ "${_version%-*}" != "0.0.0" ] && [ "${_version}" != "${_os_version}" ]; then
+		echo "balena-deploy-block: Version mismatch, OS version is ${_os_version} and deployed version is ${_version}"
+		exit 1
 	fi
-	echo "[INFO] Tagging release ${_releaseID} with version ${RELEASE_VERSION} and variant ${variant_str}"
-	balena tag set version "${RELEASE_VERSION}" --release "${_releaseID}"
-	balena tag set variant "${variant_str}" --release "${_releaseID}"
+	if balena_api_tag_exists "version" "${_os_version}" "${API_ENV}" "${BALENAOS_TOKEN}" > /dev/null; then
+			echo "[WARN] Release ID ${_releaseID} is already tagged with version ${_os_version} - bailing out"
+			exit 0
+	fi
+	echo "[INFO] Tagging release ${_releaseID} with version ${_os_version}"
+	balena tag set version "${_os_version}" --release "${_releaseID}"
+	balena release finalize "${_releaseID}"
 	if [ "$ESR" = "true" ]; then
 		balena tag set meta-balena-base "${META_BALENA_VERSION}" --release "${_releaseID}"
 	fi
 fi
-
-balena_api_set_release_version "${_releaseID}" "${BALENARC_BALENA_URL}" "${BALENAOS_TOKEN}" "${release_version}"
 
 balena_docker_stop
 exit 0

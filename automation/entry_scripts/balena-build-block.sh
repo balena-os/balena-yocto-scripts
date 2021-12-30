@@ -8,15 +8,12 @@ source "${script_dir}/balena-lib.inc"
 
 # Input checks
 [ -z "${APPNAME}" ] && echo "The block's app name needs to be defined" && exit 1
-[ -z "${API_ENV}" ] && echo "Balena's environment needs to be defined" && exit 1
-[ -z "${BALENAOS_TOKEN}" ] && echo "Balena's environment token needs to be defined" && exit 1
 [ -z "${MACHINE}" ] && echo "Machine needs to be defined" && exit 1
 [ -z "${PACKAGES}" ] && echo "list of packages to install without dependencies" && exit 1
 [ -z "${RELEASE_VERSION}" ] && echo "A release version needs to be defined" && exit 1
 [ -z "${WORKSPACE}" ] && echo "Workspace needs to be defined" && exit 1
 
 [ -z "${PACKAGE_TYPE}" ] && PACKAGE_TYPE="ipk"
-[ -z "${BALENAOS_ACCOUNT}" ] && BALENAOS_ACCOUNT="balena_os"
 
 DEVICE_TYPE_JSON="$WORKSPACE/$MACHINE.json"
 if [ -e "${DEVICE_TYPE_JSON}" ]; then
@@ -87,14 +84,7 @@ else
 	fi
 fi
 
-BALENAOS_ACCOUNT="${BALENAOS_ACCOUNT:-"balena_os"}"
-
-echo "[INFO] Logging into $API_ENV as ${BALENAOS_ACCOUNT}"
-export BALENARC_BALENA_URL=${API_ENV}
-balena login --token "${BALENAOS_TOKEN}"
-
 pushd "${TMPDIR}"
-balena_api_create_public_app "${APPNAME}" "${API_ENV}" "${MACHINE}" "${balenaCloudEmail}" "${balenaCloudPassword}"
 
 # Clean local docker of labelled hostos images
 docker rmi -f $(docker images --filter "label=${BALENA_HOSTOS_BLOCK_CLASS}" --format "{{.ID}}" | tr '\n' ' ') 2> /dev/null || true
@@ -103,8 +93,6 @@ if balena build --logs --nocache --deviceType "${MACHINE}" --arch "${ARCH}" --bu
 	image_id=$(docker images --filter "label=${BALENA_HOSTOS_BLOCK_CLASS}" --format "{{.ID}}")
 	mkdir -p "${WORKSPACE}/deploy-jenkins"
 	docker save "${image_id}" > "${WORKSPACE}/deploy-jenkins/${APPNAME}-${RELEASE_VERSION}.docker"
-	_releaseID=$(balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" "${image_id}" | sed -n 's/.*Release: //p')
-	balena_api_set_release_version "${_releaseID}" "${API_ENV}" "${BALENAOS_TOKEN}" "${RELEASE_VERSION}"
 else
 	echo "[ERROR] Fail to build"
 	exit 1

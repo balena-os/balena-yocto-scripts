@@ -81,13 +81,6 @@ while [[ $# -ge 1 ]]; do
 			BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR $1 $2"
 			shift
 			;;
-		-b|--build-flavor)
-			if [ -z "$2" ]; then
-				echo "-b|--build-flavor argument needs a build type"
-				exit 1
-			fi
-			buildFlavor="${buildFlavor:-$2}"
-			;;
 		--meta-balena-branch)
 			if [ -z "$2" ]; then
 				echo "--meta-balena-branch argument needs a meta-balena branch name (if this option is not used, the default value is __ignore__)"
@@ -123,21 +116,12 @@ metaBalenaBranch=${metaBalenaBranch:-__ignore__}
 supervisorVersion=${supervisorVersion:-__ignore__}
 
 # Sanity checks
-if [ -z "$MACHINE" ] || [ -z "$JENKINS_PERSISTENT_WORKDIR" ] || [ -z "$buildFlavor" ]; then
+if [ -z "$MACHINE" ] || [ -z "$JENKINS_PERSISTENT_WORKDIR" ]; then
 	echo -e "\n[ERROR] You are missing one of these arguments:\n
 \t -m <MACHINE>\n
 \t --shared-dir <PERSISTENT_WORKDIR>\n
 \t --build-flavor <BUILD_FLAVOR_TYPE>\n\n
 Run with -h or --help for a complete list of arguments.\n"
-	exit 1
-fi
-
-if [ "$buildFlavor" = "dev" ]; then
-	BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --development-image"
-elif [ "$buildFlavor" = "prod" ]; then
-	:
-else
-	echo "[ERROR] No such build flavor: $buildFlavor."
 	exit 1
 fi
 
@@ -158,7 +142,8 @@ else
 	popd > /dev/null 2>&1
 fi
 
-"${automation_dir}"/../build/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -v "${buildFlavor}" -g "${BARYS_ARGUMENTS_VAR}"
+"${automation_dir}"/../build/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -g "${BARYS_ARGUMENTS_VAR}"
+# Do not check for artifacts as when discontinuing device types build artifacts are not created, but device-type.json needs to be deployed to mark the device as discontinued
 
 if [ "$ENABLE_TESTS" = true ]; then
 	# Run the test script in the device specific repository
@@ -170,14 +155,6 @@ if [ "$ENABLE_TESTS" = true ]; then
 	fi
 fi
 
-# Artifacts
-DEVICE_STATE=$(balena_lib_get_dt_state "${MACHINE}")
-if [ "$DEVICE_STATE" != "DISCONTINUED" ]; then
-	VERSION_HOSTOS=$(balena_lib_get_os_version)
-else
-	VERSION_HOSTOS=$(cat "$WORKSPACE/VERSION")
-fi
-
 # Jenkins artifacts
 echo "[INFO] Starting creating jenkins artifacts..."
 balena_deploy_artifacts "${MACHINE}" "$WORKSPACE/deploy-jenkins" "true"
@@ -186,11 +163,17 @@ balena_deploy_artifacts "${MACHINE}" "$WORKSPACE/deploy-jenkins" "true"
 if [ "$deploy" = "yes" ]; then
 	echo "[INFO] Starting deployment..."
 
-	balena_deploy_to_s3 "$MACHINE" "${buildFlavor}" "${ESR}" "${deployTo}"
-
-	if [ "${DEVICE_STATE}" != "DISCONTINUED" ]; then
-		balena_deploy_to_dockerhub "${MACHINE}"
-		balena_deploy_hostapp "${MACHINE}"
+	balena_deploy_to_s3 "$MACHINE" "${ESR}" "${deployTo}"
+	balena_deploy_to_dockerhub "${MACHINE}"
+	_image_path=$(find "${WORKSPACE}/build/tmp/deploy/" -name "balena-image-${MACHINE}.docker" -type l || true)
+	if [ -n "${_image_path}" ] && [ -f "${_image_path}" ]; then
+		balena_deploy_block "$(balena_lib_get_slug "${MACHINE}")" "${MACHINE}" "${_bootable:-1}" "${_image_path}" "${deploy}"
+	else
+		_state=$(balena_lib_get_dt_state "${MACHINE}")
+		if [ "${_state}" != "DISCONTINUED" ]; then
+			echo "[ERROR]:balena_deploy_hostapp: No hostapp to release"
+			exit 1
+		fi
 	fi
 
 	if [ "$AMI" = "true" ]; then
