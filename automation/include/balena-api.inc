@@ -707,18 +707,20 @@ balena_api_fetch_image_json() {
 # $1: Application name
 # $2: Release version
 # $3: Balena API environment
+# $4: Balena API token
 #
 # Result:
 # Prints the image location in stdout
 balena_api_fetch_image_from_app() {
 	local _appName="${1}"
 	local _version="${2}"
-	local _apiEnv="${3}"
+	local _apiEnv="${3:-"balena-cloud.com"}"
+	local _token="${4:-""}"
 	local _imageLocation=""
 	local _imageDigest=""
 	local _json=""
 
-	_json=$(balena_api_fetch_image_json "${_appName}" "${_apiEnv}" "${_version}")
+	_json=$(balena_api_fetch_image_json "${_appName}" "${_apiEnv}" "${_version}" "${_token}")
 	[ -z "${_json}" ] && return
 	if ! echo "${_json}" | jq -e '.d[0].id' > /dev/null 2>&1; then
 		>&2 echo "[${_appName}]: ${_version} not found in ${_apiEnv}"
