@@ -31,7 +31,7 @@ if len(sys.argv) < 2:
 vars = ["append", "prepend", "remove"]
 vars = vars + ["qemuarm", "qemux86", "qemumips", "qemuppc", "qemuriscv", "qemuall"]
 vars = vars + ["genericx86", "edgerouter", "beaglebone-yocto"]
-vars = vars + ["armeb", "arm", "armv5", "armv6", "armv4", "powerpc64", "aarch64", "riscv32", "riscv64", "x86", "mips64", "powerpc"]
+vars = vars + ["armeb", "arm", "armv5", "armv6", "armv4", "powerpc64", "aarch64", "riscv32", "riscv64", "x86", "mips64", "powerpc", "intel-quark"]
 vars = vars + ["mipsarch", "x86-x32", "mips16e", "microblaze", "e5500-64b", "mipsisa32", "mipsisa64"]
 vars = vars + ["class-native", "class-target", "class-cross-canadian", "class-cross", "class-devupstream"]
 vars = vars + ["tune-",  "pn-", "forcevariable"]
