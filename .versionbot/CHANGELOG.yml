@@ -1,4 +1,17 @@
 - commits:
+    - subject: 'revert_overrides: Add intel-quark to architecture overrides'
+      hash: cbcbbc42c10700c77e17d8f9224e35bec90280fe
+      body: ''
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.16.1
+  date: 2022-01-11T14:37:00.027Z
+- commits:
     - subject: 'balena-deploy: Check for file existence before deploying'
       hash: 36494bf99a08b68a5afac5038d4691a583d01500
       body: |
