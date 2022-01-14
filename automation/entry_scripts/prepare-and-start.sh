@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+VERBOSE=${VERBOSE:-0}
+[ "${VERBOSE}" = "verbose" ] && set -x
+
 source /balena-docker.inc
 
 trap 'balena_docker_stop fail' SIGINT SIGTERM
@@ -28,9 +31,9 @@ balena_docker_wait
 
 # Authenticate with Balena registry if required
 BALENAOS_ACCOUNT="balena_os"
-BALENAOS_TOKEN=${BALENAOS_PRODUCTION_TOKEN}
-if [ "$DEPLOY_TO" = "staging" ]; then
-	BALENAOS_TOKEN=${BALENAOS_STAGING_TOKEN}
+BALENAOS_TOKEN=${BALENA_TOKEN:-${BALENAOS_PRODUCTION_TOKEN}}
+if [ "$API_ENV" = "balena-staging.com" ]; then
+	BALENAOS_TOKEN=${BALENA_TOKEN:-${BALENAOS_STAGING_TOKEN}}
 	export BALENARC_BALENA_URL=balena-staging.com
 fi
 if [ -n "${BALENAOS_TOKEN}" ]; then
