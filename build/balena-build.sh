@@ -100,6 +100,7 @@ balena_build_run_barys() {
 		-e VERBOSE="${VERBOSE}" \
 		-e BUILDER_GID="$(id -g)" \
 		-e BALENA_TOKEN="${_token}" \
+		-e API_ENV="${_api_env}" \
 		--name $BUILD_CONTAINER_NAME \
 		--privileged \
 		"${_namespace}"/yocto-build-env:"${balena_yocto_scripts_revision}" \
@@ -110,6 +111,7 @@ balena_build_run_barys() {
 		${_bitbake_targets} \
 		${_barys_args} \
 		-a BALENA_API_ENV=${_api_env} \
+		-a BALENA_API_TOKEN=${_token} \
 		--shared-downloads /yocto/shared-downloads \
 		--shared-sstate /yocto/shared-sstate \
 		--skip-discontinued \
@@ -123,7 +125,7 @@ balena_build_run_barys() {
 main() {
 	local _device_type
 	local _api_env
-	local _token="none"
+	local _token
 	local _shared_dir
 	local _bitbake_args
 	local _bitbake_targets
