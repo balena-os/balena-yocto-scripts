@@ -53,6 +53,7 @@ __check_fail() {
 # $1: Application name
 # $2: Balena target environment
 # $3: Balena API token
+# $4: BalenaOS cloud organization (defaults to balena_os)
 #
 # Result:
 # Prints the application ID or null if it does not exist
@@ -60,10 +61,10 @@ balena_api_appID_from_appName() {
 	local _appName="$1"
 	local _apiEnv="$2"
 	local _token="${3:-""}"
+	local _admin=${4:-balena_os}
 	[ -z "${_appName}" ] && >&2 echo "Application name is required" && return 1
 	local _appID=""
 	local _json=""
-	local _admin=${BALENA_ADMIN:-balena_os}
 	# Unauthenticated only shows public apps
 	if [ -z "${_token}" ]; then
 		if [ -f "${HOME}/.balena/token" ]; then
@@ -406,7 +407,7 @@ balena_api_fetch_release_json() {
 	if [[ "${_release_version}" == *"+"* ]]; then
 		_revision=${_release_version#*+}
 	fi
-	__dlog "[${_appName}] Fetching release version  ${_semver}+${_revision}"
+	__dlog "[${_appName}] Fetching release version  ${_semver}+rev${_revision}"
 	if [ -n "${_token}" ]; then
 		_json=$(${CURL} -XGET -H "Content-type: application/json" "https://api.${_apiEnv}/${TRANSLATION}/release?\$filter=(belongs_to__application%20eq%20${_appID})%20and%20(semver%20eq%20%27${_semver}%27)%20and%20(revision%20eq%20%27${_revision}%27)" -H "Authorization: Bearer ${_token}")
 	else
@@ -573,6 +574,7 @@ balena_api_get_image_labels() {
 # $1: Application name
 # $2: Balena target environment
 # $3: Balena API token (without it only public apps are accessible)
+# $4: BalenaOS cloud organization (defaults to balena_os)
 #
 # Result:
 #  true in stdout if bootable, false if not
@@ -585,9 +587,9 @@ balena_api_is_bootable() {
 	local _appName="$1"
 	local _apiEnv="$2"
 	local _token="${3:-""}"
+	local _admin=${4:-balena_os}
 	[ -z "${_appName}" ] && >&2 echo "Application name is required" && return 1
 	local _json=""
-	local _admin=${BALENA_ADMIN:-balena_os}
 	# Unauthenticated only shows public apps
 	if [ -z "${_token}" ]; then
 		if [ -f "${HOME}/.balena/token" ]; then
@@ -610,6 +612,7 @@ balena_api_is_bootable() {
 # $1: Application name
 # $2: Balena target environment
 # $3: Balena API token
+# $4: BalenaOS cloud organization (defaults to balena_os)
 #
 # Result:
 # Prints the application UUID or null if it does not exist
@@ -617,10 +620,10 @@ balena_api_appUUID_from_appName() {
 	local _appName="$1"
 	local _apiEnv="$2"
 	local _token="${3:-""}"
+	local _admin=${4:-balena_os}
 	[ -z "${_appName}" ] && >&2 echo "Application name is required" && return 1
 	local _appUUID=""
 	local _json=""
-	local _admin=${BALENA_ADMIN:-balena_os}
 	# Unauthenticated only shows public apps
 	if [ -z "${_token}" ]; then
 		if [ -f "${HOME}/.balena/token" ]; then
@@ -645,6 +648,7 @@ balena_api_appUUID_from_appName() {
 # $1: Application name
 # $2: Release version
 # $3: Balena API environment
+# $4: Balena API token
 #
 # Result:
 # Prints the release database ID in stdout
@@ -652,13 +656,14 @@ __get_dbid_from_app_name() {
 	local _appName="${1}"
 	local _version="${2}"
 	local _apiEnv="${3}"
+	local _token="${4}"
 	local _appID=""
 	local _dbID=""
 
 	__dlog "[__get_dbid_from_app_name] Fetching images from ${_appName}, version ${_version}"
 
 	# Fetch release database identifier from application with specified release version
-	_dbID=$(balena_api_fetch_release_json "${_appName}" "${_version}" "${_apiEnv}" | jq --raw-output '.id')
+	_dbID=$(balena_api_fetch_release_json "${_appName}" "${_version}" "${_apiEnv}" "${_token}" | jq --raw-output '.id')
 	echo "${_dbID}"
 }
 
@@ -668,7 +673,7 @@ __get_dbid_from_app_name() {
 # $1: Application name
 # $2: Balena target environment
 # $3: BalenaOS version
-# $3: Balena environment token
+# $4: Balena environment token
 #
 # Result:
 # Prints the releases metadata in JSON format
@@ -680,7 +685,7 @@ balena_api_fetch_image_json() {
 	local _json=""
 	local _dbID
 
-	_dbID=$(__get_dbid_from_app_name "${_appName}" "${_version}" "${_apiEnv}")
+	_dbID=$(__get_dbid_from_app_name "${_appName}" "${_version}" "${_apiEnv}" "${_token}")
 	if [ "${_dbID}" = "null" ]; then
 		>&2 echo "[${_appName}] No such release ${_version} in ${_apiEnv}"
 		return
@@ -707,6 +712,7 @@ balena_api_fetch_image_json() {
 # $1: Application name
 # $2: Release version
 # $3: Balena API environment
+# $4: Balena API token
 #
 # Result:
 # Prints the image location in stdout
@@ -714,11 +720,12 @@ balena_api_fetch_image_from_app() {
 	local _appName="${1}"
 	local _version="${2}"
 	local _apiEnv="${3}"
+	local _token="${4}"
 	local _imageLocation=""
 	local _imageDigest=""
 	local _json=""
 
-	_json=$(balena_api_fetch_image_json "${_appName}" "${_apiEnv}" "${_version}")
+	_json=$(balena_api_fetch_image_json "${_appName}" "${_apiEnv}" "${_version}" "${_token}")
 	[ -z "${_json}" ] && return
 	if ! echo "${_json}" | jq -e '.d[0].id' > /dev/null 2>&1; then
 		>&2 echo "[${_appName}]: ${_version} not found in ${_apiEnv}"
