@@ -1,4 +1,44 @@
 - commits:
+    - subject: 'balena-api: Propagate balena API environment, token and OS organization'
+      hash: 64c2854c85aafebf80e6a13b725ff610ae25a467
+      body: |
+        This is required to allow building against cloud instances with
+        different names for the balenaOS organization and private device types.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: 'balena-build.sh: Propagate balena API environment and token'
+      hash: 35d39c4a400df0552bfb3d875c8a9d1289ad8d4e
+      body: |
+        This is required to use the API for private slugs.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: 'prepare-and-start: Propagate balena API environment and token'
+      hash: bb7b903e00fc153afea182a330da08a49b72cced
+      body: |
+        The balena-build.sh script accepts a token in the command line. This
+        commit modifies the prepare-and-start.sh script to use it if
+        available, and also modifies it to take into account the balena
+        environment too.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.16.2
+  date: 2022-01-15T16:04:34.389Z
+- commits:
     - subject: 'revert_overrides: Add intel-quark to architecture overrides'
       hash: cbcbbc42c10700c77e17d8f9224e35bec90280fe
       body: ''
