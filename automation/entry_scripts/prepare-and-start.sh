@@ -37,7 +37,7 @@ if [ "$API_ENV" = "balena-staging.com" ]; then
 	export BALENARC_BALENA_URL=balena-staging.com
 fi
 if [ -n "${BALENAOS_TOKEN}" ]; then
-	echo "[INFO] Logging into $DEPLOY_TO as ${BALENAOS_ACCOUNT}"
+	echo "[INFO] Logging into $API_ENV as ${BALENAOS_ACCOUNT}"
 	balena login --token ${BALENAOS_TOKEN}
 fi
 
