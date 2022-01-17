@@ -853,10 +853,11 @@ done
 # 0 on match, non-zero otherwise
 #
 balena_api_tag_exists() {
-  local _tagName=${1}
-  local _tagValue=${2}
-	local _apiEnv="${3:-"balena-cloud.com"}"
-	local _token="${4:-""}"
+	local _slug="${1}"
+	local _tagName=${2}
+	local _tagValue=${3}
+	local _apiEnv="${4:-"balena-cloud.com"}"
+	local _token="${5:-""}"
 	[ -z "${_tagName}" ] && >&2 echo "Tag name is required" && return 1
 	[ -z "${_tagValue}" ] && >&2 echo "Tag value is required" && return 1
 
@@ -868,9 +869,9 @@ balena_api_tag_exists() {
 		fi
 	fi
 	if [ -n "${_token}" ]; then
-		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/release_tag?\$filter=(tag_key%20eq%20%27${_tagName}%27)%20and%20(value%20eq%20%27${_tagValue}%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}")
+		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/release_tag?\$filter=(release/belongs_to__application/slug%20eq%20%27${_slug}%27)%20and%20(tag_key%20eq%20%27${_tagName}%27)%20and%20(value%20eq%20%27${_tagValue}%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}")
 	else
-		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/release_tag?\$filter=(tag_key%20eq%20%27${_tagName}%27)%20and%20(value%20eq%20%27${_tagValue}%27)" -H "Content-Type: application/json")
+		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/release_tag?\$filter=(release/belongs_to__application/slug%20eq%20%27${_slug}%27)%20and%20(tag_key%20eq%20%27${_tagName}%27)%20and%20(value%20eq%20%27${_tagValue}%27)" -H "Content-Type: application/json")
 	fi
 	__pp_json "${_json}"
 	echo "${_json}" | jq -e '.d[0].id'

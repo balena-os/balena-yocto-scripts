@@ -42,7 +42,7 @@ if [ "${DEPLOY}" = "yes" ]; then
 		echo "balena-deploy-block: Version mismatch, OS version is ${_os_version} and deployed version is ${_version}"
 		exit 1
 	fi
-	if balena_api_tag_exists "version" "${_os_version}" "${API_ENV}" "${BALENAOS_TOKEN}" > /dev/null; then
+	if balena_api_tag_exists "${BALENAOS_ACCOUNT}/$APPNAME" "version" "${_os_version}" "${API_ENV}" "${BALENAOS_TOKEN}" > /dev/null; then
 			echo "[WARN] Release ID ${_releaseID} is already tagged with version ${_os_version} - bailing out"
 			exit 0
 	fi
