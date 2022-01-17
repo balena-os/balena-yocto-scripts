@@ -1,4 +1,18 @@
 - commits:
+    - subject: 'balena-deploy-block: Check for existing tag only in specific hostapp'
+      hash: 8893fd94bc0cc31a7fa7af8a87af68a69fec908d
+      body: |
+        The same version tag can exist across different hostapps.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.16.3
+  date: 2022-01-17T17:18:11.734Z
+- commits:
     - subject: 'balena-api: Propagate balena API environment, token and OS organization'
       hash: 64c2854c85aafebf80e6a13b725ff610ae25a467
       body: |
