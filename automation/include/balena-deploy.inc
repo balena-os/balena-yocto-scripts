@@ -370,7 +370,7 @@ balena_deploy_block() {
 		-e API_ENV="$(balena_lib_environment)" \
 		-e BALENAOS_TOKEN="$(balena_lib_token "${API_ENV}")" \
 		-e BALENAOS_ACCOUNT="${_balenaos_account}" \
-		-e META_BALENA_VERSION="$(balena_lib_get_meta_balena_version)" \
+		-e META_BALENA_VERSION="$(balena_lib_get_meta_balena_base_version)" \
 		-e MACHINE="${_device_type}" \
 		-e VERBOSE="${VERBOSE}" \
 		-e BOOTABLE="${_bootable}" \
