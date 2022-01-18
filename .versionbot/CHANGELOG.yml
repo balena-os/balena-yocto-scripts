@@ -1,4 +1,42 @@
 - commits:
+    - subject: 'balena-deploy: Deploy passing the latest meta-balena version and not tag'
+      hash: 9d5fa316dbda3d4782e782abaceed41efe3e5a99
+      body: |
+        The last meta-balena version and tag might not be the same, like in the
+        case of ESR branches.
+
+        Fixes #249
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: 'balena-lib: Add balena_lib_get_meta_balena_base_version'
+      hash: 25840dc98e138781e78530be0437f3950970f263
+      body: >
+        Retrieves the last meta-balena version, which may not be the same as the
+
+        last meta-balena tag.
+
+
+        For example, when we branch an ESR release, the meta-balena branch is
+
+        tagged with the ESR name, like 2.83.x, while the last meta-balena
+        version
+
+        will be a proper semver.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.16.4
+  date: 2022-01-18T09:50:54.889Z
+- commits:
     - subject: 'balena-deploy-block: Check for existing tag only in specific hostapp'
       hash: 8893fd94bc0cc31a7fa7af8a87af68a69fec908d
       body: |
