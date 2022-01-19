@@ -28,8 +28,8 @@ balena_lib_get_meta_balena_version() {
 
 # Return the latest meta-balena version (not the latest tag which can be an ESR)
 balena_lib_get_meta_balena_base_version() {
-	pushd "${device_dir}" > /dev/null 2>&1 || return
-	_version=$(cat "${device_dir}/VERSION")
+	pushd "${device_dir}/layers/meta-balena" > /dev/null 2>&1 || return
+	_version=$(git describe "$(git rev-list --first-parent -1 HEAD)"^1)
 	popd > /dev/null 2>&1 || return
 	echo "${_version%+*}"
 }
