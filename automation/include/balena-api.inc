@@ -888,7 +888,7 @@ done
 #
 # 0 on match, non-zero otherwise
 #
-balena_api_tag_exists() {
+balena_api_release_tag_exists() {
 	local _slug="${1}"
 	local _tagName=${2}
 	local _tagValue=${3}
@@ -911,4 +911,81 @@ balena_api_tag_exists() {
 	fi
 	__pp_json "${_json}"
 	echo "${_json}" | jq -e '.d[0].id'
+}
+
+# Check if a fleet tag exists
+# Arguments:
+#
+# $1: Fleet slug
+# $2: Tag name
+# $3: Tag value
+# $4: Balena target environment (defaults to production)
+# $5: Balena API token (without it only public apps are accessible)
+#
+# Returns:
+#
+# 0 on match, non-zero otherwise
+#
+balena_api_fleet_tag_exists() {
+	local _slug="${1}"
+	local _tagName=${2}
+	local _tagValue=${3}
+	local _apiEnv="${4:-"balena-cloud.com"}"
+	local _token="${5:-""}"
+	[ -z "${_tagName}" ] && >&2 echo "Tag name is required" && return 1
+	[ -z "${_tagValue}" ] && >&2 echo "Tag value is required" && return 1
+
+	local _json=""
+	# Unauthenticated only shows public apps
+	if [ -z "${_token}" ]; then
+		if [ -f "${HOME}/.balena/token" ]; then
+			_token=$(cat "${HOME}/.balena/token")
+		fi
+	fi
+	if [ -n "${_token}" ]; then
+		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/application_tag?\$filter=(application/app_name%20eq%20%27${_slug}%27)%20and%20(tag_key%20eq%20%27${_tagName}%27)%20and%20(value%20eq%20%27${_tagValue}%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}")
+	else
+		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/application_tag?\$filter=(application/app_name%20eq%20%27${_slug}%27)%20and%20(tag_key%20eq%20%27${_tagName}%27)%20and%20(value%20eq%20%27${_tagValue}%27)" -H "Content-Type: application/json")
+	fi
+	__pp_json "${_json}"
+	echo "${_json}" | jq -e '.d[0].id'
+}
+
+# Fetch a fleet tag
+# Arguments:
+#
+# $1: Fleet slug
+# $2: Tag name
+# $3: Balena target environment (defaults to production)
+# $4: Balena API token (without it only public apps are accessible)
+#
+# Output:
+#
+# On stdout, tag value on match, null otherwise
+#
+# Returns:
+#
+# 0 on match, non-zero otherwise
+#
+balena_api_fetch_fleet_tag() {
+	local _slug="${1}"
+	local _tagName=${2}
+	local _apiEnv="${3:-"balena-cloud.com"}"
+	local _token="${4:-""}"
+	[ -z "${_tagName}" ] && >&2 echo "Tag name is required" && return 1
+
+	local _json=""
+	# Unauthenticated only shows public apps
+	if [ -z "${_token}" ]; then
+		if [ -f "${HOME}/.balena/token" ]; then
+			_token=$(cat "${HOME}/.balena/token")
+		fi
+	fi
+	if [ -n "${_token}" ]; then
+		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${_slug}%27)%20and%20(tag_key%20eq%20%27${_tagName}%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}")
+	else
+		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${_slug}%27)%20and%20(tag_key%20eq%20%27${_tagName}%27)" -H "Content-Type: application/json")
+	fi
+	__pp_json "${_json}"
+	echo "${_json}" | jq -r -e '.d[0].value'
 }
