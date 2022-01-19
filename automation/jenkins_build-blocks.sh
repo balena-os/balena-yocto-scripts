@@ -103,7 +103,7 @@ main() {
 	local _hostos_blocks
 	local _balenaos_account
 	local _final
-	local _esr=0
+	local _esr=false
 	## Sanity checks
 	if [ ${#} -lt 1 ] ; then
 		usage
@@ -118,7 +118,7 @@ main() {
 				n) _namespace="${OPTARG}" ;;
 				s) _shared_dir="${OPTARG}" ;;
 				c) _balenaos_account="${OPTARG}" ;;
-				e) _esr=1 ;;
+				e) _esr=true ;;
 				p) _final="yes";;
 				h) usage;;
 				*) usage;exit 1;;
