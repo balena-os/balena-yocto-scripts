@@ -341,6 +341,7 @@ balena_deploy_block() {
 	local _balenaCloudPassword="${10:-"${balenaCloudPassword}"}"
 	local _esr="${11}"
 	local _discontinued
+	local _api_env=$(balena_lib_environment)
 
 	[ -z "${_device_type}" ] && echo "Device type is required" && return
 	_discontinued=$(balena_lib_get_dt_state "${_device_type}")
@@ -367,15 +368,17 @@ balena_deploy_block() {
 	fi
 	docker run --rm -t \
 		-e APPNAME="${_appName}" \
-		-e API_ENV="$(balena_lib_environment)" \
-		-e BALENAOS_TOKEN="$(balena_lib_token "${API_ENV}")" \
+		-e API_ENV="${_api_env}" \
+		-e BALENAOS_TOKEN="$(balena_lib_token "${_api_env}")" \
 		-e BALENAOS_ACCOUNT="${_balenaos_account}" \
 		-e META_BALENA_VERSION="$(balena_lib_get_meta_balena_base_version)" \
+		-e RELEASE_VERSION="$(balena_lib_get_os_version)" \
 		-e MACHINE="${_device_type}" \
 		-e VERBOSE="${VERBOSE}" \
 		-e BOOTABLE="${_bootable}" \
 		-e DEPLOY="${_deploy}" \
 		-e FINAL="${_final}" \
+		-e ESR="${_esr:-"false"}" \
 		-e balenaCloudEmail="${_balenaCloudEmail}" \
 		-e balenaCloudPassword="${_balenaCloudPassword}" \
 		-e ESR="${_esr}" \
@@ -419,6 +422,9 @@ balena_build_block() {
 		-e MACHINE="${_device_type}" \
 		-e TAG="${balena_yocto_scripts_revision}" \
 		-e WORKSPACE=/work \
+		-e balenaCloudEmail="${balenaCloudEmail}" \
+		-e balenaCloudPassword="${balenaCloudPassword}" \
+		-e ESR="${ESR}" \
 		-v "${WORKSPACE:-"${PWD}"}":/work \
 		--privileged \
 		"${NAMESPACE}"/yocto-block-build-env:"${balena_yocto_scripts_revision}" /balena-build-block.sh
