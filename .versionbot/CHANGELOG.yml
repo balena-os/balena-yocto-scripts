@@ -1,4 +1,21 @@
 - commits:
+    - subject: 'balena-deploy.inc: Do no deploy device logo to deprecated endpoint'
+      hash: 54ad619b8b9c00d7c52cfc90593b22c70233d973
+      body: |
+        As per https://jel.ly.fish/a533a6bd-1c98-412c-ae60-8427e3f7b005,
+        the /device-types/v1 endpoint is deprecated and we can remove
+        the logo from the device repos so we can also stop handling it
+        from here. Instead, the logo will be used from the hw contracts.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Florin Sarbu <florin@balena.io>
+        signed-off-by: Florin Sarbu <florin@balena.io>
+      author: Florin Sarbu
+      nested: []
+  version: 1.17.1
+  date: 2022-01-27T07:38:18.417Z
+- commits:
     - subject: 'balena-lib: Fix fetching meta-balena base version'
       hash: d5d838339ed23ecd242092bf4214fe2505ccd181
       body: |
