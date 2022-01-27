@@ -70,7 +70,6 @@ balena_deploy_artifacts () {
 
 	cp -v "$_yocto_build_deploy/kernel_modules_headers.tar.gz" "$_deploy_dir" || true
 	cp -v "$_yocto_build_deploy/kernel_source.tar.gz" "$_deploy_dir" || true
-	cp -v "$_device_type.svg" "$_deploy_dir/logo.svg"
 	if [ "${_compressed}" != 'true' ]; then
 		# uncompressed, just copy and we're done
 		cp -v "$(readlink --canonicalize "$_yocto_build_deploy/$_deploy_artifact")" "$_deploy_dir/image/balena.img"
@@ -306,7 +305,6 @@ if [ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/)" ] || [ -n "$
 	$S3_CMD put /host/images/${SLUG}/${BUILD_VERSION}/IGNORE s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
 	$S3_CMD $S3_SYNC_OPTS dsync /host/images/${SLUG}/${BUILD_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/
 	$S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/ --API-ACL=public-read -f
-	[ -f "/host/images/${SLUG}/${BUILD_VERSION}/logo.svg" ] && $S3_CMD put /host/images/${SLUG}/${BUILD_VERSION}/logo.svg s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/ --API-ACL=public-read -f --API-ContentType=image/svg+xml
 	$S3_CMD del s3://${S3_BUCKET}/${SLUG}/${BUILD_VERSION}/IGNORE
 else
 	echo "WARNING: Deployment already done for ${SLUG} at version ${BUILD_VERSION}"
