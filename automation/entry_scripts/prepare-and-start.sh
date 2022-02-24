@@ -29,18 +29,6 @@ echo "StrictHostKeyChecking no" > /home/builder/.ssh/config
 balena_docker_start
 balena_docker_wait
 
-# Authenticate with Balena registry if required
-BALENAOS_ACCOUNT="balena_os"
-BALENAOS_TOKEN=${BALENA_TOKEN:-${BALENAOS_PRODUCTION_TOKEN}}
-if [ "$API_ENV" = "balena-staging.com" ]; then
-	BALENAOS_TOKEN=${BALENA_TOKEN:-${BALENAOS_STAGING_TOKEN}}
-	export BALENARC_BALENA_URL=balena-staging.com
-fi
-if [ -n "${BALENAOS_TOKEN}" ]; then
-	echo "[INFO] Logging into $DEPLOY_TO as ${BALENAOS_ACCOUNT}"
-	balena login --token ${BALENAOS_TOKEN}
-fi
-
 sudo -H -u builder git config --global user.name "Resin Builder"
 sudo -H -u builder git config --global user.email "buildy@builder.com"
 echo "[INFO] The configured git credentials for user builder are:"
