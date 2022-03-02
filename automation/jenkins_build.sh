@@ -138,7 +138,7 @@ else
 	pushd "$WORKSPACE/layers/meta-balena" > /dev/null 2>&1
 	git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
 	git fetch --all
-	git checkout --force "$metaBalenaBranch"
+	git checkout --force --recurse-submodule "$metaBalenaBranch"
 	popd > /dev/null 2>&1
 fi
 
