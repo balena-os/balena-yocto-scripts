@@ -1,4 +1,19 @@
 - commits:
+    - subject: "jenkins_build: Use recurse-submodules when checking out meta-balena"
+      hash: 00fb29b9a7a00dc1209be497ef171736e6229954
+      body: |
+        If meta-balena has submodule updates we want to make sure to use them.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.17.3
+  title: "'jenkins_build: Use recurse-submodules when checking out meta-balena'"
+  date: 2022-03-02T17:17:21.631Z
+- commits:
     - subject: "prepare-and-start: Remove balena login"
       hash: 67568d3a5eceb45ee65c245baae18fa299366f9e
       body: |
