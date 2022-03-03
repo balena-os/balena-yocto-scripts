@@ -1,4 +1,21 @@
 - commits:
+    - subject: Init and update submodules when switching meta-balena branches
+      hash: 5162e7c9fa39498488303caab7d746456fc9abd4
+      body: |
+        If the submodule was recently added to meta-balena, the checkout
+        command will not initialize it without a separate submodule update
+        command.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.17.4
+  title: "'Init and update submodules when switching meta-balena branches'"
+  date: 2022-03-03T16:46:17.542Z
+- commits:
     - subject: "jenkins_build: Use recurse-submodules when checking out meta-balena"
       hash: 00fb29b9a7a00dc1209be497ef171736e6229954
       body: |
