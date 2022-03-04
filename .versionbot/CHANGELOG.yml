@@ -1,5 +1,42 @@
 - commits:
-    - subject: 'balena-deploy.inc: Do no deploy device logo to deprecated endpoint'
+    - subject: "balena-lib: Warn when using cached credentials"
+      hash: 00fb72e3055f886806441848a843e016c2923d57
+      body: |
+        Using cached credentials has the risk of using staled credentials.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena_api: Use library function to fetch token"
+      hash: 737de5102ef32ab64c7246dd971fe5d54999852b
+      body: |
+        Using cached credentials is a source of race conditions. The library
+        function will give preference to environment set credentials.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "prepare-and-start: Remove balena login"
+      hash: 67568d3a5eceb45ee65c245baae18fa299366f9e
+      body: |
+        The login will happen as needed.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.17.2
+  date: 2022-03-04T20:50:31.244Z
+- commits:
+    - subject: "balena-deploy.inc: Do no deploy device logo to deprecated endpoint"
       hash: 54ad619b8b9c00d7c52cfc90593b22c70233d973
       body: |
         As per https://jel.ly.fish/a533a6bd-1c98-412c-ae60-8427e3f7b005,
@@ -16,7 +53,7 @@
   version: 1.17.1
   date: 2022-01-27T07:38:18.417Z
 - commits:
-    - subject: 'balena-lib: Fix fetching meta-balena base version'
+    - subject: "balena-lib: Fix fetching meta-balena base version"
       hash: d5d838339ed23ecd242092bf4214fe2505ccd181
       body: |
         On an ESR branch the VERSION file contains the ESR version, not the
@@ -31,7 +68,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'jenkins_build-block: Use true/false for ESR variable'
+    - subject: "jenkins_build-block: Use true/false for ESR variable"
       hash: 24876740b2299d092ea3cd1b54f61a020d12a5ba
       body: |
         Keep the same boolean format as in the rest of the files.
@@ -42,7 +79,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-deploy-block: Label ESR hostapps'
+    - subject: "balena-deploy-block: Label ESR hostapps"
       hash: 1c6561daf9f16e579d55305471274e7793dc3619
       body: |
         ESR hostapps need special labels in order to be recognized. This commit
@@ -54,7 +91,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-api: add balena_api_fetch_fleet_tag'
+    - subject: "balena-api: add balena_api_fetch_fleet_tag"
       hash: 2ced90fc432298abf14e00d4ac58cc8eaf003b24
       body: |
         Add a function to retrieve fleet tags.
@@ -65,7 +102,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-api: Set policy on ESR hostapps'
+    - subject: "balena-api: Set policy on ESR hostapps"
       hash: 6e4d7b3d2ccbd1a5c67d94cc73c4552775ce3b94
       body: |
         ESR hostapps need an esr release-policy in order to be recognized.
@@ -76,7 +113,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-deploy: Pass ESR variable when creating apps'
+    - subject: "balena-deploy: Pass ESR variable when creating apps"
       hash: 2497bfb59ae16810169718e6d383d0bc9d564a04
       body: |
         ESR hostapps need special labels in order to be recognized. This allows
@@ -91,7 +128,8 @@
   version: 1.17.0
   date: 2022-01-20T12:30:21.992Z
 - commits:
-    - subject: 'balena-deploy: Deploy passing the latest meta-balena version and not tag'
+    - subject: "balena-deploy: Deploy passing the latest meta-balena version and not
+        tag"
       hash: 9d5fa316dbda3d4782e782abaceed41efe3e5a99
       body: |
         The last meta-balena version and tag might not be the same, like in the
@@ -105,7 +143,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-lib: Add balena_lib_get_meta_balena_base_version'
+    - subject: "balena-lib: Add balena_lib_get_meta_balena_base_version"
       hash: 25840dc98e138781e78530be0437f3950970f263
       body: >
         Retrieves the last meta-balena version, which may not be the same as the
@@ -115,8 +153,7 @@
 
         For example, when we branch an ESR release, the meta-balena branch is
 
-        tagged with the ESR name, like 2.83.x, while the last meta-balena
-        version
+        tagged with the ESR name, like 2.83.x, while the last meta-balena version
 
         will be a proper semver.
       footer:
@@ -129,7 +166,7 @@
   version: 1.16.4
   date: 2022-01-18T09:50:54.889Z
 - commits:
-    - subject: 'balena-deploy-block: Check for existing tag only in specific hostapp'
+    - subject: "balena-deploy-block: Check for existing tag only in specific hostapp"
       hash: 8893fd94bc0cc31a7fa7af8a87af68a69fec908d
       body: |
         The same version tag can exist across different hostapps.
@@ -143,7 +180,7 @@
   version: 1.16.3
   date: 2022-01-17T17:18:11.734Z
 - commits:
-    - subject: 'balena-api: Propagate balena API environment, token and OS organization'
+    - subject: "balena-api: Propagate balena API environment, token and OS organization"
       hash: 64c2854c85aafebf80e6a13b725ff610ae25a467
       body: |
         This is required to allow building against cloud instances with
@@ -155,7 +192,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-build.sh: Propagate balena API environment and token'
+    - subject: "balena-build.sh: Propagate balena API environment and token"
       hash: 35d39c4a400df0552bfb3d875c8a9d1289ad8d4e
       body: |
         This is required to use the API for private slugs.
@@ -166,7 +203,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'prepare-and-start: Propagate balena API environment and token'
+    - subject: "prepare-and-start: Propagate balena API environment and token"
       hash: bb7b903e00fc153afea182a330da08a49b72cced
       body: |
         The balena-build.sh script accepts a token in the command line. This
@@ -183,9 +220,9 @@
   version: 1.16.2
   date: 2022-01-15T16:04:34.389Z
 - commits:
-    - subject: 'revert_overrides: Add intel-quark to architecture overrides'
+    - subject: "revert_overrides: Add intel-quark to architecture overrides"
       hash: cbcbbc42c10700c77e17d8f9224e35bec90280fe
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
@@ -196,7 +233,7 @@
   version: 1.16.1
   date: 2022-01-11T14:37:00.027Z
 - commits:
-    - subject: 'balena-deploy: Check for file existence before deploying'
+    - subject: "balena-deploy: Check for file existence before deploying"
       hash: 36494bf99a08b68a5afac5038d4691a583d01500
       body: |
         When discontinuing a device type, there are no artifacts apart from
@@ -208,7 +245,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-deploy-block: Check existence of tag before re-deploying'
+    - subject: "balena-deploy-block: Check existence of tag before re-deploying"
       hash: c1a5b20b0ef0d04a30b6bf0bcfacf0a527e931ae
       body: |
         If a release is already tagged with this version, issue a warning and
@@ -220,9 +257,9 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-api: Add function to check the existence of a release tag'
+    - subject: "balena-api: Add function to check the existence of a release tag"
       hash: bdc2146c3ad719f5c7335aeb7b4ee43775a20ac7
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
@@ -230,7 +267,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-deploy-block: Finalize releases when deployed'
+    - subject: "balena-deploy-block: Finalize releases when deployed"
       hash: 1e3768132d87295998bd9a17d0f01121e161e312
       body: |
         For now and until a proper CI/CD workflow is in place, finalize releases
@@ -260,7 +297,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'jenkins_generate_ami: Remove variant from image name'
+    - subject: "jenkins_generate_ami: Remove variant from image name"
       hash: 0fe3d6c8d0ebff85248f0bed99750186f05ab686
       body: |
         The OS is now a unified image so there are no variants.
@@ -271,7 +308,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-build.sh: Stop building OS variants'
+    - subject: "balena-build.sh: Stop building OS variants"
       hash: 4e65c83e7808e91c99e335609142401e0031ed23
       body: |
         The OS is now a unified image so there are no variants.
@@ -282,7 +319,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'jenkins_build.sh: Remove buildFlavor'
+    - subject: "jenkins_build.sh: Remove buildFlavor"
       hash: b66f7ce58f0c12f78941ed34eb311bbd3a96af1c
       body: |
         The OS is now a unified image so there are no build flavours.
@@ -293,7 +330,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'jenkins_build-blocks: Remove variant build option'
+    - subject: "jenkins_build-blocks: Remove variant build option"
       hash: e7fb9fc8354445bcbc05687e1f96aa0e8025ecc9
       body: |
         The OS is now a unified image without variants.
@@ -304,7 +341,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-deploy: Stop using .dev/.prod variant suffixes'
+    - subject: "balena-deploy: Stop using .dev/.prod variant suffixes"
       hash: 65c030b986f62b0faaddba501520662a8ac2777d
       body: |
         The OS has now a unified image that can be configured to be development
@@ -316,7 +353,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-deploy-block: Stop tagging hostapp releases with variant'
+    - subject: "balena-deploy-block: Stop tagging hostapp releases with variant"
       hash: 3fc5efeeef4ae74e499504c1148932539a49c28e
       body: |
         The API will stop using the variant tag but will still use the version
@@ -328,7 +365,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-lib: Use externalVersion to match contracts'
+    - subject: "balena-lib: Use externalVersion to match contracts"
       hash: 385c5bacfc1452e4b065de55bfdf71727b303fff
       body: |
         The version refers to the actual contract, while the externalVersion is
@@ -340,7 +377,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'jenkins_build: Deploy hostapp like any other block'
+    - subject: "jenkins_build: Deploy hostapp like any other block"
       hash: bfe7f51dc75f335d38fa4dbf824fa887be8d82ee
       body: |
         Use common functions for block deployments
@@ -351,7 +388,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'jenkins_build-blocks: Separate block build release deployment'
+    - subject: "jenkins_build-blocks: Separate block build release deployment"
       hash: 70fe00969921bbf6894cc86ecb343eb342c6f2ca
       body: >
         Separating the build and release of blocks allows to use common code for
@@ -359,8 +396,7 @@
         block release.
 
 
-        Also, pass a flag to specify whether the block should be deployed as
-        final
+        Also, pass a flag to specify whether the block should be deployed as final
 
         release.
       footer:
@@ -370,7 +406,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-deploy-block: Use release versioning'
+    - subject: "balena-deploy-block: Use release versioning"
       hash: d1c74d0261f17ebcad9825bc7e0df22142da14a3
       body: |
         Deploy as draft releases by default. Final releases will be flagged
@@ -382,7 +418,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'jenkins_build: Remove discontinued check'
+    - subject: "jenkins_build: Remove discontinued check"
       hash: 55774ee27f938bbcbb238aa6441680b3d39172c3
       body: |
         Individual deploy functions now bail out for discontinued device types,
@@ -394,7 +430,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-deploy: Do not deploy discontinued device types'
+    - subject: "balena-deploy: Do not deploy discontinued device types"
       hash: f54251e61c466018072e04c344595b3eba70bf57
       body: |
         Check for discontinued device types before deploying to dockerhub or
@@ -406,9 +442,9 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-deploy: Discontinued device types use meta-balena version'
+    - subject: "balena-deploy: Discontinued device types use meta-balena version"
       hash: bbecd72c64bf8ff1277a10c03cb39fbf99748e05
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
@@ -416,9 +452,8 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: >-
-        balena-deploy: Adapt balena_deploy_block to release versioning and use
-        it
+    - subject: "balena-deploy: Adapt balena_deploy_block to release versioning and use
+        it"
       hash: cfc0bc43af1fb60ff3ddd56f08ae781edaa90b68
       body: |
         * Convert balena_deploy_build_block to balena_build_block, and deploy
@@ -436,7 +471,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-build-block: Remove image release'
+    - subject: "balena-build-block: Remove image release"
       hash: 443269afbe867cb5c464ca5dd91bf27aa51427bd
       body: |
         Deal with the release separately so we can use common code for it.
@@ -447,14 +482,13 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-api: Use release revision for fetchers'
+    - subject: "balena-api: Use release revision for fetchers"
       hash: f501ac55e327af0db2142a146423e83f459e0c1f
       body: >
         When fetching images for blocks, use a given release revision.
 
 
-        Also, add token autentication to the API calls that miss it so that they
-        work
+        Also, add token autentication to the API calls that miss it so that they work
 
         with private device types.
 
@@ -467,7 +501,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'jenkins_build-block: Remove release version API setter'
+    - subject: "jenkins_build-block: Remove release version API setter"
       hash: 8e27328a0caec2acc7651dfe64f8dfc5510e48e0
       body: |
         When using the now deprecated release_version field, the API would
@@ -482,7 +516,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-api: Remove release version API setter'
+    - subject: "balena-api: Remove release version API setter"
       hash: 42486a59654047cf42f19bd999ef0bcd0a279ea5
       body: |
         This functionality has now been deprecated in the balena API is favour
@@ -494,7 +528,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-lib: Use release versioning'
+    - subject: "balena-lib: Use release versioning"
       hash: de2c7af440c1ae4d6f84c5440368f92333500389
       body: |
         BalenaCloud has now a release versioning feature that deprecates the
@@ -512,7 +546,7 @@
   version: 1.16.0
   date: 2021-12-30T15:08:43.225Z
 - commits:
-    - subject: 'balena-deploy: Set leviathan networkWireless mode based on device slug'
+    - subject: "balena-deploy: Set leviathan networkWireless mode based on device slug"
       hash: 891fadcbabe422e24245beb720cf7326a5ea1136
       body: |
         These changes are currently made in the Jenkins job, so it's preferrable
@@ -529,7 +563,7 @@
 - commits:
     - subject: Substitute the worker types for generic device slugs
       hash: 7539caf732975a5b114abc371a5f6df211d12812
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
@@ -540,7 +574,7 @@
   version: 1.15.9
   date: 2021-11-26T19:20:31.029Z
 - commits:
-    - subject: 'Dockerfile_yocto-build-env: Install Honister host deps'
+    - subject: "Dockerfile_yocto-build-env: Install Honister host deps"
       hash: efc069c609431965394912d3ffd34362a1108852
       body: >
         See
@@ -555,7 +589,7 @@
   version: 1.15.8
   date: 2021-11-03T10:01:44.980Z
 - commits:
-    - subject: 'jenkins_build.sh: Fix deployment for discontinued device types'
+    - subject: "jenkins_build.sh: Fix deployment for discontinued device types"
       hash: 84e65e937fef38625277fb8330ebd3179c466d04
       body: |
         Do not deploy dockerhub or hostapp images for discontinued device types.
@@ -566,7 +600,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'jenkins_build.sh: Remove PRIVATE_DT as it is unused'
+    - subject: "jenkins_build.sh: Remove PRIVATE_DT as it is unused"
       hash: 35fd54620ff5eb487b1323a1ead5fef9c157e385
       body: |
         The private device types status is checked with the API when required.
@@ -577,7 +611,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'jenkins_build.sh: Fix lint warnings'
+    - subject: "jenkins_build.sh: Fix lint warnings"
       hash: 068a4197101a2db4aba60793e01564b67d14f820
       body: |
         Fix some minor lint warnings.
@@ -591,9 +625,9 @@
   version: 1.15.7
   date: 2021-10-25T16:57:03.955Z
 - commits:
-    - subject: 'balena-generate-ami.sh: wait for boot partition when preloading AMI'
+    - subject: "balena-generate-ami.sh: wait for boot partition when preloading AMI"
       hash: d2ea170a86810a782eeb241e178d4ad72c4939b0
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
@@ -604,7 +638,7 @@
   version: 1.15.6
   date: 2021-10-21T15:04:37.774Z
 - commits:
-    - subject: 'jenkins_generate_ami.sh: Use a shared directory for preloaded image'
+    - subject: "jenkins_generate_ami.sh: Use a shared directory for preloaded image"
       hash: 9b032f2fddc970db13147b4e637abd1bada1f234
       body: >
         The previous commit moved the preloaded image out of yocto cache, which
@@ -612,11 +646,9 @@
         made it unreachable from the balena-generate-ami-env container.
 
 
-        This patch makes mktemp create the file back within yocto cache to
-        ensure
+        This patch makes mktemp create the file back within yocto cache to ensure
 
-        this is shared yet still each concurrent process can safely have its own
-        copy.
+        this is shared yet still each concurrent process can safely have its own copy.
       footer:
         Change-type: patch
         change-type: patch
@@ -627,7 +659,7 @@
   version: 1.15.5
   date: 2021-10-21T04:50:17.146Z
 - commits:
-    - subject: 'barys: update development image variables'
+    - subject: "barys: update development image variables"
       hash: 427510332026ca8636dedb6630632a740b481374
       body: |
         Update the DEVELOPMENT_IMAGE references to use OS_DEVELOPMENT
@@ -635,8 +667,8 @@
       footer:
         Change-type: patch
         change-type: patch
-        Changelog-entry: 'barys: update development image variables'
-        changelog-entry: 'barys: update development image variables'
+        Changelog-entry: "barys: update development image variables"
+        changelog-entry: "barys: update development image variables"
         Signed-off-by: Mark Corbin mark@balena.io
         signed-off-by: Mark Corbin mark@balena.io
       author: Mark Corbin
@@ -644,19 +676,16 @@
   version: 1.15.4
   date: 2021-10-20T09:40:14.890Z
 - commits:
-    - subject: 'jenkins_generate_ami.sh: Preload outside of yocto cache'
+    - subject: "jenkins_generate_ami.sh: Preload outside of yocto cache"
       hash: fb1763984d76218adc2510da6cb673fbad7197be
       body: >
         Since the file name is hardcoded at this moment, this fails when two
 
-        builds are running in parallel (e.g. dev and prod variants during
-        deploy)
+        builds are running in parallel (e.g. dev and prod variants during deploy)
 
-        because they try to preload the same file at pretty much the same
-        moment.
+        because they try to preload the same file at pretty much the same moment.
 
-        Having a separate copy for each outside of yocto cache should fix the
-        issue.
+        Having a separate copy for each outside of yocto cache should fix the issue.
       footer:
         Change-type: patch
         change-type: patch
@@ -667,11 +696,10 @@
   version: 1.15.3
   date: 2021-10-20T05:12:57.093Z
 - commits:
-    - subject: >-
-        balena-generate-ami.sh: correctly mount boot partition when injecting
-        SSH key
+    - subject: "balena-generate-ami.sh: correctly mount boot partition when injecting
+        SSH key"
       hash: c0f6da3e4fe3f9c51ba8b279986a6f4baffe6d96
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
@@ -699,9 +727,9 @@
   version: 1.15.1
   date: 2021-10-01T10:11:14.438Z
 - commits:
-    - subject: 'jenkins_generate_ami.sh: Use lib function to get arch from config.json'
+    - subject: "jenkins_generate_ami.sh: Use lib function to get arch from config.json"
       hash: fffe9ffb363c9eed783a5055e69847c81eb68bcd
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
@@ -709,11 +737,10 @@
         signed-off-by: Michal Toman <michalt@balena.io>
       author: Michal Toman
       nested: []
-    - subject: >-
-        balena-generate-ami.sh: Look for boot partition by label rather than
-        hardcoding p1
+    - subject: "balena-generate-ami.sh: Look for boot partition by label rather than
+        hardcoding p1"
       hash: 45786e701d05811f96d0aeef20481442bb1d0f1c
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
@@ -721,7 +748,7 @@
         signed-off-by: Michal Toman <michalt@balena.io>
       author: Michal Toman
       nested: []
-    - subject: 'balena-generate-ami.sh: Fail if AMI already exists'
+    - subject: "balena-generate-ami.sh: Fail if AMI already exists"
       hash: 9e9a792aed2a659c1ed7327237a61594033b308a
       body: |
         This was only ignored for development purposes, we should not replace
@@ -733,9 +760,9 @@
         signed-off-by: Michal Toman <michalt@balena.io>
       author: Michal Toman
       nested: []
-    - subject: 'balena-generate-ami.sh: sync after writing config.json'
+    - subject: "balena-generate-ami.sh: sync after writing config.json"
       hash: f0838aaee9751a6fb60558a7646d597b1f99b1c3
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
@@ -743,9 +770,9 @@
         signed-off-by: Michal Toman <michalt@balena.io>
       author: Michal Toman
       nested: []
-    - subject: 'balena-generate-ami.sh: Stick to POSIX-compliant [ instead of [['
+    - subject: "balena-generate-ami.sh: Stick to POSIX-compliant [ instead of [["
       hash: 2c6a97c263a71c63387290fca29ba5b01eba8db4
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
@@ -753,9 +780,9 @@
         signed-off-by: Michal Toman <michalt@balena.io>
       author: Michal Toman
       nested: []
-    - subject: 'balena-generate-ami.sh: Remove useless statements'
+    - subject: "balena-generate-ami.sh: Remove useless statements"
       hash: 9d4ac02f3ad8eadaed79703dbc859c4950449810
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
@@ -763,9 +790,8 @@
         signed-off-by: Michal Toman <michalt@balena.io>
       author: Michal Toman
       nested: []
-    - subject: >-
-        jenkins_generate_ami.sh: Use architecture as suffix instead of machine
-        name
+    - subject: "jenkins_generate_ami.sh: Use architecture as suffix instead of machine
+        name"
       hash: 7d2e3911defedc500b3b1ded3268dbe74bb523b0
       body: >
         This removes the necessity for the DT being named generic-*. It also
@@ -779,7 +805,7 @@
         signed-off-by: Michal Toman <michalt@balena.io>
       author: Michal Toman
       nested: []
-    - subject: 'jenkins_build.sh: pass MACHINE to jenkins_generate_ami.sh'
+    - subject: "jenkins_build.sh: pass MACHINE to jenkins_generate_ami.sh"
       hash: 0e33582e2860474e1c6aff5275539b1333aef6b9
       body: |
         This removes the dependency on JOB_NAME from jenkins_generate_ami.sh
@@ -790,25 +816,25 @@
         signed-off-by: Michal Toman <michalt@balena.io>
       author: Michal Toman
       nested: []
-    - subject: 'AMI automation: Adjust AMI names to be compatible with AWS API'
+    - subject: "AMI automation: Adjust AMI names to be compatible with AWS API"
       hash: bc91b7036b32aa57c053c115ac87b7f21fa634c8
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
       author: ab77
       nested: []
-    - subject: 'AMI automation: Correct S3 bucket name and key'
+    - subject: "AMI automation: Correct S3 bucket name and key"
       hash: 8864adcb20c1f4cbfd48e422dbae44b885c8ca06
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
       author: ab77
       nested: []
-    - subject: 'AMI automation: Add a separate container for generaing AMI'
+    - subject: "AMI automation: Add a separate container for generaing AMI"
       hash: d7d91ff4c3ea655dfa9a483a020d2d16aa5e0f49
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
@@ -816,17 +842,17 @@
         signed-off-by: Michal Toman <michalt@balena.io>
       author: Michal Toman
       nested: []
-    - subject: 'AMI automation: shellcheck and resolve violations'
+    - subject: "AMI automation: shellcheck and resolve violations"
       hash: 6b11dd26bc1229aafed98c5933f23e892811f49f
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
       author: ab77
       nested: []
-    - subject: 'AMI automation: Use staging env by default'
+    - subject: "AMI automation: Use staging env by default"
       hash: 21fa55a6f73faf59fe5fc3b1e6e8bc4084e17c01
-      body: ''
+      body: ""
       footer:
         Change-type: minor
         change-type: minor
@@ -834,9 +860,9 @@
         signed-off-by: Tomás Tormo <tomast@balena.io>
       author: Tomás Tormo
       nested: []
-    - subject: 'AMI automation: Simplify public ssh addition. Do not use sudo'
+    - subject: "AMI automation: Simplify public ssh addition. Do not use sudo"
       hash: dd96771607f79620a241e4dee99879542643f55f
-      body: ''
+      body: ""
       footer:
         Change-type: minor
         change-type: minor
@@ -844,9 +870,9 @@
         signed-off-by: Tomás Tormo <tomast@balena.io>
       author: Tomás Tormo
       nested: []
-    - subject: 'automation: Generate and publish AMI from the raw balenaOS image'
+    - subject: "automation: Generate and publish AMI from the raw balenaOS image"
       hash: efe2b5beb5ea6b00fff07372a312c7e0c690654b
-      body: ''
+      body: ""
       footer:
         Change-type: minor
         change-type: minor
@@ -857,11 +883,10 @@
   version: 1.15.0
   date: 2021-10-01T04:12:24.310Z
 - commits:
-    - subject: 'balena-deploy: When deploying hostapp default to using slug as name'
+    - subject: "balena-deploy: When deploying hostapp default to using slug as name"
       hash: d9ee5fa5f5a97de9c41c2acc13b6c7335e2b043f
       body: >
-        Using the device type is incorrect as aliases are not taken into
-        account.
+        Using the device type is incorrect as aliases are not taken into account.
       footer:
         Change-type: patch
         change-type: patch
@@ -869,7 +894,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-api: Do not use balena_lib_resolve_aliases'
+    - subject: "balena-api: Do not use balena_lib_resolve_aliases"
       hash: d50cee134436914b4960254abd0a5cf28b40f764
       body: >
         That function is now for internal use, replace with
@@ -883,7 +908,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena_lib: Make resolve_aliases local so it is not globally used'
+    - subject: "balena_lib: Make resolve_aliases local so it is not globally used"
       hash: 45a0f62debdbf9e20d56e8bba8a9567359d7e8e4
       body: |
         The correct call is balena_lib_get_slug(device_type), which resolves
@@ -900,7 +925,7 @@
 - commits:
     - subject: Use slug when setting deviceType for leviathan
       hash: bc628771aa0014e86e649e3312b48e1c7ae4968c
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
@@ -911,9 +936,9 @@
   version: 1.14.8
   date: 2021-07-22T14:51:50.560Z
 - commits:
-    - subject: 'balena-lib: Fix print statements helper functions'
+    - subject: "balena-lib: Fix print statements helper functions"
       hash: 45ccecc6945a06c3975c4ffc782bef5770f30ae7
-      body: ''
+      body: ""
       footer:
         Change-type: patch
         change-type: patch
@@ -921,7 +946,7 @@
         signed-off-by: Kyle Harding <kyle@balena.io>
       author: Kyle Harding
       nested: []
-    - subject: 'balena-lib: Fix device dir when running in Jenkins containers'
+    - subject: "balena-lib: Fix device dir when running in Jenkins containers"
       hash: 95530d134ea729359e7e1e19fac109dd6d40ca5c
       body: |
         Avoid returning an empty path when we are running in containers
@@ -936,7 +961,7 @@
   version: 1.14.7
   date: 2021-06-29T20:20:09.994Z
 - commits:
-    - subject: 'balena-deploy: Flag hostapps as bootable apps'
+    - subject: "balena-deploy: Flag hostapps as bootable apps"
       hash: 4093fe7397b52cc58d676f2d7b3db3699c8a8b92
       body: |
         This will mark the app as isHost.
@@ -947,7 +972,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-deploy: Provide working directory when deploying hostapp'
+    - subject: "balena-deploy: Provide working directory when deploying hostapp"
       hash: c20241cdf161ca8f438c38e84f504dadfaeeadc0
       body: |
         When creating a public app, the workdir is used to retrieve the URL
@@ -962,7 +987,7 @@
   version: 1.14.6
   date: 2021-06-18T10:49:05.763Z
 - commits:
-    - subject: 'balena-deploy-block: Do not add variant suffix to release tag'
+    - subject: "balena-deploy-block: Do not add variant suffix to release tag"
       hash: 084154ac3c3d0d6d3ec4c7d2a21590815a61bb2f
       body: |
         Fix the legacy way of tagging releases with a string variant and the OS
@@ -977,7 +1002,7 @@
   version: 1.14.5
   date: 2021-06-18T09:06:25.918Z
 - commits:
-    - subject: 'Dockerfile_balena-push-env: Add balena-lib to image'
+    - subject: "Dockerfile_balena-push-env: Add balena-lib to image"
       hash: 937026182287183bffbdc6836c707d34532bc509
       body: |
         The balena-api library requires functions in balena-lib.
@@ -988,7 +1013,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-deploy-block: source balena-lib script library'
+    - subject: "balena-deploy-block: source balena-lib script library"
       hash: 4b05b3ea6b3d42add1926547809e29213ce84890
       body: |
         Some functions in balena-api require this library.
@@ -1002,7 +1027,7 @@
   version: 1.14.4
   date: 2021-06-16T10:37:10.537Z
 - commits:
-    - subject: 'balena-api: Filter out debug output'
+    - subject: "balena-api: Filter out debug output"
       hash: bbb7ec875bd4b0d56c878187eb1d00e8d450b5d8
       body: |
         Change a json dump for a debug function call.
@@ -1013,7 +1038,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-api: Specify API environment and token when setting app roles'
+    - subject: "balena-api: Specify API environment and token when setting app roles"
       hash: c2402322ef608cb207494c37ade33a531734d9ca
       body: |
         The defaults only work with the production environment.
@@ -1024,7 +1049,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'jenkins_build-blocks: Separate recipes and packages'
+    - subject: "jenkins_build-blocks: Separate recipes and packages"
       hash: 0b7c0a0a14141bbeb6b29171763cac99d68d9830
       body: >
         Currently we are reading a package list from the contracts that mixes
@@ -1034,8 +1059,7 @@
         stop the build when a package name fails to match a recipe.
 
 
-        The contracts have now been modified to specify either a
-        `sw.recipe.yocto`
+        The contracts have now been modified to specify either a `sw.recipe.yocto`
 
         or a `sw.package.yocto` so we can distinguish between them and use
 
@@ -1050,7 +1074,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-lib: Generalize contract fetcher'
+    - subject: "balena-lib: Generalize contract fetcher"
       hash: 2d01048848734b580b89bfdd41df13ef10a8d31f
       body: |
         Instead of fetching a package list, fetch a composedOf list passing a
@@ -1062,9 +1086,8 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: >-
-        balena-deploy: Shorten installation directory '/yocto/resin-board' to
-        '/work'
+    - subject: "balena-deploy: Shorten installation directory '/yocto/resin-board' to
+        '/work'"
       hash: 20baa1d287d95f95cb84797586afa73ed52f2db1
       body: |
         The installation directory is currently "/yocto/resin-board". This is
@@ -1093,7 +1116,7 @@
   version: 1.14.3
   date: 2021-06-01T11:48:30.209Z
 - commits:
-    - subject: 'balena-lib: Add function to fetch labels from image'
+    - subject: "balena-lib: Add function to fetch labels from image"
       hash: a987a933ad52af6c7935b19f13f4f39f0be157f1
       body: |
         Image labels are used to handle the installation of images.
@@ -1104,7 +1127,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-lib: contracts: Add package list fetcher'
+    - subject: "balena-lib: contracts: Add package list fetcher"
       hash: f2e5ce081f9ef39bcff364ce4a8e9a9d0d806590
       body: >
         Add functions to retrieve a package list from a sw.package contract
@@ -1118,14 +1141,13 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'semver: Add bash utility for semantic version comparison'
+    - subject: "semver: Add bash utility for semantic version comparison"
       hash: 831c494a1bc1f286a9b95f22cc86ade46f336a89
       body: >
         From https://github.com/Ariel-Rodriguez/sh-semversion-2
 
 
-        MIT licensed:
-        https://github.com/Ariel-Rodriguez/sh-semversion-2/blob/main/LICENSE
+        MIT licensed: https://github.com/Ariel-Rodriguez/sh-semversion-2/blob/main/LICENSE
       footer:
         Change-type: patch
         change-type: patch
@@ -1133,7 +1155,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       author: Alex Gonzalez
       nested: []
-    - subject: 'balena-docker: Add image retrieval function'
+    - subject: "balena-docker: Add image retrieval function"
       hash: 79d8a1b201196e2730bcf1d92c8be19dbd693106
       body: |
         Common image retrieval code.
@@ -1159,8 +1181,7 @@
         provide nested-changelogs.
 
 
-        Generated with
-        product-os/versionist/blob/master/scripts/generate-changelog.sh
+        Generated with product-os/versionist/blob/master/scripts/generate-changelog.sh
       footer:
         Change-type: patch
         change-type: patch
@@ -1181,15 +1202,13 @@
         change-type: patch
         changelog-entry: Add yocto-block-build-env container to build Yocto based hostOS blocks
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: >-
-        Dockerfile_yocto-block-build-env: Add container to build Yocto based
-        hostOS blocks
+      subject: "Dockerfile_yocto-block-build-env: Add container to build Yocto based
+        hostOS blocks"
       body: >-
         This container is based on the `balena-push-env` helper container and
         includes
 
-        an opkg application built from source. It is used to build Yocto IPK
-        packaged
+        an opkg application built from source. It is used to build Yocto IPK packaged
 
         based hostOS blocks.
     - hash: dcb1ee52f56d4785cc4a6b93d33c2b63f2bcda12
@@ -1198,7 +1217,7 @@
         change-type: patch
         changelog-entry: Balena build and deploy a hostOS yocto ipk block image
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-build-block: Balena build and deploy a hostOS block image'
+      subject: "balena-build-block: Balena build and deploy a hostOS block image"
       body: Balena builds and deploys a hostOS block from a Yocto ipk package feed.
     - hash: 285e72e2107b5c7693ebe70ee5041d2001507f98
       author: Alex Gonzalez
@@ -1206,23 +1225,22 @@
         change-type: minor
         changelog-entry: Add script to build hostOS blocks
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins_build-blocks: Add package blocks builder script'
-      body: >-
-        This script builds hostOS blocks as defined in their contract
+      subject: "jenkins_build-blocks: Add package blocks builder script"
+      body: This script builds hostOS blocks as defined in their contract
         specification.
     - hash: 5f6a285d43ce7b161601174b11d7c9b8771b9799
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-deploy: Add functions to deploy block, feed and OS release'
+      subject: "balena-deploy: Add functions to deploy block, feed and OS release"
       body: Add the logic for block and OS deployment.
     - hash: 1b551c71da050d84005f80cd076ec9abe8569b0a
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'README: Add brief introduction to the main scripts'
+      subject: "README: Add brief introduction to the main scripts"
       body: |-
         Add a short description of the helper build scripts that this repository
         offers.
@@ -1234,7 +1252,7 @@
       footers:
         change-type: minor
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'barys: Replace supervisor tag with supervisor release version'
+      subject: "barys: Replace supervisor tag with supervisor release version"
       body: |-
         The latest meta-balena fetches the supervisor from the internal registry
         using the release version.
@@ -1243,7 +1261,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins_build: Replace supervisor tag with supervisor release'
+      subject: "jenkins_build: Replace supervisor tag with supervisor release"
       body: |-
         The latest meta-balena fetches the supervisor from the internal registry
         using the release version.
@@ -1252,7 +1270,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins_build: Rename metaResinBranch to metaBalenaBranch'
+      subject: "jenkins_build: Rename metaResinBranch to metaBalenaBranch"
       body: Rename variables to match current brand.
 - version: 1.12.16
   date: 2021-05-18T16:10:59.000Z
@@ -1262,7 +1280,7 @@
       footers:
         change-type: patch
         signed-off-by: Kyle Harding <kyle@balena.io>
-      subject: 'tests: Substitute deviceType with MACHINE when packaging tests'
+      subject: "tests: Substitute deviceType with MACHINE when packaging tests"
       body: null
 - version: 1.12.15
   date: 2021-05-18T16:05:32.000Z
@@ -1272,7 +1290,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'Dockerfile_yocto-build-env: Specify docker version'
+      subject: "Dockerfile_yocto-build-env: Specify docker version"
       body: |-
         This matches as closely as possible the version of the dind container
         used in the Yocto build.
@@ -1281,7 +1299,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-docker: Allow to control iptables and ipmasq flags'
+      subject: "balena-docker: Allow to control iptables and ipmasq flags"
       body: >-
         When running multiple daemons, we don't want them to clash managing
 
@@ -1291,8 +1309,7 @@
 
         By default we enable both which is the current dockerd default.
 
-        When running a single docker daemon without the iptables and ipmasq
-        flags,
+        When running a single docker daemon without the iptables and ipmasq flags,
 
         containers on the default bridge network cannot communite with the
 
@@ -1305,7 +1322,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-api: Set default argument value not to exist on nounset setting'
+      subject: "balena-api: Set default argument value not to exist on nounset setting"
       body: |-
         Scripts sourcing balena-api might set nounset, so assign empty values
         to optional arguments not to trigger an early exit.
@@ -1314,7 +1331,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-api: Allow access to OS developers to public apps'
+      subject: "balena-api: Allow access to OS developers to public apps"
       body: |-
         This allows the OS developers to see these applications with their
         Balena account tokens.
@@ -1326,14 +1343,14 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-api: Add functions for apps management'
+      subject: "balena-api: Add functions for apps management"
       body: Add utility function to manage balenaCloud apps.
     - hash: 6938b8feec5d5ac5e92ed25c702b1fc4953e931e
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-api: Add block images getter functions'
+      subject: "balena-api: Add block images getter functions"
       body: |-
         Add a set of utility functions to retrieve release images and parse them
         according to their labeling.
@@ -1342,14 +1359,14 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-api: Add missing argument to function comments'
+      subject: "balena-api: Add missing argument to function comments"
       body: This is a non-functional change.
     - hash: 899122243bf47c20247eaa800cd55a3ff37c4886
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-deploy-block: Create public app if required'
+      subject: "balena-deploy-block: Create public app if required"
       body: |-
         The script will, given the correct token, create a public app if it does
         not exist.
@@ -1358,9 +1375,8 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: >-
-        balena-lib: Fix device installation path when running in helper
-        container
+      subject: "balena-lib: Fix device installation path when running in helper
+        container"
       body: >-
         Several functions require to know where the device installation
         directory
@@ -1371,9 +1387,8 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: >-
-        balena-deploy: Fix device installation path when running in helper
-        container
+      subject: "balena-deploy: Fix device installation path when running in helper
+        container"
       body: >-
         Several functions require to know where the device installation
         directory
@@ -1387,29 +1402,29 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-docker: Adapt to be used from POSIX shell'
-      body: 'Also, fix indentation to use tabs.'
+      subject: "balena-docker: Adapt to be used from POSIX shell"
+      body: Also, fix indentation to use tabs.
     - hash: ba5fbfd03adea5895f88c7dd2e9223d5fbee33f0
       author: Alex Gonzalez
       footers:
         change-type: patch
         changelog-entry: Generalize balena-docker to any engine
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-docker: Generalize functions to any engine'
+      subject: "balena-docker: Generalize functions to any engine"
       body: This is so it can be used both for balena-engine and docker.
     - hash: adbe6807cbdd603a229bc466a9e954b9bbef9cfc
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-build: Re-enable the container''s output'
+      subject: "balena-build: Re-enable the container's output"
       body: Remove the pseudo tty from the docker run command.
     - hash: 9fb2417d73e8e5f4a0eeb0d457aac0b0327c8c49
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-build: Add option to keep local containers'
+      subject: "balena-build: Add option to keep local containers"
       body: |-
         This is helpful when developing locally not to continuously download
         the helper images.
@@ -1418,7 +1433,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'yocto-build-env: Update Dockerfile to add host tools dependencies'
+      subject: "yocto-build-env: Update Dockerfile to add host tools dependencies"
       body: |-
         In preparation for replacing docker with balena-engine, add the required
         host dependencies.
@@ -1451,7 +1466,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-build: print submodule status'
+      subject: "balena-build: print submodule status"
       body: |-
         Print the details of all submodules so that layers that are not part of
         bblayers, like balena-yocto-scripts, also get their sha1s displayed on
@@ -1461,7 +1476,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-build: Correctly pass development images flag and amend usage'
+      subject: "balena-build: Correctly pass development images flag and amend usage"
       body: |-
         The development image flag is not being correctly passed to barys.
         Also, attemps to make the usage instructions clearer.
@@ -1473,16 +1488,15 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-build: Pass the API environment to the build container'
+      subject: "balena-build: Pass the API environment to the build container"
       body: This allows to target builds to non-production environments.
     - hash: 4fb71f2d09e621ef6a070dd8e28f093a8a81adf0
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: >-
-        balena-lib: Add function to resolve between contract slugs and Yocto
-        machines
+      subject: "balena-lib: Add function to resolve between contract slugs and Yocto
+        machines"
       body: |-
         Some device types have different Yocto machine names than contract
         slugs, so provide a function to translate.
@@ -1491,7 +1505,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-build: Do not exit if no SSH_AUTH_SOCK defined'
+      subject: "balena-build: Do not exit if no SSH_AUTH_SOCK defined"
       body: |-
         Environment that build public device types will probably have no use
         for ssh authentication, so print a warning but  go on.
@@ -1500,14 +1514,14 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-build: Fix indentation'
+      subject: "balena-build: Fix indentation"
       body: No functional changes.
     - hash: 5131302a1cb8351d5b05b41249a7808af5935a73
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-build: Cleanup build containers and enable build output'
+      subject: "balena-build: Cleanup build containers and enable build output"
       body: |-
         It is useful to know what the build output is. Also, not leaving
         containers around is important for the builders storage size.
@@ -1519,7 +1533,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-build: Fix development image build'
+      subject: "balena-build: Fix development image build"
       body: |-
         The development image flag is being set to the variant instead of a
         yes/no string.
@@ -1528,7 +1542,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins_build-containers: Use a fixed length for the git short revision'
+      subject: "jenkins_build-containers: Use a fixed length for the git short revision"
       body: |-
         The short version length could be configured differently on different
         git installations so this commit specifies the length.
@@ -1537,7 +1551,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-lib: Do not err when sourcing without a repository'
+      subject: "balena-lib: Do not err when sourcing without a repository"
       body: |-
         A global variable uses git to retrieve a sha1 revision. If this fails
         with the errexit option the script exists after sourcing this file.
@@ -1553,7 +1567,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-api: Improve logs when setting version'
+      subject: "balena-api: Improve logs when setting version"
       body: |-
         The set release version function would print a success message even when
         the patch operation failed.
@@ -1562,14 +1576,14 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-docker: Make it less verbose'
+      subject: "balena-docker: Make it less verbose"
       body: Hide debug messages unless the DEBUG variable is set.
     - hash: 86a275ad03a07223ce42cb3c704211b71922f73d
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-deploy: Set the OS version before setting deploy directory'
+      subject: "balena-deploy: Set the OS version before setting deploy directory"
       body: The local build directory is expected to include the OS version.
 - version: 1.12.6
   date: 2021-03-30T11:32:20.000Z
@@ -1579,21 +1593,21 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'include: Move include files and entry scripts into its own folder'
-      body: 'Cosmetic reorganization, no functional changes.'
+      subject: "include: Move include files and entry scripts into its own folder"
+      body: Cosmetic reorganization, no functional changes.
     - hash: 5c5669a8d6901b4a28ad952d367774e7c8cb3a90
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-build.sh: Move into build script'
+      subject: "balena-build.sh: Move into build script"
       body: This is a containeirized barys so it should live along barys.
     - hash: 7dbf390cdf5a88f349dac1323b1c85cf579f4cc7
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-lib: Set default namespace if not defined'
+      subject: "balena-lib: Set default namespace if not defined"
       body: |-
         The namespace variable can point to an alternative registry and it is
         useful for developing. This commit sets the default when not defined.
@@ -1605,14 +1619,14 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-deploy: Shellcheck warnings'
+      subject: "balena-deploy: Shellcheck warnings"
       body: Remove shellcheck warnings. No functional changes.
     - hash: 9237debc97aef84d21f042494bd4d017e29182f9
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-deploy-block: Adjust variables for common use'
+      subject: "balena-deploy-block: Adjust variables for common use"
       body: |-
         This script is called either to deploy a bootable block (hostapp) or to
         deploy a standard block. This commit makes the environmental variables
@@ -1622,16 +1636,15 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-deploy-block: Fix shellcheck warnings'
-      body: 'No functional changes, just fixing linter warnings.'
+      subject: "balena-deploy-block: Fix shellcheck warnings"
+      body: No functional changes, just fixing linter warnings.
     - hash: 0f6b0753c8d8deffc62f58717528f4f577d85eb3
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: >-
-        balena-deploy: Adjust balena_deploy_hostapp to new balena_deploy_block
-        entrypoint arguments
+      subject: "balena-deploy: Adjust balena_deploy_hostapp to new balena_deploy_block
+        entrypoint arguments"
       body: |-
         The arguments to balena-deploy-block.sh have been modified so it can be
         used from multiple places.
@@ -1640,21 +1653,21 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-deploy.inc: Pass API environment to balena_lib_token'
-      body: 'Also, do not exit on error but return.'
+      subject: "balena-deploy.inc: Pass API environment to balena_lib_token"
+      body: Also, do not exit on error but return.
     - hash: c9d8f8299c5ad6a720d596f8d2b5a6a458fa31c7
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-build: Pass an API environment to balena_lib_token'
+      subject: "balena-build: Pass an API environment to balena_lib_token"
       body: Assure logging to the desired environment.
     - hash: 1c479d353fcbf5c1289e3ea52fb0f769d43bd99b
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-lib: Pass API environment to balena_lib_token'
+      subject: "balena-lib: Pass API environment to balena_lib_token"
       body: Assure which environment we will log into.
 - version: 1.12.4
   date: 2021-03-29T12:15:27.000Z
@@ -1664,7 +1677,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-api: Add is_dt_private function'
+      subject: "balena-api: Add is_dt_private function"
       body: |-
         This looks for a device type JSON file and outputs whether the device is
         a private type.
@@ -1673,25 +1686,23 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: >-
-        balena-lib: Add several function to extract device details from device
-        type JSON file
+      subject: "balena-lib: Add several function to extract device details from device
+        type JSON file"
       body: These are utility functions used from other scripts.
     - hash: a275b3ab8f5bc1ae3a6ec7545dfc0f4faca725cf
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-lib: By default only login to BaleneCloud if not token is found'
+      subject: "balena-lib: By default only login to BaleneCloud if not token is found"
       body: This avoids redundant logging call to the API.
     - hash: 4a83bb9c440059a2e1c153a70385b5bb6e312ebf
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: >-
-        balena_deploy: Add functions to deploy Jenkins artifacts to S3 and
-        dockerhub
+      subject: "balena_deploy: Add functions to deploy Jenkins artifacts to S3 and
+        dockerhub"
       body: |-
         These have been extracted from `jenkins_buils.sh` so that they can be
         reused if required.
@@ -1700,14 +1711,14 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-deploy: Fix indentation and shellcheck warnings'
+      subject: "balena-deploy: Fix indentation and shellcheck warnings"
       body: Non functional cosmetic changes.
     - hash: cb77f35d4e52f7e44af458746a2e1ba1e1b8c8a6
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins_build: Call out to script libraries functions'
+      subject: "jenkins_build: Call out to script libraries functions"
       body: This simplies the script and makes it more legible.
 - version: 1.12.3
   date: 2021-03-26T18:28:05.000Z
@@ -1717,7 +1728,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-lib: Fix indentation to tabs'
+      subject: "balena-lib: Fix indentation to tabs"
       body: Match the file style and use tabs to indent. Only cosmetic changes.
 - version: 1.12.2
   date: 2021-03-26T18:13:45.000Z
@@ -1727,7 +1738,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-docker: Remove execution trace flag'
+      subject: "balena-docker: Remove execution trace flag"
       body: This is a leftover from development.
 - version: 1.12.1
   date: 2021-03-25T08:55:29.000Z
@@ -1737,7 +1748,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-lib: Add commonly used utility functions'
+      subject: "balena-lib: Add commonly used utility functions"
       body: >-
         Add functions to obtain Balena environment, token and login to the
         cloud,
@@ -1748,7 +1759,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins_build-containers: Allow docker login for local development'
+      subject: "jenkins_build-containers: Allow docker login for local development"
       body: |-
         Only fix user and password from environment when in a Jenkins context.
         This allows to rebuild and deploy helper images to user repositories for
@@ -1757,13 +1768,11 @@
       author: Alex Gonzalez
       footers:
         change-type: patch
-        changelog-entry: >-
-          Add bitbake-args argument to barys and make bitbake-target accept
-          multiple arguments
+        changelog-entry: Add bitbake-args argument to barys and make bitbake-target
+          accept multiple arguments
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: >-
-        barys: Add bitbake-args argument and make bitbake-target accept multiple
-        arguments
+      subject: "barys: Add bitbake-args argument and make bitbake-target accept
+        multiple arguments"
       body: |-
         This commit extends barys so it accepts a list of bitbake arguments
         and/or target images. This will allow the flexibilty needed to build
@@ -1773,7 +1782,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins_build: Separate deploy functions'
+      subject: "jenkins_build: Separate deploy functions"
       body: |-
         In future we will stop deploying to dockerhub and deploy only to
         balenaCloud.
@@ -1781,14 +1790,14 @@
       author: Alex Gonzalez
       footers:
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins_build: Refactor balena_lib_get_os_version'
+      subject: "jenkins_build: Refactor balena_lib_get_os_version"
       body: null
     - hash: ceded8430b5b404ed5157e0decf1f95a8cd09d52
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-api: Add script library with API calls'
+      subject: "balena-api: Add script library with API calls"
       body: |-
         This library is to be sourced by scripts that need to use the API to
         obtain app or image specific information.
@@ -1797,16 +1806,14 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: >-
-        balena-push-os-version: Rename to balena-deploy-block and set the
-        release version on deploy
+      subject: "balena-push-os-version: Rename to balena-deploy-block and set the
+        release version on deploy"
       body: >-
         Until "balena deploy" has this functionality let's perform a direct
 
         API call.
 
-        Production versions have the OS release name and development versions
-        get
+        Production versions have the OS release name and development versions get
 
         appended a .dev suffix. Once both image variants are merged only the OS
 
@@ -1816,23 +1823,22 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'Dockerfile_balena-push-env: Refactor to use balena-deploy-block'
+      subject: "Dockerfile_balena-push-env: Refactor to use balena-deploy-block"
       body: Rename to use balena-deploy-block.
     - hash: 576b5dc53fa04709111866b290f31fda62740867
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-build: Split build related functions'
-      body: >-
-        This script can be used standalone to call barys on a containerized
+      subject: "balena-build: Split build related functions"
+      body: This script can be used standalone to call barys on a containerized
         environment.
     - hash: d924527622c55e584889ebbb91e0500e8cbd21d4
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins_build: Separate barys build functions'
+      subject: "jenkins_build: Separate barys build functions"
       body: |-
         Separate the call to barys to a scritpt library so it can be reused from
         other scripts.
@@ -1841,7 +1847,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-deploy: Add script library for deploy logic'
+      subject: "balena-deploy: Add script library for deploy logic"
       body: |-
         Centralize all the deploy login in one script library starting with
         balena_deploy_hostapp.
@@ -1850,10 +1856,8 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins_build: Use balena_deploy_hostapp from balena-deploy'
-      body: >-
-        Use the same function call on all scripts that require to push a
-        hostapp.
+      subject: "jenkins_build: Use balena_deploy_hostapp from balena-deploy"
+      body: Use the same function call on all scripts that require to push a hostapp.
 - version: 1.12.0
   date: 2021-03-25T08:47:27.000Z
   commits:
@@ -1863,7 +1867,7 @@
         change-type: minor
         changelog-entry: Improve template layer matching
         signed-off-by: Kyle Harding <kyle@balena.io>
-      subject: 'barys: Improve template layer matching'
+      subject: "barys: Improve template layer matching"
       body: |-
         The current method does not support multiple layers named with names
         following `meta-balena-*` so this change will search for the required
@@ -1875,13 +1879,11 @@
       author: Alex Gonzalez
       footers:
         change-type: patch
-        changelog-entry: >-
-          Allow to specify which containers to build and login to dockerhub so
-          that they can be deployed
+        changelog-entry: Allow to specify which containers to build and login to
+          dockerhub so that they can be deployed
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: >-
-        jenkins_build-container: Do not overwrite environment DOCKERFILES
-        variable if provided
+      subject: "jenkins_build-container: Do not overwrite environment DOCKERFILES
+        variable if provided"
       body: >-
         Also, do not duplicate the variable that specifies current script
         directory
@@ -1892,21 +1894,20 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-lib: Rename to balena-lib.inc'
+      subject: "balena-lib: Rename to balena-lib.inc"
       body: This indicates it is to be sourced and not executed.
     - hash: e9d3dc9c9816a72cbd62f0b247c36364fe168be5
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-lib: Rename functions with the balena_lib prefix'
+      subject: "balena-lib: Rename functions with the balena_lib prefix"
       body: >-
         This makes them easy to identify and makes it clear where they come from
 
         making the code more legible.
 
-        Also, remove balena login from `balena_lib_docker_pull_helper_image`
-        function
+        Also, remove balena login from `balena_lib_docker_pull_helper_image` function
 
         as the login is performed by the container deployment script.
     - hash: 111843536ad9c951f0850256b8a56d9f4c612816
@@ -1914,7 +1915,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins_build: Use balena-lib.inc instead of balena-inc.sh'
+      subject: "jenkins_build: Use balena-lib.inc instead of balena-inc.sh"
       body: Adapt to the refactoring of balena-lib.
 - version: 1.11.1
   date: 2021-03-22T12:50:36.000Z
@@ -1924,30 +1925,29 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-docker: Rename manage-docker to balena-docker'
+      subject: "balena-docker: Rename manage-docker to balena-docker"
       body: Convert manage-docker into a script library so it can be re-used.
     - hash: 7c79c2109455c54b9d09938416c47463fc8bb652
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-push-os-version: Refactor to use balena-docker'
+      subject: "balena-push-os-version: Refactor to use balena-docker"
       body: Use common scripts to manage the docker instance
     - hash: 2deb988b1c9da918fd0729f64039140884f6e63d
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'prepare-and-start: Refactor to use balena-lib'
+      subject: "prepare-and-start: Refactor to use balena-lib"
       body: Use common script to manage docker instances
     - hash: 943839ff2210c7db9030d3deca00c99c41f1253e
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: >-
-        Dockerfile_yocto_build-env: Refactor to update dockerd and use
-        balena-docker
+      subject: "Dockerfile_yocto_build-env: Refactor to update dockerd and use
+        balena-docker"
       body: |-
         Use common scripts to manage docker instances, and update the dockerd
         daemon to the distribution supported stabel version.
@@ -1956,7 +1956,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'Dockerfile_balena-push-env: Refactor to use balena-docker'
+      subject: "Dockerfile_balena-push-env: Refactor to use balena-docker"
       body: Use common scripts to manage the docker instance.
 - version: 1.11.0
   date: 2021-03-02T18:51:04.000Z
@@ -1968,7 +1968,7 @@
         changelog-entry: Rename resin image types to balena
         depends-on: balena-os/meta-balena#2118
         signed-off-by: Kyle Harding <kyle@balena.io>
-      subject: 'balena-yocto-scripts: rename resin image types to balena'
+      subject: "balena-yocto-scripts: rename resin image types to balena"
       body: |-
         As part of a full rename away from legacy resin namespaces the
         following device compatibility changes are required to align
@@ -1977,9 +1977,9 @@
     - hash: b5cf2879c4b42d6653ffcd2b4c1493463e445fdb
       author: Kyle Harding
       footers:
-        depends-on: 'https://github.com/balena-os/meta-balena/pull/2118'
+        depends-on: https://github.com/balena-os/meta-balena/pull/2118
         signed-off-by: Kyle Harding <kyle@balena.io>
-      subject: 'balena-yocto-scripts: bulk rename of RESIN_ variables'
+      subject: "balena-yocto-scripts: bulk rename of RESIN_ variables"
       body: |-
         This is just a bulk rename of all the RESIN_ yocto variables
         to BALENA_. Compatible changes are required in meta-balena and
@@ -1992,7 +1992,7 @@
       footers:
         change-type: patch
         signed-off-by: Kyle Harding <kyle@balena.io>
-      subject: 'tests: fix typo in tests packaging'
+      subject: "tests: fix typo in tests packaging"
       body: null
 - version: 1.10.2
   date: 2021-03-01T13:52:23.000Z
@@ -2002,7 +2002,7 @@
       footers:
         change-type: patch
         signed-off-by: Kyle Harding <kyle@balena.io>
-      subject: 'tests: strip leading paths when packaging'
+      subject: "tests: strip leading paths when packaging"
       body: null
 - version: 1.10.1
   date: 2021-02-26T07:52:26.000Z
@@ -2012,7 +2012,7 @@
       footers:
         change-type: patch
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'Dockerfile_yocto-build-env: Install required python3-distutils module'
+      subject: "Dockerfile_yocto-build-env: Install required python3-distutils module"
       body: |-
         Otherwise bitbake fails with the following error:
         Your Python 3 is not a full install. Please install the module
@@ -2026,7 +2026,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'yocto-build-env: Add balena-cli to container image'
+      subject: "yocto-build-env: Add balena-cli to container image"
       body: |-
         We need the balena CLI in order to pull images from Balena's internal
         registry.
@@ -2035,7 +2035,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'Dockerfile_yocto-build-env: Update Ubuntu version to bionic'
+      subject: "Dockerfile_yocto-build-env: Update Ubuntu version to bionic"
       body: |-
         Keep the Ubuntu version of the helper containers in sync and updates the
         poky/yocto package dependencies to the ones defined in the 3.0 Quick
@@ -2045,7 +2045,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'Dockerfile_balena-push-env: Install node from correct distro source'
+      subject: "Dockerfile_balena-push-env: Install node from correct distro source"
       body: |-
         When the base container was updated to bionic the node source distro was
         not updated accordingly.
@@ -2054,21 +2054,22 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-lib: Fix balena devices dockerhub password'
+      subject: "balena-lib: Fix balena devices dockerhub password"
       body: This needs to be a variable and not a string.
     - hash: fe7bf75cb23d39671b8e4b019977b0566d9e707d
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-lib: Return the current repository revision'
+      subject: "balena-lib: Return the current repository revision"
       body: Enable the calling script to use the newly pulled image by tag.
     - hash: 8110121c0e3f397810495b293594c93123b5110f
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins_build-containers: Use revision of the repo where the scrip lives'
+      subject: "jenkins_build-containers: Use revision of the repo where the scrip
+        lives"
       body: |-
         We want to tag with the revision of the balena-yocto-scripts repository,
         and not the repository from the script that calls it.
@@ -2078,9 +2079,8 @@
         change-type: minor
         changelog-entry: Use version controlled helper containers
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: >-
-        jenkins_build: Use the helper containers that corresponds to this
-        revision
+      subject: "jenkins_build: Use the helper containers that corresponds to this
+        revision"
       body: |-
         Instead of using the master tag of the helper containers, use the ones
         that correspond to the current repository revision.
@@ -2092,17 +2092,16 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-lib: Add scripts library'
+      subject: "balena-lib: Add scripts library"
       body: This file allows to share snippets across scripts.
     - hash: 6bf24cac8f93180a5eabc2e7de8dcfffea3dd95e
       author: Alex Gonzalez
       footers:
         change-type: patch
-        changelog-entry: >-
-          Helper containers are now referenced by tag instead of using latest,
-          and will be built and deployed if required
+        changelog-entry: Helper containers are now referenced by tag instead of using
+          latest, and will be built and deployed if required
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins-build: Dynamically build helper containers'
+      subject: "jenkins-build: Dynamically build helper containers"
       body: |-
         Instead of using the master tag of the helper containers, use those with
         a tag that matches the repository revision.
@@ -2115,11 +2114,10 @@
       author: Alex Gonzalez
       footers:
         change-type: patch
-        changelog-entry: >-
-          Generalize balena-push-os-version container helper image to push any
-          image type
+        changelog-entry: Generalize balena-push-os-version container helper image to
+          push any image type
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'balena-push-os-version: Generalize application name'
+      subject: "balena-push-os-version: Generalize application name"
       body: |-
         Do not assume that the target application name is always the slug. This
         allows to push non-hostapp type of images, like hostapp extensions.
@@ -2128,14 +2126,14 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'barys: Allow to pass multiple bitbake targets'
+      subject: "barys: Allow to pass multiple bitbake targets"
       body: This allows to build specific packages.
     - hash: 3afa0b6ba7d5d6fd32391c473c44489c09034c81
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins-build.sh: Generalized target image names'
+      subject: "jenkins-build.sh: Generalized target image names"
       body: >-
         Do not assume that the target image to push is always a resin-image.
         This
@@ -2145,13 +2143,11 @@
       author: Alex Gonzalez
       footers:
         change-type: patch
-        changelog-entry: >-
-          The jenkins_build script will now preserve the deploy folder too when
-          the preserve build flag is set.
+        changelog-entry: The jenkins_build script will now preserve the deploy folder
+          too when the preserve build flag is set.
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: >-
-        jenkins_build: Also preserve deploy folder if preserve build is
-        requested
+      subject: "jenkins_build: Also preserve deploy folder if preserve build is
+        requested"
       body: |-
         Currently the deploy folder is always erased even if the preserve build
         flag is set. For cases where there are several steps in the build, we
@@ -2161,16 +2157,15 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins-build: Correct build flavor usage'
+      subject: "jenkins-build: Correct build flavor usage"
       body: The build flavor can only be production (prod) or development (dev).
     - hash: ce2c480150f74f85f6853dc0931030acf887e779
       author: Alex Gonzalez
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: >-
-        prepare-and-start: Login to Balena's registry if credentials are
-        provided
+      subject: "prepare-and-start: Login to Balena's registry if credentials are
+        provided"
       body: |-
         In order to pull from Balena's registry the docker client needs to login
         first.
@@ -2179,9 +2174,8 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: >-
-        jenkins-build: Allow the build container to authenticate with the
-        registry
+      subject: "jenkins-build: Allow the build container to authenticate with the
+        registry"
       body: |-
         This is required for the Yocto build process to pull images from the
         hostapp extensions apps in the Balena registry.
@@ -2190,7 +2184,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins_build: Parametrize the docker registry repository'
+      subject: "jenkins_build: Parametrize the docker registry repository"
       body: |-
         This allows to test with images of a different registry and will also
         make it easy to remove the use of resin in the future.
@@ -2199,7 +2193,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'jenkins_build_containers: Extract repository name into variable'
+      subject: "jenkins_build_containers: Extract repository name into variable"
       body: This allows to easily replace the target repository.
     - hash: 346abf9ee5ff8c27a652773308c32862689cf6ee
       author: Alex Gonzalez
@@ -2207,7 +2201,7 @@
         change-type: patch
         changelog-entry: Update Ubuntu version on balena-push-env helper container image
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'Dockerfile_balena-push-env: Update Ubuntu version'
+      subject: "Dockerfile_balena-push-env: Update Ubuntu version"
       body: |-
         This is required so that this image can be used as a base of the hostext
         one which needs to build opkg.
@@ -2219,7 +2213,7 @@
       footers:
         change-type: patch
         signed-off-by: Kyle Harding <kyle@balena.io>
-      subject: 'jenkins: compress test suites inside jenkins artifacts'
+      subject: "jenkins: compress test suites inside jenkins artifacts"
       body: null
 - version: 1.9.3
   date: 2021-02-16T13:17:02.000Z
@@ -2244,7 +2238,7 @@
       footers:
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
-      subject: 'esr: Add branch creation automation script'
+      subject: "esr: Add branch creation automation script"
       body: null
 - version: 1.9.1
   date: 2021-02-11T15:04:18.000Z
@@ -2254,7 +2248,7 @@
       footers:
         change-type: patch
         signed-off-by: Kyle Harding <kyle@balena.io>
-      subject: 'jenkins: deploy test suite from meta-balena'
+      subject: "jenkins: deploy test suite from meta-balena"
       body: |-
         If leviathan test suites are found in the checkout of
         meta-balena we should package them up with the jenkins artifacts.
@@ -2276,7 +2270,7 @@
       footers:
         change-type: patch
         signed-off-by: Joseph Kogut <joseph@balena.io>
-      subject: 'build-device-type-json: show stderr on failure'
+      subject: "build-device-type-json: show stderr on failure"
       body: |-
         When building a device type JSON manifest, any syntax error is handled
         by printing a message about node being unavailable, even when it's
@@ -2292,7 +2286,7 @@
       footers:
         change-type: patch
         signed-off-by: Alexandru Costache <alexandru@balena.io>
-      subject: 'README: Remove resin occurrences in documentation'
+      subject: "README: Remove resin occurrences in documentation"
       body: null
 - version: 1.8.0
   date: 2020-06-22T13:59:41.000Z
@@ -2302,8 +2296,7 @@
       footers:
         change-type: minor
         signed-off-by: Giovanni Garufi <giovanni@balena.io>
-      subject: >-
-        Push images to S3 as the first step, and then create the docker and
+      subject: Push images to S3 as the first step, and then create the docker and
         balena
       body: resources
 - version: 1.7.2
@@ -2358,7 +2351,7 @@
       footers:
         change-type: patch
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'jenkins_build.sh: Fix passing additional argument to barys'
+      subject: "jenkins_build.sh: Fix passing additional argument to barys"
       body: null
 - version: 1.5.5
   date: 2020-02-28T16:29:17.000Z
@@ -2368,7 +2361,7 @@
       footers:
         change-type: patch
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'jenkins_build.sh: Allow for passing additional arguments to barys'
+      subject: "jenkins_build.sh: Allow for passing additional arguments to barys"
       body: |-
         This is useful for passing SD8887_FROM_SOURCE=1 for example so that
         the Balena Fin Jenkins job will compile the wifi and bt driver from
@@ -2380,11 +2373,11 @@
       author: Thodoris Greasidis
       footers:
         change-type: patch
-        connects-to: '#166'
-        hq: 'https://github.com/balena-io/balena/issues/1818'
-        see: 'https://github.com/bloomreach/s4cmd#--api-contenttypestring'
+        connects-to: "#166"
+        hq: https://github.com/balena-io/balena/issues/1818
+        see: https://github.com/bloomreach/s4cmd#--api-contenttypestring
         signed-off-by: Thodoris Greasidis <thodoris@balena.io>
-      subject: 'jenkins_build.sh: Set a content-type to the device type''s logo.svg'
+      subject: "jenkins_build.sh: Set a content-type to the device type's logo.svg"
       body: |-
         This is needed so that browsers can load the logo.
         Since s4cmd doesn't have a `modify` command, I
@@ -2486,20 +2479,17 @@
       footers:
         change-type: patch
         signed-off-by: Gergely Imreh <gergely@balena.io>
-      subject: 'barys: correctly apply SUPERVISOR_TAG variable in local.conf'
+      subject: "barys: correctly apply SUPERVISOR_TAG variable in local.conf"
       body: >-
         Setting `--supervisor-tag` to enable building for a specific supervisor
 
         tag sets the `SUPERVISOR_TAG` value. That is the correct variable
 
-        to set according to meta-balena (see at
-        https://github.com/balena-os/meta-balena/blob/8d5057b45e1965e6c27c03a95d2211ae47842331/meta-balena-common/recipes-containers/resin-supervisor/resin-supervisor.inc#L20
-        )
+        to set according to meta-balena (see at https://github.com/balena-os/meta-balena/blob/8d5057b45e1965e6c27c03a95d2211ae47842331/meta-balena-common/recipes-containers/resin-supervisor/resin-supervisor.inc#L20 )
 
         but in the device types' `local.conf.sample` the `TARGET_TAG` variable
 
-        was set, see for example
-        https://github.com/balena-os/balena-raspberrypi/blob/078b0add0345e94f27c15d98256f8c7b61b66761/layers/meta-balena-raspberrypi/conf/samples/local.conf.sample#L45-L46
+        was set, see for example https://github.com/balena-os/balena-raspberrypi/blob/078b0add0345e94f27c15d98256f8c7b61b66761/layers/meta-balena-raspberrypi/conf/samples/local.conf.sample#L45-L46
 
         and thus barys' setting was not applied.
 
@@ -2511,14 +2501,11 @@
 
         With this change this can be implemented in two steps:
 
-        * the current PR updates `SUPERVISOR_TAG` if exists or appends if it
-        doesn't (or the
+        * the current PR updates `SUPERVISOR_TAG` if exists or appends if it doesn't (or the
 
-        update has failed) in local.conf and allows using the relevant barys
-        flag again
+        update has failed) in local.conf and allows using the relevant barys flag again
 
-        * in other per-device repo PRs then the `local.conf.example` can
-        separately updated,
+        * in other per-device repo PRs then the `local.conf.example` can separately updated,
 
         to be less misleading, on its own schedule
 - version: 1.3.7
@@ -2539,7 +2526,7 @@
       footers:
         change-type: patch
         signed-off-by: Sven Schwermer <sven.schwermer@disruptive-technologies.com>
-      subject: 'git: Ignore package-lock.json'
+      subject: "git: Ignore package-lock.json"
       body: |-
         Since this file seems to be generated by the barys script and it's not
         supposed to be checked in, let's ignore it.
@@ -2551,7 +2538,7 @@
       footers:
         change-type: patch
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'jenkins_build.sh: Use dsync instead of deprecated sync command'
+      subject: "jenkins_build.sh: Use dsync instead of deprecated sync command"
       body: |-
         The sync command is deprecated in s4cmd in favour of dsync. And also
         the existing deprecated sync command in s4cmd does the sync in a
@@ -2566,7 +2553,7 @@
       footers:
         change-type: patch
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'jenkins_build.sh: Use put command with -f for latest file'
+      subject: "jenkins_build.sh: Use put command with -f for latest file"
       body: |-
         We need to use -f (force overwrite) otherwise s4cmd fails:
         [Thread Failure] File already exists: <s3_bucket>/latest
@@ -2578,7 +2565,7 @@
       footers:
         change-type: patch
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'jenkins_build.sh: Use canned ACL and remove obsolete option'
+      subject: "jenkins_build.sh: Use canned ACL and remove obsolete option"
       body: |-
         Since s4cmd does not have the "--acl-public" option we use the new
         --API-ACL option that allows us to set canned ACLs for the objects
@@ -2594,7 +2581,7 @@
       footers:
         change-type: patch
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'jenkins_build.sh: Use s4cmd del command instead of rm'
+      subject: "jenkins_build.sh: Use s4cmd del command instead of rm"
       body: |-
         Since we switched from s3cmd to s4cmd we also need to use the
         del command because s4cmd lacks the rm command.
@@ -2606,7 +2593,7 @@
       footers:
         change-type: patch
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'jenkins_build.sh: Use new s4cmd params for accessing s3'
+      subject: "jenkins_build.sh: Use new s4cmd params for accessing s3"
       body: null
 - version: 1.3.0
   date: 2019-07-12T10:15:47.000Z
@@ -2616,7 +2603,7 @@
       footers:
         change-type: minor
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'jenkins_build.sh: Switch s3cmd with s4cmd'
+      subject: "jenkins_build.sh: Switch s3cmd with s4cmd"
       body: |-
         The resin-img docker image has changed to open-balena-base 8.0.0
         which in turn is based on debian:buster. This version of debian
@@ -2634,7 +2621,7 @@
       footers:
         change-type: patch
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'jenkins_build.sh: Rename device type icon to logo.svg'
+      subject: "jenkins_build.sh: Rename device type icon to logo.svg"
       body: null
 - version: 1.2.2
   date: 2019-06-24T11:18:36.000Z
@@ -2645,7 +2632,7 @@
         change-type: patch
         changelog-entry: Deploy the device type logo so the UI can pick it up
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'jenkins_build.sh: Deploy the device type logo'
+      subject: "jenkins_build.sh: Deploy the device type logo"
       body: This is needed so that the UI can pick it up.
 - version: 1.2.1
   date: 2019-06-19T12:32:53.000Z
@@ -2656,13 +2643,12 @@
         change-type: patch
         changelog-entry: Do not error if the kernel headers are not generated
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'jenkins_build.sh: Do not error if the kernel headers are not generated'
+      subject: "jenkins_build.sh: Do not error if the kernel headers are not generated"
       body: >-
         We have customers that do not want to have the kernel modules headers
         generated.
 
-        So let's make sure the deploy won't fail when these headers are not
-        present.
+        So let's make sure the deploy won't fail when these headers are not present.
 - version: 1.2.0
   date: 2019-05-30T15:47:27.000Z
   commits:
@@ -2683,7 +2669,7 @@
       footers:
         change-type: patch
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'jenkins_build.sh: Use correct bash variable assignment'
+      subject: "jenkins_build.sh: Use correct bash variable assignment"
       body: null
 - version: 1.1.0
   date: 2019-05-20T15:45:21.000Z
@@ -2713,7 +2699,7 @@
       footers:
         change-type: patch
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'jenkins_build.sh: Replace meta-resin reference with meta-balena'
+      subject: "jenkins_build.sh: Replace meta-resin reference with meta-balena"
       body: The meta-resin layer is now renamed to meta-balena
 - version: 1.0.4
   date: 2019-04-09T09:27:26.000Z
@@ -2724,7 +2710,7 @@
         change-type: patch
         changelog-entry: Parse by meta-balena- instead of by meta-resin-
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'barys: Parse by meta-balena-'
+      subject: "barys: Parse by meta-balena-"
       body: |-
         Now that meta-resin is renamed to meta-balena we do
         the same change here.
@@ -2737,7 +2723,7 @@
         change-type: patch
         changelog-entry: Also deploy kernel source tarball
         signed-off-by: Zubair Lutfullah Kakakhel <zubair@balena.io>
-      subject: 'jenkins_build.sh: Deploy the kernel source tarball as well.'
+      subject: "jenkins_build.sh: Deploy the kernel source tarball as well."
       body: |-
         After https://github.com/balena-os/meta-balena/pull/1328 is merged,
         the kernel_source tarball will also be created and be available.
@@ -2760,7 +2746,7 @@
         change-type: patch
         changelog-entry: Add error check for the in-container bash code
         signed-off-by: Florin Sarbu <florin@balena.io>
-      subject: 'jenkins_build.sh: Add error check for the in-container bash code'
+      subject: "jenkins_build.sh: Add error check for the in-container bash code"
       body: |-
         The in-container bash code can also error so we need to make sure
         we propagate this error outside the container so Jenkins fails and
@@ -2783,8 +2769,7 @@
       footers:
         signed-off-by: Florin Sarbu <florin@balena.io>
       subject: Allow to build a custom "production" resinos image
-      body: >-
-        We can already set the --development-image flag for barys to build a
+      body: We can already set the --development-image flag for barys to build a
         development image
     - hash: 588c6a784ae8f1a397070762366b1622f5663f4b
       author: Lucian Buzzo
@@ -2797,13 +2782,13 @@
       footers:
         change-type: patch
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'barys: Set SUPERVISOR_TAG when using a custom supervisor tag'
+      subject: "barys: Set SUPERVISOR_TAG when using a custom supervisor tag"
       body: null
     - hash: dc5b2eedaf8dfe9fddae3b89781829710b3d39d5
       author: Lucian Buzzo
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: 'package.json: Update device-types package to latest version'
+      subject: "package.json: Update device-types package to latest version"
       body: |-
         [Issue resin-os/resinos#403]
         Improve commoninstructions for installing resinOS on a device
@@ -2811,7 +2796,7 @@
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: 'jenkins_build.sh: Fix typo when using the deployTo variable'
+      subject: "jenkins_build.sh: Fix typo when using the deployTo variable"
       body: null
     - hash: 8e2cd0e10f25b3796911c1d3f79f52b84bd84ed5
       author: Theodor Gherzan
@@ -2829,7 +2814,7 @@
       author: Will Newton
       footers:
         signed-off-by: Will Newton <willn@resin.io>
-      subject: 'build/package.json: Set a valid license'
+      subject: "build/package.json: Set a valid license"
       body: |-
         This fixes a warning during builds and also makes the code license
         clearer.
@@ -2837,23 +2822,21 @@
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: >-
-        jenkins_build.sh: Deploy docker artifact and push it to dockerhub for
-        staging too
+      subject: "jenkins_build.sh: Deploy docker artifact and push it to dockerhub for
+        staging too"
       body: null
     - hash: 49d5f58ae3f9037b35c6fbc10fbfac61fa6f2d4c
       author: Will Newton
       footers:
         signed-off-by: Will Newton <willn@resin.io>
-      subject: 'build-device-type-json.sh: Make npm failures louder'
+      subject: "build-device-type-json.sh: Make npm failures louder"
       body: Currently if npm fails it is difficult to debug.
     - hash: 5b4cae640649fe8f0743149921d55a1514498601
       author: Oleksiy Protas
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
       subject: Allow empty values to -a
-      body: >-
-        The format checker now only checks if there is an equality sign and
+      body: The format checker now only checks if there is an equality sign and
         something like an identifier to the left.
     - hash: 7d43cbbe597e348aca567619c971e74c60505f03
       author: Petros Angelatos
@@ -2865,7 +2848,7 @@
       author: Will Newton
       footers:
         signed-off-by: Will Newton <willn@resin.io>
-      subject: 'automation/jenkins_build.sh: Pull yocto-build-env'
+      subject: "automation/jenkins_build.sh: Pull yocto-build-env"
       body: |-
         Do a docker pull on the resin/yocto-build-env image before
         starting the build. This means we always get the latest version
@@ -2874,13 +2857,12 @@
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: 'Dockerfile_yocto-build-env: Use correct ubuntu package name for ping'
-      body: >-
-        Package ping is a virtual package so we use the actual provider called
+      subject: "Dockerfile_yocto-build-env: Use correct ubuntu package name for ping"
+      body: Package ping is a virtual package so we use the actual provider called
         iputils-ping
     - hash: e4ca4def12b3ad99de45d27716d944a836b88ad7
       author: Florin Sarbu
-      subject: 'jenkins_yocto-build-env.sh: Remove obsolete -f flag'
+      subject: "jenkins_yocto-build-env.sh: Remove obsolete -f flag"
       body: The -f flag has been obsoleted since docker 1.12.x
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
@@ -2888,7 +2870,7 @@
       author: Will Newton
       footers:
         signed-off-by: Will Newton <willn@resin.io>
-      subject: 'automation/jenkins_yocto-build-env.sh: Get revision directly'
+      subject: "automation/jenkins_yocto-build-env.sh: Get revision directly"
       body: |-
         Get the current short commit ID by calling git rather than
         relying on Jenkins to inject the variable.
@@ -2896,7 +2878,7 @@
       author: Will Newton
       footers:
         signed-off-by: Will Newton <willn@resin.io>
-      subject: 'Dockerfile_yocto-build-env: Add some packages for Pyro'
+      subject: "Dockerfile_yocto-build-env: Add some packages for Pyro"
       body: |-
         The Yocto Pyro build process is more strict about which packages
         it requires, add packages for: ip, ping, scp, ssh
@@ -2904,7 +2886,7 @@
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: 'jenkins_build.sh: Allow non-jenkins docker container builds'
+      subject: "jenkins_build.sh: Allow non-jenkins docker container builds"
       body: >-
         jenkins_build.sh should also be able to run outside of the jenkins
         environment
@@ -2914,13 +2896,13 @@
       author: Will Newton
       footers:
         signed-off-by: Will Newton <willn@resin.io>
-      subject: 'build/barys: Add --build-history flag'
+      subject: "build/barys: Add --build-history flag"
       body: Allow enabling the Yocto build history feature from barys.
     - hash: 852a4de786802ac314247e7e82e24787cbf2e90d
       author: Will Newton
       footers:
         signed-off-by: Will Newton <willn@resin.io>
-      subject: 'build/barys: Set supervisor tag last'
+      subject: "build/barys: Set supervisor tag last"
       body: |-
         Set the supervisor tag value in local.conf after setting the
         default value in order to avoid the value being overwritten.
@@ -2928,7 +2910,7 @@
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'barys: Add more information for dry run flag'
+      subject: "barys: Add more information for dry run flag"
       body: Fix a typo too.
     - hash: 58a804bab17b7a18b7ee173000c4dd648942c382
       author: Michal Mazurek
@@ -2940,7 +2922,7 @@
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: 'jenkins_build.sh: Also deploy non-flasher images'
+      subject: "jenkins_build.sh: Also deploy non-flasher images"
       body: null
     - hash: 0adbfc6accab03aeb887d5894021f01136d2fd0d
       author: Michal Mazurek
@@ -2952,60 +2934,52 @@
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: 'Dockerfile_yocto-build-env: Do not include SDL'
+      subject: "Dockerfile_yocto-build-env: Do not include SDL"
       body: >-
         Yocto Morty can build a libsdl-native so there is no need for it in the
         docker image.
 
-        Also we install python 2.7 as it is explicitly needed by some packages.
-        E.g. xcb-proto-native
+        Also we install python 2.7 as it is explicitly needed by some packages. E.g. xcb-proto-native
     - hash: 162d603654b26dadba4d6e5228ef485b594d9fa5
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: >-
-        Dockerfile_yocto-build-env: Update docker base image to ubuntu 16.04
-        (LTS)
+      subject: "Dockerfile_yocto-build-env: Update docker base image to ubuntu 16.04
+        (LTS)"
       body: >-
         Also update nodejs to v8 and remove npm from being installed as the
         nodejs package
 
-        now contains the npm binary and it will conflict when "apt get
-        install"-ing npm.
+        now contains the npm binary and it will conflict when "apt get install"-ing npm.
 
-        We also need to install the "locales" package as it has been removed
-        from the ubuntu 16.04
+        We also need to install the "locales" package as it has been removed from the ubuntu 16.04
 
         base image in order to reduce the base image size.
     - hash: f32783271d86a7d9fc54c1c851de3c456c40ee37
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: 'Dockerfile_yocto-build-env: Add npm to yocto-build-env image'
-      body: >-
-        We need npm when building the yocto image for the .json generation
+      subject: "Dockerfile_yocto-build-env: Add npm to yocto-build-env image"
+      body: We need npm when building the yocto image for the .json generation
         routine.
     - hash: 9dd35ab50e700ef456f39723cc5e14e96d3c1eab
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: >-
-        jenkins_yocto-build-env.sh: Invalidate cache when building the
-        yocto-build-env docker image.
+      subject: "jenkins_yocto-build-env.sh: Invalidate cache when building the
+        yocto-build-env docker image."
       body: >-
         We specify "--no-cache" when building the yocto-build-env docker image
         to get rid of errors during "docker run" such as this one:
 
-        Error response from daemon: could not find image: no such id:
-        e34890d8e9bcb92938c0891f792b32bd83eec3ad1d50dad90eea779980e09664
+        Error response from daemon: could not find image: no such id: e34890d8e9bcb92938c0891f792b32bd83eec3ad1d50dad90eea779980e09664
 
-        where e34890d8e9bcb92938c0891f792b32bd83eec3ad1d50dad90eea779980e09664
-        does not exist on the machine doing the "docker run".
+        where e34890d8e9bcb92938c0891f792b32bd83eec3ad1d50dad90eea779980e09664 does not exist on the machine doing the "docker run".
     - hash: 4cd73f4b6ecb6dad5c0c4a12ced1c7077f272a32
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: 'jenkins_build.sh: Handle partial deploys'
+      subject: "jenkins_build.sh: Handle partial deploys"
       body: |-
         There may be cases where deployment is not fully done (network
         errors for example). In such cases, we force the redeployment.
@@ -3013,28 +2987,23 @@
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: 'jenkins_build.sh: Do not error out when deployment has been already done'
+      subject: "jenkins_build.sh: Do not error out when deployment has been already
+        done"
       body: >-
         Currently we call this script from Jenkins 4 times in a row: for managed
         production build,
 
-        for managed development build, for unmanaged production build and for
-        unmanaged development
+        for managed development build, for unmanaged production build and for unmanaged development
 
-        build. For various reasons related to the Jenkins environment and not
-        only, one of these builds
+        build. For various reasons related to the Jenkins environment and not only, one of these builds
 
-        can fail. If the second, third or fourth of these builds fail, when
-        retriggering the upstream
+        can fail. If the second, third or fourth of these builds fail, when retriggering the upstream
 
-        Jenkins job to redo the deployment it will error out on the code
-        highlighted here complaining that
+        Jenkins job to redo the deployment it will error out on the code highlighted here complaining that
 
-        deployment is done. That should not be an error and it should only throw
-        a warning and continue with
+        deployment is done. That should not be an error and it should only throw a warning and continue with
 
-        the rest of the downstream build jobs to finish deploying successfully
-        all the resin build flavours.
+        the rest of the downstream build jobs to finish deploying successfully all the resin build flavours.
     - hash: 3189445fe8a3d3eb59532a2f3bca2a36a3af0856
       author: Florin Sarbu
       footers:
@@ -3045,8 +3014,7 @@
 
         "cannot enable tty mode on non tty input"
 
-        We also add the "--rm" flag to automatically remove the container when
-        it exits
+        We also add the "--rm" flag to automatically remove the container when it exits
 
         as it makes no sense for it to be running after exiting.
     - hash: 4dc4b2d917077cdd00dc5db26d531ea968020e04
@@ -3065,7 +3033,7 @@
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'generate-conf-notes.sh: Minor tweaks'
+      subject: "generate-conf-notes.sh: Minor tweaks"
       body: |-
         Fix commands output for longer machine description.
         Replace ASCI art with ResinOS.
@@ -3073,13 +3041,13 @@
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: 'jenkins_build.sh: Copy to path expected by the resin image maker'
+      subject: "jenkins_build.sh: Copy to path expected by the resin image maker"
       body: null
     - hash: f3a734e1d4377e9100fb35d3054e704c6ca94bc8
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: 'jenkins_build.sh: Copy just the contents of a directory'
+      subject: "jenkins_build.sh: Copy just the contents of a directory"
       body: |-
         for an archived build, not the whole directory
         The image maker expects the contents of the build dir artifacts to be in
@@ -3088,9 +3056,8 @@
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: >-
-        jenkins_build.sh: Copy recursively when dealing with archived build
-        artifacts
+      subject: "jenkins_build.sh: Copy recursively when dealing with archived build
+        artifacts"
       body: >-
         Archived build artifacts flagging means we are dealing with a directory
         so we
@@ -3100,13 +3067,13 @@
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: Use prod as version suffix for production images'
-      body: 'Fixes https://github.com/resin-os/resinos/issues/310'
+      subject: "jenkins_build.sh: Use prod as version suffix for production images"
+      body: Fixes https://github.com/resin-os/resinos/issues/310
     - hash: 1f997a81691f78cbe30e716a9eec44ff7c57d3b0
       author: Michal Mazurek
       footers:
         signed-off-by: Michal Mazurek <michal@resin.io>
-      subject: 'barys: reset, don''t append, additional variables'
+      subject: "barys: reset, don't append, additional variables"
       body: |-
         Currently barys will append local variables to conf/local.conf each time
         it's run, leading to a long repeated list after a couple of runs.
@@ -3115,28 +3082,26 @@
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: >-
-        automation/jenkins_build.sh: Add message when build has already been
-        deployed
+      subject: "automation/jenkins_build.sh: Add message when build has already been
+        deployed"
       body: null
     - hash: 170a8f02560e65b6f3ebcf3bbab8bafa45c0452e
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: 'automation/jenkins_build.sh: Allow checkout of forked pull requests'
+      subject: "automation/jenkins_build.sh: Allow checkout of forked pull requests"
       body: >-
         When we checkout a meta-resin revision for building we must also take
         into
 
-        consideration that such a revision might be from an external
-        contributor's
+        consideration that such a revision might be from an external contributor's
 
         fork sent as a pull request.
     - hash: a919b62e1b718cc123338b3a287d97ae1754ad00
       author: Will Newton
       footers:
         signed-off-by: Will Newton <willn@resin.io>
-      subject: 'automation/jenkins_build.sh: Simplify git checkout'
+      subject: "automation/jenkins_build.sh: Simplify git checkout"
       body: |-
         Remove explicit use of origin namespace when checking out
         meta-resin. If we want to specify a revision using a SHA1
@@ -3145,13 +3110,13 @@
       author: Will Newton
       footers:
         signed-off-by: Will Newton <willn@resin.io>
-      subject: 'automation/jenkins_build.sh: Remove unused variables'
+      subject: "automation/jenkins_build.sh: Remove unused variables"
       body: These don't seem to be used anywhere.
     - hash: 63258fb9c65833729a7df21ff09d6ec02bcc0bfe
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: 'jenkins_build.sh: Pass SSH_AUTH_SOCK to build container'
+      subject: "jenkins_build.sh: Pass SSH_AUTH_SOCK to build container"
       body: |-
         We need the SSH_AUTH_SOCK variable to be passed from the host
         environment right through to the build container so that various
@@ -3165,23 +3130,21 @@
         We need the user "builder" in the docker build container to be able to
         use
 
-        the host SSH keys (we need to be able to clone private git repositories
-        using
+        the host SSH keys (we need to be able to clone private git repositories using
 
         the SSH protocol for example).
     - hash: c4e2cc81c5f62525830f11de967cb29d62383890
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: >-
-        jenkins_build.sh: resin-img generates files in the name of the current
-        user
+      subject: "jenkins_build.sh: resin-img generates files in the name of the current
+        user"
       body: In this way we avoid any permissions errors afterwards.
     - hash: 9ac69e7a9fed12952967d9a554aab260aa2ab5d4
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: Make sure IGNORE is writable'
+      subject: "jenkins_build.sh: Make sure IGNORE is writable"
       body: null
     - hash: 86da4bfd7157cb3aae8ca2352c756e6527e52241
       author: Michal Mazurek
@@ -3257,21 +3220,20 @@
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: Use zip from compressing images'
+      subject: "jenkins_build.sh: Use zip from compressing images"
       body: null
     - hash: ccb2dd561b3ad1d23cc7b30382da4de4346bb1fa
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: Push resinhup images only for managed ones'
+      subject: "jenkins_build.sh: Push resinhup images only for managed ones"
       body: null
     - hash: 86acb9eea2f25724dcece5b2675bfb42df9ec81e
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: >-
-        jenkins_build.sh: Always locally create latest but upload it only for
-        nondev images
+      subject: "jenkins_build.sh: Always locally create latest but upload it only for
+        nondev images"
       body: |-
         If latest doesn't exist the compressed partitions will not get
         generated. So make sure it always exists but only push it if we are
@@ -3280,37 +3242,37 @@
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: prepare.coffee depends on latest file'
+      subject: "jenkins_build.sh: prepare.coffee depends on latest file"
       body: null
     - hash: baa2c0713a93c6a7148b79339cc06eb6cb8e10b9
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: Set latest in the container'
+      subject: "jenkins_build.sh: Set latest in the container"
       body: null
     - hash: 7730e8a61c8659718bb1a950975645fafbd61601
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: Expect resinhup only in managed/nondev'
+      subject: "jenkins_build.sh: Expect resinhup only in managed/nondev"
       body: null
     - hash: e7f2968651d82918d09c9e7b7607e782468f5e77
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: Use only non development images as ''latest'''
+      subject: "jenkins_build.sh: Use only non development images as 'latest'"
       body: null
     - hash: 33f5a4500dc7e984e021c5eb02b7657838ee67ae
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: Deploy to s3 and support build flavors'
+      subject: "jenkins_build.sh: Deploy to s3 and support build flavors"
       body: null
     - hash: 9943be3b9b883a3c6e697ac051481d272542a601
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: Make sure the docker registry tags are valid'
+      subject: "jenkins_build.sh: Make sure the docker registry tags are valid"
       body: >-
         The docker registry tags need to satisfy the following regex:
 
@@ -3323,11 +3285,11 @@
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'barys: Rename RESIN_SDIMG_COMPRESSION -> RESIN_RAW_IMG_COMPRESSION'
+      subject: "barys: Rename RESIN_SDIMG_COMPRESSION -> RESIN_RAW_IMG_COMPRESSION"
       body: Follow resinOS change.
     - hash: 20e8c450d67cd7eac5b525d75e6a79255087c0bf
       author: Andrei Gherzan
-      subject: 'barys.changelog: Add entry for this patch set'
+      subject: "barys.changelog: Add entry for this patch set"
       body: null
     - hash: 4680466e601301229720b98565a214b376a2302c
       author: Florin Sarbu
@@ -3341,8 +3303,7 @@
 
         Please use a locale setting which supports utf-8.
 
-        Python can't change the filesystem locale after loading so we need a
-        utf-8 when python starts or things won't work.
+        Python can't change the filesystem locale after loading so we need a utf-8 when python starts or things won't work.
     - hash: 0ff791aa8555dca97add210ed4ae993f5c0ea56d
       author: Florin Sarbu
       footers:
@@ -3355,17 +3316,15 @@
       author: Michal Mazurek
       footers:
         signed-off-by: Michal Mazurek <michal@resin.io>
-      subject: >-
-        jenkins_build.sh: Upload production resinhup packages to
-        registry.resinstaging.io
+      subject: "jenkins_build.sh: Upload production resinhup packages to
+        registry.resinstaging.io"
       body: null
     - hash: 17270977d7f7f7bbf165f6cbd682aabb85a208e4
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: >-
-        jenkins_build.sh: Don't allocate a pseudo-tty when running docker
-        container
+      subject: "jenkins_build.sh: Don't allocate a pseudo-tty when running docker
+        container"
       body: >-
         Not having a tty allocated and available, yocto build will revert to
         plain text
@@ -3375,45 +3334,44 @@
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'barys: Implement ability to inject random variables in local.conf'
+      subject: "barys: Implement ability to inject random variables in local.conf"
       body: null
     - hash: e75f76302bde36b086ffc2a0a7b1c2ea441e6e53
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'barys: Implement --resinio and default to resinos build configuration'
+      subject: "barys: Implement --resinio and default to resinos build configuration"
       body: null
     - hash: 83d0cfcef3e9ae58284e379af6d588d3a98107bb
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: Run resinio builds with this script'
+      subject: "jenkins_build.sh: Run resinio builds with this script"
       body: null
     - hash: 09bf6b6ff289893b56051163d06033fda85747a6
       author: Theodor Gherzan
       footers:
         signed-off-by: Theodor Gherzan <theodor@gherzan.ro>
-      subject: 'barys: Replace DEBUG_IMAGE with DEVELOPMENT_IMAGE'
+      subject: "barys: Replace DEBUG_IMAGE with DEVELOPMENT_IMAGE"
       body: null
     - hash: 966a03552bf4bedc42baf24c24cd64d1592300cb
       author: Theodor Gherzan
       footers:
         signed-off-by: Theodor Gherzan <theodor@gherzan.ro>
-      subject: 'jenkins_buid.sh: Replace DEBUG_IMAGE with DEVELOPMENT_IMAGE'
+      subject: "jenkins_buid.sh: Replace DEBUG_IMAGE with DEVELOPMENT_IMAGE"
       body: null
     - hash: f40b910b27cea2aeebd3efc3636e842a1b798287
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: kernel_modules_headers is now filtered through gzip'
+      subject: "jenkins_build.sh: kernel_modules_headers is now filtered through gzip"
       body: null
     - hash: 518e12d279c07ffc5dda9dc4efb8cf620b84e2b8
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: >-
-        jenkins_build.sh: Upload to dockerhub resinhup packages for production
-        builds
+      subject: "jenkins_build.sh: Upload to dockerhub resinhup packages for production
+        builds"
       body: null
     - hash: 9e54267222225ca6a82847b825d450e23b7820d1
       author: Eugene Mirotin
@@ -3429,7 +3387,7 @@
       author: Florin Sarbu
       footers:
         signed-off-by: Florin Sarbu <florin@resin.io>
-      subject: 'jenkins_build.sh: Deploy kernel_modules_headers.tar.bz2'
+      subject: "jenkins_build.sh: Deploy kernel_modules_headers.tar.bz2"
       body: We need this archive exposed as a Jenkins build artifact
     - hash: 5af3cf06aa0e26846f6f657b3b555d35ef84e311
       author: Michal Mazurek
@@ -3441,7 +3399,7 @@
       author: Michal Mazurek
       footers:
         signed-off-by: Michal Mazurek <michal@resin.io>
-      subject: 'build-device-type-json.sh: make this work on ubuntu'
+      subject: "build-device-type-json.sh: make this work on ubuntu"
       body: |-
         Some package managers install nodejs as 'node', while others as
         'nodejs'.
@@ -3450,98 +3408,94 @@
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'barys: Clarify invalid argument reason'
+      subject: "barys: Clarify invalid argument reason"
       body: null
     - hash: 0732b09f939da65e9e7b48b572d4fb0667974daf
       author: Praneeth
       footers:
         signed-off-by: Praneeth <lifeeth@gmail.com>
-      subject: >-
-        jenkins_build.sh: Add a env ENABLE_TESTS - that allows for disabling of
-        tests or overriding in specific cases.
+      subject: "jenkins_build.sh: Add a env ENABLE_TESTS - that allows for disabling
+        of tests or overriding in specific cases."
       body: null
     - hash: 0a8c5f4c7ea70cf2e4a737713f74f86bc2fd3379
       author: Praneeth
       footers:
         signed-off-by: Praneeth <lifeeth@gmail.com>
-      subject: 'jenkins_build.sh: Add ability to run a device type specific test script.'
+      subject: "jenkins_build.sh: Add ability to run a device type specific test
+        script."
       body: This script is located in the device repository at tests/start.sh
     - hash: 4ee9cc9217aec0192910d1fe8e111de9f38f4bee
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: Run debug images based on env variable'
+      subject: "jenkins_build.sh: Run debug images based on env variable"
       body: null
     - hash: f13d3b751ffe994a254cdc17d5e74a97381f35fe
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: --staging was replaced by --debug-image'
+      subject: "jenkins_build.sh: --staging was replaced by --debug-image"
       body: null
     - hash: 4b13456c5f0f1a5ee0507df49b9d76566a136e04
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'barys: Replace RESIN_STAGING_BUILD by DEBUG_IMAGE'
+      subject: "barys: Replace RESIN_STAGING_BUILD by DEBUG_IMAGE"
       body: null
     - hash: bde025432e1ec125befa86ac1f00838c772de853
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'barys: Don''t default supervisor tag to production'
+      subject: "barys: Don't default supervisor tag to production"
       body: null
     - hash: de6ca4d930af5ad0a2aa11be6b0f5320369241dc
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: Use supervisor tag only if it is not ignored'
+      subject: "jenkins_build.sh: Use supervisor tag only if it is not ignored"
       body: null
     - hash: 02002cc986e7ebafc2dfb37fbc5dfdd78ff55df2
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'prepare-and-start.sh: First create current group and then docker'
+      subject: "prepare-and-start.sh: First create current group and then docker"
       body: >-
         We create two groups right now: one for docker and one for the
 
-        user running the script (to avoid any permission issues). The docker
-        group
+        user running the script (to avoid any permission issues). The docker group
 
-        is created without specifying the GID so it will take the first
-        available one
+        is created without specifying the GID so it will take the first available one
 
         (in container that is 1000). The user GID can be anything from 1000 up.
 
-        If the user has GID 1000 and we first create docker group (this will
-        take 1000)
+        If the user has GID 1000 and we first create docker group (this will take 1000)
 
-        and then the user group (1000), we will get an error. Avoid this by
-        creating
+        and then the user group (1000), we will get an error. Avoid this by creating
 
         the current user group first and then the docker one.
     - hash: ab5ed5eaec59d6e585df6e0b15c2f5518c308003
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'Dockerfile: Rename to Dockerfile_yocto-build-env for clarity'
+      subject: "Dockerfile: Rename to Dockerfile_yocto-build-env for clarity"
       body: null
     - hash: e6c24852dcc9d033e6a1c78c5a06d4e800a92a7c
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_yocto-build-env.sh: Add script for jenkins build'
+      subject: "jenkins_yocto-build-env.sh: Add script for jenkins build"
       body: null
     - hash: fabe632b18113db9ba9c450989e5b105c1bcf0ff
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'Dockerfile: Add docker file for yocto-build-env images'
+      subject: "Dockerfile: Add docker file for yocto-build-env images"
       body: null
     - hash: 6b7096bd6eb49c341eae7f096061260bd04121ad
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'prepare-and-start.sh: Add entrypoint for yocto-build-env images'
+      subject: "prepare-and-start.sh: Add entrypoint for yocto-build-env images"
       body: |-
         This script gets all the arguments for barys, deals with all the
         prerequisites for resin yocto builds and then passes over the
@@ -3550,36 +3504,34 @@
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: Run barys in yocto-build-env docker image'
+      subject: "jenkins_build.sh: Run barys in yocto-build-env docker image"
       body: As well there were some minor tweaks added.
     - hash: a871e114061ff2628db4e9b3d7fee9e23ed5d07e
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'Dockerfile: Verify downloaded docker binary'
+      subject: "Dockerfile: Verify downloaded docker binary"
       body: null
     - hash: e711e359e554903b1826b9bb7a981934241a24d0
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'barys: Update HARD ASSUMPTIONS section'
+      subject: "barys: Update HARD ASSUMPTIONS section"
       body: null
     - hash: 6cbe2b35bb94c111f79084c462cb96d58fc765ca
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'README.md: Add basic information'
+      subject: "README.md: Add basic information"
       body: null
     - hash: da8460b9bd7eede46d93660343dd5e1f6358e784
       author: Pagan Gazzard
-      subject: >-
-        Compress archives into the top level dir in the tar, rather than within
+      subject: Compress archives into the top level dir in the tar, rather than within
         a subdir.
       body: null
     - hash: c06810b56cd29a3dac90ac3f727909b80976d962
       author: Pagan Gazzard
-      subject: >-
-        Always create a tar.gz for compressed artifacts, since docker only
+      subject: Always create a tar.gz for compressed artifacts, since docker only
         automatically uncompresses tar files.
       body: null
     - hash: 7c68073f1db3e7194ba2efca3010ba1413174ca0
@@ -3590,15 +3542,15 @@
       author: Andrei Gherzan
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
-      subject: 'jenkins_build.sh: Remove build at the end'
+      subject: "jenkins_build.sh: Remove build at the end"
       body: null
     - hash: 0ac899ac68a2fc952bf2389e91fb99b7f0f92c18
       author: Pagan Gazzard
-      subject: 'jenkins_build.sh: Add support for compressed artifacts.'
+      subject: "jenkins_build.sh: Add support for compressed artifacts."
       body: null
     - hash: 160a6a8f180d09c49e7349c8b85a69a3aa203ad6
       author: Pagan Gazzard
-      subject: 'jenkins_build.sh: Add support for compressed archive artifacts.'
+      subject: "jenkins_build.sh: Add support for compressed archive artifacts."
       body: null
     - hash: ffd74225380dcacf0c2b1d7a1641e0eed18d2c40
     - hash: 668221a907dad53ea528fb5722b5959d1b1fa7c6
