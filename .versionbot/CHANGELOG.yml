@@ -1,4 +1,19 @@
 - commits:
+    - subject: "barys: Remove RESINHUP setting"
+      hash: 367f153009928f36de8edcd97a56d6f58b5d6773
+      body: |
+        This has now been removed from meta-balena.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.17.6
+  title: "'barys: Remove RESINHUP setting'"
+  date: 2022-03-08T19:00:31.730Z
+- commits:
     - subject: "balena-deploy: Avoid patching test suites config.js during deploy"
       hash: 21c27cd41cda7ee7f5041752cca1f79280c51a7e
       body: |
