@@ -64,6 +64,7 @@ fi
 
 APP_SUFFIX="${JSON_ARCH}"
 BALENA_PRELOAD_APP="cloud-config-${APP_SUFFIX}"
+BALENA_PRELOAD_COMMIT="${BALENA_PRELOAD_COMMIT:-current}"
 
 # shellcheck disable=SC1004
 # AWS_SESSION_TOKEN only needed if MFA is enabled for the account
