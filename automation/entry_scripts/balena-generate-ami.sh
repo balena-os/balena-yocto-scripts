@@ -23,6 +23,7 @@ ensure_all_env_variables_are_set() {
                          AMI_NAME
                          AMI_ARCHITECTURE
                          BALENA_PRELOAD_APP
+			 BALENA_PRELOAD_COMMIT
                          BALENARC_BALENA_URL
                          BALENACLI_TOKEN
                          PRELOAD_SSH_PUBKEY"
@@ -118,7 +119,7 @@ deploy_preload_app_to_image() {
     balena preload \
       --debug \
       --app "${BALENA_PRELOAD_APP}" \
-      --commit current \
+      --commit "${BALENA_PRELOAD_COMMIT}" \
       "${image}"
 }
 
