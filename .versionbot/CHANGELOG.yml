@@ -1,4 +1,21 @@
 - commits:
+    - subject: "jenkins_generate_ami: surface preload app commit as variable"
+      hash: 7248b344198ba09a219ee227ffea4b6f0a4850d7
+      body: |
+        Surface the preloaded app commit as a variable that can be overridden in
+        the build job. Default to "current" to maintain existing behavior when
+        the variable isn't set.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Joseph Kogut <joseph@balena.io>
+        signed-off-by: Joseph Kogut <joseph@balena.io>
+      author: Joseph Kogut
+      nested: []
+  version: 1.17.7
+  title: "'jenkins_generate_ami: surface preload app commit as variable'"
+  date: 2022-03-15T16:36:33.654Z
+- commits:
     - subject: "barys: Remove RESINHUP setting"
       hash: 367f153009928f36de8edcd97a56d6f58b5d6773
       body: |
