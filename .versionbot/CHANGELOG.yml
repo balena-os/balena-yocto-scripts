@@ -1,4 +1,18 @@
 - commits:
+    - subject: "balena-deploy: s/resin-flasher/balena-flasher"
+      hash: abdae4c86ed213a64bb1fa7498f4837f53d95448
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Joseph Kogut <joseph@balena.io>
+        signed-off-by: Joseph Kogut <joseph@balena.io>
+      author: Joseph Kogut
+      nested: []
+  version: 1.17.8
+  title: "'balena-deploy: s/resin-flasher/balena-flasher'"
+  date: 2022-03-15T20:11:21.544Z
+- commits:
     - subject: "jenkins_generate_ami: surface preload app commit as variable"
       hash: 7248b344198ba09a219ee227ffea4b6f0a4850d7
       body: |
