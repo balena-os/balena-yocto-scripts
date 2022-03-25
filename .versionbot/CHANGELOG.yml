@@ -1,4 +1,20 @@
 - commits:
+    - subject: "automation: ami: make BALENA_PRELOAD_COMMIT optional"
+      hash: b365cb9ba359637a3a6a8451b8d83142bb167571
+      body: |
+        Remove BALENA_PRELOAD_COMMIT from required env vars, as we have a
+        default if it's not specified.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Joseph Kogut <joseph@balena.io>
+        signed-off-by: Joseph Kogut <joseph@balena.io>
+      author: Joseph Kogut
+      nested: []
+  version: 1.17.9
+  title: "'automation: ami: make BALENA_PRELOAD_COMMIT optional'"
+  date: 2022-03-25T23:25:09.583Z
+- commits:
     - subject: "balena-deploy: s/resin-flasher/balena-flasher"
       hash: abdae4c86ed213a64bb1fa7498f4837f53d95448
       body: ""
