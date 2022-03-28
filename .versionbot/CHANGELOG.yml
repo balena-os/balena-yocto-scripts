@@ -1,4 +1,16 @@
 - commits:
+    - subject: Pass environment to docker
+      hash: ac8be68fb073aed53b21b2e66df4fb54adb64e22
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: ab77
+      nested: []
+  version: 1.17.10
+  title: "'Pass environment to docker'"
+  date: 2022-03-28T17:26:04.107Z
+- commits:
     - subject: "automation: ami: make BALENA_PRELOAD_COMMIT optional"
       hash: b365cb9ba359637a3a6a8451b8d83142bb167571
       body: |
