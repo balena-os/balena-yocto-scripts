@@ -25,6 +25,7 @@ fi
 
 NAMESPACE=${NAMESPACE:-resin}
 
+# shellcheck disable=SC1091,SC2154
 source "${automation_dir}/include/balena-lib.inc"
 
 if ! balena_lib_docker_pull_helper_image "Dockerfile_balena-generate-ami-env" balena_yocto_scripts_revision; then
@@ -42,12 +43,12 @@ YOCTO_IMAGES_PATH="${WORKSPACE}/build/tmp/deploy/images/${MACHINE}"
 IMAGE_NAME=${IMAGE_NAME:-balena-image-${MACHINE}.balenaos-img}
 
 ORIG_IMAGE="${YOCTO_IMAGES_PATH}/${IMAGE_NAME}"
-PRELOADED_IMAGE="$(mktemp -p ${YOCTO_IMAGES_PATH})"
+PRELOADED_IMAGE="$(mktemp -p "${YOCTO_IMAGES_PATH}")"
 
 cp "${ORIG_IMAGE}" "${PRELOADED_IMAGE}"
 
 # AMI names must be between 3 and 128 characters long, and may contain letters, numbers, '(', ')', '.', '-', '/' and '_'
-VERSION=$(cat "${YOCTO_IMAGES_PATH}/VERSION_HOSTOS" | sed 's/+/-/g')
+VERSION=$(cat < "${YOCTO_IMAGES_PATH}/VERSION_HOSTOS" | sed 's/+/-/g')
 
 # AMI name format: balenaOS-VERSION-DEVICE_TYPE
 # shellcheck disable=SC2154
@@ -66,7 +67,7 @@ APP_SUFFIX="${JSON_ARCH}"
 BALENA_PRELOAD_APP="cloud-config-${APP_SUFFIX}"
 BALENA_PRELOAD_COMMIT="${BALENA_PRELOAD_COMMIT:-current}"
 
-# shellcheck disable=SC1004
+# shellcheck disable=SC1004,SC2154
 # AWS_SESSION_TOKEN only needed if MFA is enabled for the account
 docker run --rm -t \
     --privileged  \
@@ -85,6 +86,7 @@ docker run --rm -t \
     -e BALENARC_BALENA_URL="${BALENA_ENV}" \
     -e BALENACLI_TOKEN="${BALENACLI_TOKEN}" \
     -e PRELOAD_SSH_PUBKEY="${BALENA_PRELOAD_SSH_PUBKEY}" \
+    -e BALENA_PRELOAD_COMMIT="${BALENA_PRELOAD_COMMIT}" \
     -e IMAGE="${PRELOADED_IMAGE}" \
     -w "${WORKSPACE}" \
     "${NAMESPACE}/balena-generate-ami-env:${balena_yocto_scripts_revision}" /balena-generate-ami.sh
