@@ -1,4 +1,16 @@
 - commits:
+    - subject: Remove superfluous preload flag
+      hash: a124b525ca058ead27eb43c0a799eb692c79fa80
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: ab77
+      nested: []
+  version: 1.17.12
+  title: "'Remove superfluous preload flag'"
+  date: 2022-03-29T17:38:21.495Z
+- commits:
     - subject: Unattended preload operation
       hash: 1fecbb4d000b1a403f192a63d5e2921ded56647c
       body: >
