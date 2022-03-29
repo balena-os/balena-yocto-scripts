@@ -120,7 +120,6 @@ deploy_preload_app_to_image() {
       --debug \
       --app "${BALENA_PRELOAD_APP}" \
       --commit "${BALENA_PRELOAD_COMMIT}" \
-      --pin-device-to-release \
       "${image}"
 }
 
