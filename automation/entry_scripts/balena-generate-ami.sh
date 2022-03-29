@@ -81,7 +81,7 @@ mount_boot_partition() {
     boot_partition=""
     I=0
     while [ -z "${boot_partition}" ] && [ "$I" -lt "3" ]; do
-        I=$["$I" + 1]
+        I=$((I + 1))
 
         boot_partition_name=$(lsblk "${img_loop_dev}" -nlo kname,label | grep "resin-boot" | cut -d " " -f 1)
         if [ -z "${boot_partition_name}" ]; then
@@ -115,10 +115,12 @@ deploy_preload_app_to_image() {
     local image=$1
 
     echo "* Adding the preload app"
-    balena preload \
+    # FIXME: Would you like to disable automatic updates for this fleet now? No
+    printf 'n\n' | balena preload \
       --debug \
       --app "${BALENA_PRELOAD_APP}" \
       --commit "${BALENA_PRELOAD_COMMIT}" \
+      --pin-device-to-release \
       "${image}"
 }
 
@@ -256,7 +258,7 @@ cleanup () {
 
 ## MAIN
 
-[ $(id -u) != 0 ] && echo "ERROR: This script should be run as root" && exit 1
+! [[ $(id -u) -eq 0 ]] && echo "ERROR: This script should be run as root" && exit 1
 
 ensure_all_env_variables_are_set
 
@@ -264,6 +266,7 @@ trap "cleanup" EXIT
 
 balena login -t "${BALENACLI_TOKEN}"
 
+# shellcheck disable=SC2153
 deploy_preload_app_to_image "${IMAGE}"
 mount_boot_partition "${IMAGE}" BOOT_PARTITION LOOP_DEV
 add_ssh_key_to_boot_partition "${PRELOAD_SSH_PUBKEY}"
