@@ -113,12 +113,20 @@ mount_boot_partition() {
 deploy_preload_app_to_image() {
 
     local image=$1
+    local cli_ver=$(balena --version)
+    local fleet_arg="--app"
+
+    # --app was replaced by --fleet, and the former was deprecated in cli v13
+    # https://github.com/balena-io/balena-cli/wiki/CLI-v13-Release-Notes
+    if [ "$(echo ${cli_ver} | cut -d. -f1)" -ge "13" ]; then
+	    fleet_arg="--fleet"
+    fi
 
     echo "* Adding the preload app"
     # FIXME: Would you like to disable automatic updates for this fleet now? No
     printf 'n\n' | balena preload \
       --debug \
-      --app "${BALENA_PRELOAD_APP}" \
+      "${fleet_arg}" "${BALENA_PRELOAD_APP}" \
       --commit "${BALENA_PRELOAD_COMMIT}" \
       "${image}"
 }
