@@ -1,4 +1,20 @@
 - commits:
+    - subject: "balena-generate-ami: update to support CLI v13"
+      hash: 8b7e81190885db46df1156b89ef2e6e37d1dd8a1
+      body: |
+        Switch from --app to --fleet when the CLI version is greater than or
+        equal to v13, which deprecated the former.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Joseph Kogut <joseph@balena.io>
+        signed-off-by: Joseph Kogut <joseph@balena.io>
+      author: Joseph Kogut
+      nested: []
+  version: 1.17.13
+  title: "'balena-generate-ami: update to support CLI v13'"
+  date: 2022-03-31T21:26:54.475Z
+- commits:
     - subject: Remove superfluous preload flag
       hash: a124b525ca058ead27eb43c0a799eb692c79fa80
       body: ""
