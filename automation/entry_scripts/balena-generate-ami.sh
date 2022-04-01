@@ -11,7 +11,6 @@ AMI_EBS_VOLUME_TYPE=${AMI_EBS_VOLUME_TYPE:-gp2}
 AMI_BOOT_MODE=${AMI_BOOT_MODE:-uefi}
 
 IMPORT_SNAPSHOT_TIMEOUT_MINS=${IMPORT_SNAPSHOT_TIMEOUT_MINS:-15}
-BOOT_PARTITION=''
 
 ensure_all_env_variables_are_set() {
     local env_not_set=""
@@ -24,8 +23,7 @@ ensure_all_env_variables_are_set() {
                          AMI_ARCHITECTURE
                          BALENA_PRELOAD_APP
                          BALENARC_BALENA_URL
-                         BALENACLI_TOKEN
-                         PRELOAD_SSH_PUBKEY"
+                         BALENACLI_TOKEN"
 
     for env in $env_variables; do
         [ -z "${!env}" ] && echo "ERROR: Missing env variable: $env" && env_not_set=true
@@ -35,81 +33,6 @@ ensure_all_env_variables_are_set() {
 }
 
 
-mount_cleanup() {
-    [ -n "${BOOT_PARTITION}" ] && \
-        echo "* Unmounting boot partition" && \
-        umount "${BOOT_PARTITION}" && \
-        rmdir "${BOOT_PARTITION}" && \
-        BOOT_PARTITION=''
-
-    [ -n "${LOOP_DEV}" ] && \
-        echo "* Detaching loop device" && \
-        losetup -d "${LOOP_DEV}" && \
-        LOOP_DEV=''
-}
-
-
-
-mount_boot_partition() {
-    local img=$1
-    local __bootvar=$2
-    local __loopvar=$3
-
-    new_dev=$(mktemp -d)
-    mount -t devtmpfs devtmpfs "${new_dev}"
-    for mnt in console mqueue pts shm
-    do
-      mount --move "/dev/${mnt}" "${new_dev}/${mnt}"
-    done
-
-    umount /dev || :
-
-    mount --move "${new_dev}" /dev
-
-    /lib/systemd/systemd-udevd -d
-
-    img_loop_dev=$(losetup -fP --show "${img}")
-    echo "* Image attached to ${img_loop_dev}"
-
-    # Do this ASAP so that cleanup can detach it if boot partition mount fails
-    eval "$__loopvar='${img_loop_dev}'"
-
-    udevadm settle
-
-    boot_partition_mountpoint=$(mktemp -d)
-
-    boot_partition=""
-    I=0
-    while [ -z "${boot_partition}" ] && [ "$I" -lt "3" ]; do
-        I=$((I + 1))
-
-        boot_partition_name=$(lsblk "${img_loop_dev}" -nlo kname,label | grep "resin-boot" | cut -d " " -f 1)
-        if [ -z "${boot_partition_name}" ]; then
-            echo "* Unable to detect boot partition on ${img_loop_dev}, giving it some more time to come up"
-            sleep 1
-            continue
-        fi
-
-        boot_partition="/dev/${boot_partition_name}"
-        if [ ! -e "${boot_partition}" ]; then
-            echo "* Though boot partition has been detected on ${img_loop_dev}, the dev node does not exist yet, giving it some more time to come up"
-            boot_partition=""
-            sleep 1
-            continue
-        fi
-    done
-
-    if [ -z "${boot_partition}" ]; then
-        echo "* Failed to detect boot partition on ${img_loop_dev} even after several attempts"
-        exit 1
-    fi
-
-    mount "${boot_partition}" "${boot_partition_mountpoint}"
-
-    echo "* Boot partition mounted on ${boot_partition_mountpoint}"
-    eval "$__bootvar='${boot_partition_mountpoint}'"
-}
-
 deploy_preload_app_to_image() {
 
     local image=$1
@@ -118,21 +41,11 @@ deploy_preload_app_to_image() {
     # FIXME: Would you like to disable automatic updates for this fleet now? No
     printf 'n\n' | balena preload \
       --debug \
-      --app "${BALENA_PRELOAD_APP}" \
+      --fleet "${BALENA_PRELOAD_APP}" \
       --commit "${BALENA_PRELOAD_COMMIT}" \
       "${image}"
 }
 
-add_ssh_key_to_boot_partition() {
-    local public_key=$1
-
-    echo "* Adding the preload public key"
-    cp "${BOOT_PARTITION}/config.json" /tmp/.config.json
-    jq --arg keys "${public_key}" '. + {os: {sshKeys: [$keys]}}' "${BOOT_PARTITION}/config.json" > /tmp/.config.json
-    mv /tmp/.config.json "${BOOT_PARTITION}/config.json"
-    sync "${BOOT_PARTITION}"
-    mount_cleanup || true
-}
 
 get_value_from_ebs_snapshot_import_task() {
     local task_id=$1
@@ -250,7 +163,6 @@ create_aws_ami() {
 }
 
 cleanup () {
-    mount_cleanup || true
     aws_s3_image_cleanup || true
     aws_ebs_snapshot_cleanup || true
 }
@@ -267,8 +179,6 @@ balena login -t "${BALENACLI_TOKEN}"
 
 # shellcheck disable=SC2153
 deploy_preload_app_to_image "${IMAGE}"
-mount_boot_partition "${IMAGE}" BOOT_PARTITION LOOP_DEV
-add_ssh_key_to_boot_partition "${PRELOAD_SSH_PUBKEY}"
 create_aws_ebs_snapshot "${IMAGE}" ebs_snapshot_id s3_image_url
 # shellcheck disable=SC2154
 # ebs_snapshot_id defined with eval in create_aws_ebs_snapshot function
