@@ -1,4 +1,17 @@
 - commits:
+    - subject: Bump balena-cli to v.Latest
+      hash: 6aec14bf20674e62822ba41f56ef2763c4036b6d
+      body: |
+        * remove SSH key injection
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: ab77
+      nested: []
+  version: 1.18.0
+  title: "'Bump balena-cli to v.Latest'"
+  date: 2022-03-31T20:52:47.275Z
+- commits:
     - subject: Remove superfluous preload flag
       hash: a124b525ca058ead27eb43c0a799eb692c79fa80
       body: ""
