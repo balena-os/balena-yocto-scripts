@@ -29,6 +29,7 @@ balena_deploy_artifacts () {
 	local _deploy_artifact
 	local _image
 	local _deploy_flasher_artifact
+	local _deploy_raw_artifact
 	local _compressed
 	local _archive
 	local _device_state
@@ -41,6 +42,7 @@ balena_deploy_artifacts () {
 	_deploy_artifact=$(jq --raw-output '.yocto.deployArtifact' "${_device_type_json}")
 	_image=$(jq --raw-output '.yocto.image' "${_device_type_json}")
 	_deploy_flasher_artifact=$(jq --raw-output '.yocto.deployFlasherArtifact // empty' "${_device_type_json}")
+	_deploy_raw_artifact=$(jq --raw-output '.yocto.deployRawArtifact' "${_device_type_json}")
 	_compressed=$(jq --raw-output '.yocto.compressed' "${_device_type_json}")
 	_archive=$(jq --raw-output '.yocto.archive' "$_device_type_json")
 	_device_state=$(jq --raw-output '.state' "${_device_type_json}")
@@ -77,6 +79,12 @@ balena_deploy_artifacts () {
 			cp -v "$(readlink --canonicalize "$_yocto_build_deploy/$_deploy_flasher_artifact")" \
 				"$_deploy_dir/image/balena-flasher.img"
 		fi
+
+		if [ -n "${_deploy_raw_artifact}" ]; then
+			cp -v "$(readlink --canonicalize "$_yocto_build_deploy/$_deploy_raw_artifact")" \
+				"$_deploy_dir/image/balena-raw.img"
+		fi
+
 		return
 	fi
 
@@ -86,6 +94,10 @@ balena_deploy_artifacts () {
 		if [ -n "$_deploy_flasher_artifact" ]; then
 		    cp -rv "$_yocto_build_deploy"/"$_deploy_flasher_artifact"/* "$_deploy_dir"/image/
 		    (cd "$_deploy_dir/image/" && zip -r "../$_deploy_flasher_artifact.zip" .)
+		fi
+		if [ -n "$_deploy_raw_artifact" ]; then
+			cp -rv "$_yocto_build_deploy"/"$_deploy_raw_artifact"/* "$_deploy_dir"/image/
+			(cd "$_deploy_dir/image/" && zip -r "../$_deploy_raw_artifact.zip" .)
 		fi
 		if [ "$_remove_compressed_file" = "true" ]; then
 			rm -rf "$_deploy_dir/image"
@@ -98,9 +110,15 @@ balena_deploy_artifacts () {
 				"$_deploy_dir/image/balena-flasher.img"
 			(cd "$_deploy_dir/image" && zip balena-flasher.img.zip balena-flasher.img)
 		fi
+		if [ -n "$_deploy_raw_artifact" ]; then
+			cp -v "$(readlink --canonicalize "$_yocto_build_deploy/$_deploy_raw_artifact")" \
+				"$_deploy_dir/image/balena-raw.img"
+			(cd "$_deploy_dir/image" && zip balena-raw.img.zip balena-raw.img)
+		fi
 		if [ "$_remove_compressed_file" = "true" ]; then
 			rm -rf "$_deploy_dir/image/balena.img"
 			rm -rf "$_deploy_dir/image/balena-flasher.img"
+			rm -rf "$_deploy_dir/image/balena-raw.img"
 		fi
 	fi
 
