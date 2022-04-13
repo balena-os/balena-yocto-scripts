@@ -1,4 +1,18 @@
 - commits:
+    - subject: "deploy: push image variant artifacts"
+      hash: f5b7ae35f2f2996d93ba572919e26e1487a79f79
+      body: ""
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Joseph Kogut <joseph@balena.io>
+        signed-off-by: Joseph Kogut <joseph@balena.io>
+      author: Joseph Kogut
+      nested: []
+  version: 1.19.0
+  title: "'deploy: push image variant artifacts'"
+  date: 2022-04-13T14:36:11.268Z
+- commits:
     - subject: Bump balena-cli to v.Latest
       hash: 6aec14bf20674e62822ba41f56ef2763c4036b6d
       body: |
