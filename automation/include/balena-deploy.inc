@@ -42,7 +42,7 @@ balena_deploy_artifacts () {
 	_deploy_artifact=$(jq --raw-output '.yocto.deployArtifact' "${_device_type_json}")
 	_image=$(jq --raw-output '.yocto.image' "${_device_type_json}")
 	_deploy_flasher_artifact=$(jq --raw-output '.yocto.deployFlasherArtifact // empty' "${_device_type_json}")
-	_deploy_raw_artifact=$(jq --raw-output '.yocto.deployRawArtifact' "${_device_type_json}")
+	_deploy_raw_artifact=$(jq --raw-output '.yocto.deployRawArtifact // empty' "${_device_type_json}")
 	_compressed=$(jq --raw-output '.yocto.compressed' "${_device_type_json}")
 	_archive=$(jq --raw-output '.yocto.archive' "$_device_type_json")
 	_device_state=$(jq --raw-output '.state' "${_device_type_json}")
