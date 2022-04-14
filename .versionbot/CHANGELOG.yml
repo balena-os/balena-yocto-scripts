@@ -1,4 +1,22 @@
 - commits:
+    - subject: "deploy: ensure deployRawArtifact is empty instead of null"
+      hash: 56edfe62d6ecede3e07b0b51653ca605a2e4ba83
+      body: |
+        jq returns null by default when a given key isn't found, ensure that
+        when getting the value of deployRawArtifact, we get an empty variable
+        instead, which is checked later on to determine if that file should be
+        deployed
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Joseph Kogut <joseph@balena.io>
+        signed-off-by: Joseph Kogut <joseph@balena.io>
+      author: Joseph Kogut
+      nested: []
+  version: 1.19.1
+  title: "'deploy: ensure deployRawArtifact is empty instead of null'"
+  date: 2022-04-14T16:02:35.647Z
+- commits:
     - subject: "deploy: push image variant artifacts"
       hash: f5b7ae35f2f2996d93ba572919e26e1487a79f79
       body: ""
