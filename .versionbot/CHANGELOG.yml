@@ -1,4 +1,20 @@
 - commits:
+    - subject: "balena-lib: fix 'fatal: unsafe repository'"
+      hash: 445d6d1fcfce97f85ffcfedc0083eb658a734321
+      body: |
+        Git 2.35.2 was released to fix a security issue with multi-user
+        machines. Add `device_dir` to the whitelist to avoid this error.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Joseph Kogut <joseph@balena.io>
+        signed-off-by: Joseph Kogut <joseph@balena.io>
+      author: Joseph Kogut
+      nested: []
+  version: 1.19.2
+  title: "'balena-lib: fix 'fatal: unsafe repository''"
+  date: 2022-04-21T23:56:18.934Z
+- commits:
     - subject: "deploy: ensure deployRawArtifact is empty instead of null"
       hash: 56edfe62d6ecede3e07b0b51653ca605a2e4ba83
       body: |
