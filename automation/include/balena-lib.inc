@@ -14,7 +14,7 @@ NAMESPACE="${NAMESPACE:-"resin"}"
 balena_lib_get_os_version() {
 	# Fixes "fatal: unsafe repository"
 	# https://lore.kernel.org/git/xmqqv8veb5i6.fsf@gitster.g/
-	git config --add safe.directory "${device_dir}"
+	git config --global --add safe.directory "${device_dir}"
 
 	pushd "${device_dir}" > /dev/null 2>&1 || return
 	_version=$(git describe --abbrev=0)
