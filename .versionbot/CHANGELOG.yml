@@ -1,4 +1,21 @@
 - commits:
+    - subject: "balena-lib: fix 445d6d1fcfce97f85ffcfedc0083eb658a734321"
+      hash: d8a3a47e87dc65b81451e5dd07213577cc9fe82b
+      body: |
+        Commit 445d6d1fcfce97f85ffcfedc0083eb658a734321 does not fix
+        the issue because it is missing the --global arg without which
+        the git config command fails.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Florin Sarbu <florin@balena.io>
+        signed-off-by: Florin Sarbu <florin@balena.io>
+      author: Florin Sarbu
+      nested: []
+  version: 1.19.3
+  title: "'balena-lib: fix 445d6d1fcfce97f85ffcfedc0083eb658a734321'"
+  date: 2022-04-26T08:40:52.078Z
+- commits:
     - subject: "balena-lib: fix 'fatal: unsafe repository'"
       hash: 445d6d1fcfce97f85ffcfedc0083eb658a734321
       body: |
