@@ -1,0 +1,17 @@
+{
+  "name": "oscontracts",
+  "version": "0.0.1",
+  "description": "BalenaOS contracts generator",
+  "main": "generate-oscontracts.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@balena/contrato": "^0.6.5",
+    "fs-extra": "^10.1.0",
+    "lodash": "^4.17.21",
+    "require-all": "^3.0.0"
+  }
+}
