@@ -320,13 +320,14 @@ EOSU
 #  $1: App name to deploy into
 #  $2: Device type for the app
 #  $3: Bootable flag
-#  $4: Deploy as final release
-#  $5: Path to the image to deploy
-#  $6: Path to the working directory (defaults to device repository root)
-#  $7: BalenaCloud admin account (defaults to balena_os)
-#  $8: BalenaCloud email address (defaults to the balenaCloudEmail enviromental variable)
-#  $9: BalenaCloud password (defaults to the balenaCloudPassword enviromental variable)
-#  $10: ESR release flag (default to "ESR" environment variable)
+#  $4: Path to the image to deploy
+#  $5: Deploy release to S3 and balenaCloud fleet
+#  $6: Deploy to balenaCloud fleet as draft (default) or final release
+#  $7: Path to the working directory (defaults to device repository root)
+#  $8: BalenaCloud admin account (defaults to balena_os)
+#  $9: BalenaCloud email address (defaults to the balenaCloudEmail enviromental variable)
+#  $10: BalenaCloud password (defaults to the balenaCloudPassword enviromental variable)
+#  $11: ESR release flag (default to "ESR" environment variable)
 #
 balena_deploy_block() {
 	local _appName="$1"
