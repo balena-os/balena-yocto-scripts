@@ -573,3 +573,33 @@ balena_lib_release_finalize() {
 		fi
 	fi
 }
+
+balena_lib_build_contract () {
+	local _slug="${1}"
+	local _contracts_dir="${include_dir}/../../build/contracts"
+	which nodejs >/dev/null 2>&1 && NODE=nodejs || NODE=node
+	if [ ! -x "$(command -v $NODE)" ]; then
+		>&2 echo "[balena_lib_build_contracts]: Nodejs is not installed"
+		return 1
+	fi
+	if [ ! -x "$(command -v npm)" ]; then
+		>&2 echo "[balena_lib_build_contracts]: npm is not installed"
+		return 1
+	fi
+	# Contracts are usually a submodule so that they can be version controlled with the device repository
+	# This covers cases when this is not the case, like public repositories that contain private device types
+	if [ ! -d "${device_dir}/contracts" ]; then
+		git clone "https://github.com/balena-io/contracts.git" "${device_dir}/contracts"
+	fi
+	if [ "$(balena_api_is_dt_private "${_slug}")" = "true" ]; then
+		git clone "https://${githubCredentials}@github.com/balena-io/private-contracts.git" "${device_dir}/private-contracts"
+	fi
+	npm --prefix="${_contracts_dir}" ci > /dev/null || (>&2 echo "[balena_lib_build_contracts]: npm failed installing dependencies" && return 1)
+	NODE_PATH="${_contracts_dir}/node_modules" ${NODE} "${_contracts_dir}/generate-oscontracts.js" > /dev/null
+	if [ -f "${device_dir}/build/contracts/${_slug}/balena-os/balena.yml" ]; then
+		echo "${device_dir}/build/contracts/${_slug}/balena-os/balena.yml"
+	else
+		>&2 echo "[balena_lib_build_contracts]: Failed to build OS contract for ${_slug}"
+		return 1
+	fi
+}
