@@ -492,3 +492,77 @@ balena_lib_release() {
 	[ -n "${_releaseID}" ] && >&2 echo "Deployed ${_image_id} to ${_appName} as ${_status##--} at ${_releaseID}"
 	echo "${_releaseID}"
 }
+
+#
+# Finalize release and create release tags
+#
+# Arguments:
+#
+# 1: Release ID
+# 2: Fleet slug
+# 3: Balena API environment
+# 4: Balena API token
+# 5: ESR release
+#
+balena_lib_release_finalize() {
+	local _releaseID="${1}"
+	local _fleet="${2}"
+	local _api_env="${3}"
+	local _token="${4}"
+	local _esr="${5}"
+	local Q1ESR="1|01"
+	local Q2ESR="4|04"
+	local Q3ESR="7|07"
+	local Q4ESR="10"
+	_version=$(balena_api_get_version "${_releaseID}" "${_api_env}" "${_token}")
+	_os_version=$(balena_lib_get_os_version)
+	# 0.0.0 is a reserved version used when the semver is not set
+	if [ "${_version%-*}" != "0.0.0" ] && [ "${_version}" != "${_os_version}" ]; then
+		echo "balena-deploy-block: Version mismatch, OS version is ${_os_version} and deployed version is ${_version}"
+		exit 1
+	fi
+	if balena_api_release_tag_exists "${_fleet}" "version" "${_os_version}" "${_api_env}" "${_token}" > /dev/null; then
+		echo "[WARN] Release ID ${_releaseID} is already tagged with version ${_os_version} - bailing out"
+		exit 0
+	fi
+	echo "[INFO] Tagging release ${_releaseID} with version ${_os_version}"
+	balena tag set version "${_os_version}" --release "${_releaseID}"
+	balena release finalize "${_releaseID}"
+	if [ "$_esr" = "true" ]; then
+		_regex="^[1-3][0-9]{3}\.${Q1ESR}|${Q2ESR}|${Q3ESR}|${Q4ESR}\.[0-9]*$"
+
+		if ! echo "${_os_version}" | grep -Eq "${_regex}"; then
+			>&2 echo "Invalid ESR release ${_os_version}"
+			exit 1
+		fi
+		balena tag set meta-balena-base "${META_BALENA_VERSION}" --release "${_releaseID}"
+
+		last_current=$(balena_api_fetch_fleet_tag "${_fleet}" "esr-current" "${_api_env}" || true)
+		last_sunset=$(balena_api_fetch_fleet_tag "${_fleet}" "esr-sunset" "${_api_env}" || true)
+		last_next=$(balena_api_fetch_fleet_tag "${_fleet}" "esr-next" "${_api_env}" || true)
+		if [ "${last_current}" = "null" ]; then
+			echo "[INFO][${_fleet}] Tagging fleet with esr-current: ${_os_version}"
+			balena tag set esr-current "${_os_version}" --fleet "${_fleet}"
+		elif [ "${last_sunset}" = "null" ]; then
+			if [ "${last_next}" = "null" ]; then
+				echo "[INFO][${_fleet}] Tagging fleet with esr-next: ${_os_version}"
+				balena tag set esr-next "${_os_version}" --fleet "${_fleet}"
+			else
+				echo "[INFO][${_fleet}] Tagging fleet with esr-next: ${_os_version} esr-current: ${last_next} esr-sunset: ${last_current}"
+				balena tag set esr-next "${_os_version}" --fleet "${_fleet}"
+				balena tag set esr-current "${last_next}" --fleet "${_fleet}"
+				balena tag set esr-sunset "${last_current}" --fleet "${_fleet}"
+			fi
+		else
+			if [ "${last_next}" = "null" ]; then
+				>&2 echo "Invalid fleet tags: current: ${last_current} next: ${last_next} sunset: ${last_sunset}"
+				exit 1
+			else
+				echo "[INFO][${_fleet}] Tagging fleet with esr-next: ${_os_version} esr-current: ${last_next} esr-sunset: ${last_current}"
+				balena tag set esr-next "${_os_version}" --fleet "${_fleet}"
+				balena tag set esr-current "${last_next}" --fleet "${_fleet}"
+				balena tag set esr-sunset "${last_current}" --fleet "${_fleet}"
+			fi
+		fi
+	fi
+}
