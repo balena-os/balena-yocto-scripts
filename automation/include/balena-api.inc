@@ -304,6 +304,11 @@ done
 
 _get_device_family() {
 	local _family
+
+	# Fixes "fatal: unsafe repository"
+	# https://lore.kernel.org/git/xmqqv8veb5i6.fsf@gitster.g/
+	git config --global --add safe.directory "${device_dir}"
+
 	pushd "${device_dir}" > /dev/null
 	_family=$(git remote get-url origin)
 	popd > /dev/null
@@ -348,7 +353,7 @@ balena_api_create_public_app() {
 	if [ -z "${_appID}" ] || [ "${_appID}" = "null" ]; then
 		__create_app "${_appName}" "${_apiEnv}" "${_token}" "${_device_type}"
 		balena_api_add_role_access "${_appName}" "${_apiEnv}" "${_token}"
-		_appID=$(__set_public_app "${_appName}" "${_apiEnv}" "${_token}" "${_url}" || true)
+		_appID=$(__set_public_app "${_appName}" "${_apiEnv}" "${_token}" "${_url}")
 		if [ -n "${_appID}" ] && [ "${_appID}" != "null" ]; then
 			>&2 echo "[${_appName}] Application ${_appID} has been created as public"
 		fi
