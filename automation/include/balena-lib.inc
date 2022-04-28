@@ -24,6 +24,10 @@ balena_lib_get_os_version() {
 
 # Return the latest tag of the meta-balena repository
 balena_lib_get_meta_balena_version() {
+	# Fixes "fatal: unsafe repository"
+	# https://lore.kernel.org/git/xmqqv8veb5i6.fsf@gitster.g/
+	git config --global --add safe.directory "${device_dir}/layers/meta-balena"
+
 	pushd "${device_dir}/layers/meta-balena" > /dev/null 2>&1 || return
 	_version=$(git describe --abbrev=0)
 	popd > /dev/null 2>&1 || return
@@ -32,6 +36,10 @@ balena_lib_get_meta_balena_version() {
 
 # Return the latest meta-balena version (not the latest tag which can be an ESR)
 balena_lib_get_meta_balena_base_version() {
+	# Fixes "fatal: unsafe repository"
+	# https://lore.kernel.org/git/xmqqv8veb5i6.fsf@gitster.g/
+	git config --global --add safe.directory "${device_dir}/layers/meta-balena"
+
 	pushd "${device_dir}/layers/meta-balena" > /dev/null 2>&1 || return
 	_version=$(git describe "$(git rev-list --first-parent -1 HEAD)"^1)
 	popd > /dev/null 2>&1 || return
