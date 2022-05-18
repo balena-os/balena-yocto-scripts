@@ -514,6 +514,14 @@ balena_lib_release_finalize() {
 	local Q2ESR="4|04"
 	local Q3ESR="7|07"
 	local Q4ESR="10"
+	local _final
+	_final=$(balena_api_is_release_final "${_releaseID}" "${_api_env}" "${_token}")
+	if [ "${_final}" = "false" ]; then
+		balena_lib_login "${_api_env}" "${_token}"
+		BALENARC_BALENA_URL="${_api_env}" balena release finalize "${_releaseID}"
+	fi
+
+	# Only tag final releases with matching versions
 	_version=$(balena_api_get_version "${_releaseID}" "${_api_env}" "${_token}")
 	_os_version=$(balena_lib_get_os_version)
 	# 0.0.0 is a reserved version used when the semver is not set
@@ -526,8 +534,7 @@ balena_lib_release_finalize() {
 		exit 0
 	fi
 	echo "[INFO] Tagging release ${_releaseID} with version ${_os_version}"
-	balena tag set version "${_os_version}" --release "${_releaseID}"
-	balena release finalize "${_releaseID}"
+	BALENARC_BALENA_URL=${_api_env} balena tag set version "${_os_version}" --release "${_releaseID}"
 	if [ "$_esr" = "true" ]; then
 		_regex="^[1-3][0-9]{3}\.${Q1ESR}|${Q2ESR}|${Q3ESR}|${Q4ESR}\.[0-9]*$"
 
@@ -535,23 +542,23 @@ balena_lib_release_finalize() {
 			>&2 echo "Invalid ESR release ${_os_version}"
 			exit 1
 		fi
-		balena tag set meta-balena-base "${META_BALENA_VERSION}" --release "${_releaseID}"
+		BALENARC_BALENA_URL=${_api_env} balena tag set meta-balena-base "${META_BALENA_VERSION}" --release "${_releaseID}"
 
 		last_current=$(balena_api_fetch_fleet_tag "${_fleet}" "esr-current" "${_api_env}" || true)
 		last_sunset=$(balena_api_fetch_fleet_tag "${_fleet}" "esr-sunset" "${_api_env}" || true)
 		last_next=$(balena_api_fetch_fleet_tag "${_fleet}" "esr-next" "${_api_env}" || true)
 		if [ "${last_current}" = "null" ]; then
 			echo "[INFO][${_fleet}] Tagging fleet with esr-current: ${_os_version}"
-			balena tag set esr-current "${_os_version}" --fleet "${_fleet}"
+			BALENARC_BALENA_URL=${_api_env} balena tag set esr-current "${_os_version}" --fleet "${_fleet}"
 		elif [ "${last_sunset}" = "null" ]; then
 			if [ "${last_next}" = "null" ]; then
 				echo "[INFO][${_fleet}] Tagging fleet with esr-next: ${_os_version}"
-				balena tag set esr-next "${_os_version}" --fleet "${_fleet}"
+				BALENARC_BALENA_URL=${_api_env} balena tag set esr-next "${_os_version}" --fleet "${_fleet}"
 			else
 				echo "[INFO][${_fleet}] Tagging fleet with esr-next: ${_os_version} esr-current: ${last_next} esr-sunset: ${last_current}"
-				balena tag set esr-next "${_os_version}" --fleet "${_fleet}"
-				balena tag set esr-current "${last_next}" --fleet "${_fleet}"
-				balena tag set esr-sunset "${last_current}" --fleet "${_fleet}"
+				BALENARC_BALENA_URL=${_api_env} balena tag set esr-next "${_os_version}" --fleet "${_fleet}"
+				BALENARC_BALENA_URL=${_api_env} balena tag set esr-current "${last_next}" --fleet "${_fleet}"
+				BALENARC_BALENA_URL=${_api_env} balena tag set esr-sunset "${last_current}" --fleet "${_fleet}"
 			fi
 		else
 			if [ "${last_next}" = "null" ]; then
@@ -559,9 +566,9 @@ balena_lib_release_finalize() {
 				exit 1
 			else
 				echo "[INFO][${_fleet}] Tagging fleet with esr-next: ${_os_version} esr-current: ${last_next} esr-sunset: ${last_current}"
-				balena tag set esr-next "${_os_version}" --fleet "${_fleet}"
-				balena tag set esr-current "${last_next}" --fleet "${_fleet}"
-				balena tag set esr-sunset "${last_current}" --fleet "${_fleet}"
+				BALENARC_BALENA_URL=${_api_env} balena tag set esr-next "${_os_version}" --fleet "${_fleet}"
+				BALENARC_BALENA_URL=${_api_env} balena tag set esr-current "${last_next}" --fleet "${_fleet}"
+				BALENARC_BALENA_URL=${_api_env} balena tag set esr-sunset "${last_current}" --fleet "${_fleet}"
 			fi
 		fi
 	fi
