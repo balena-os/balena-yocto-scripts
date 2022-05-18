@@ -25,6 +25,10 @@ if [ "$ESR" = "true" ]; then
 	APPNAME="${APPNAME}-esr"
 fi
 
+if [ -f "/deploy/balena.yml" ]; then
+	echo -e "\nversion: $(balena_lib_get_os_version)" >> "/deploy/balena.yml"
+fi
+
 echo "[INFO] Deploying  to ${BALENAOS_ACCOUNT}/$APPNAME"
 balena_api_create_public_app "${APPNAME}" "${BALENARC_BALENA_URL}" "${MACHINE}" "${balenaCloudEmail}" "${balenaCloudPassword}" "${ESR}" "${BOOTABLE}"
 _releaseID=$(balena_lib_release "${BALENAOS_ACCOUNT}/$APPNAME" "${FINAL}" "/deploy" "${API_ENV}" "$_local_image")
