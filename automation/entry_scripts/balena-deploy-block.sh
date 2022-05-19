@@ -38,7 +38,7 @@ if [ -z "${_releaseID}" ]; then
 fi
 
 # Legacy hostapp tagging
-if [ "${DEPLOY}" = "yes" ]; then
+if [ "${DEPLOY}" = "yes" ] && [ "${FINAL}" = "yes" ]; then
 	balena_lib_release_finalize "${_releaseID}" "${BALENAOS_ACCOUNT}/${APPNAME}" "${API_ENV}" "${BALENAOS_TOKEN}" "${ESR}"
 fi
 
