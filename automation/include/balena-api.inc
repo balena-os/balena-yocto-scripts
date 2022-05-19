@@ -994,3 +994,33 @@ balena_api_fetch_fleet_tag() {
 	__pp_json "${_json}"
 	echo "${_json}" | jq -r -e '.d[0].value'
 }
+
+# Returns whether a release is final
+# Arguments:
+#
+# $1: Release commit ID
+# $2: Balena target environment
+# $3: Balena API token
+#
+# Return:
+# 	true if final, false if not
+# Result:
+# 	Success or failure
+balena_api_is_release_final() {
+	local _release_id="${1}"
+	local _apiEnv="${2}"
+	local _token="${3}"
+	local _json
+	local _final
+
+	_apiEnv=${_apiEnv:-$(balena_lib_environment)}
+	_token=${_token:-$(balena_lib_token)}
+	if [ -n "${_token}" ]; then
+		 _json=$(${CURL} -XGET -H "Content-type: application/json" "https://api.${_apiEnv}/${TRANSLATION}/release?\$filter=commit%20eq%20%27${_release_id}%27" -H "Authorization: Bearer ${_token}")
+	else
+		 _json=$(${CURL} -XGET -H "Content-type: application/json" "https://api.${_apiEnv}/${TRANSLATION}/release?\$filter=commit%20eq%20%27${_release_id}%27")
+	fi
+	__pp_json "${_json}"
+	_final=$(echo "${_json}" | jq -r '.d[0].is_final')
+	echo "${_final}"
+}
