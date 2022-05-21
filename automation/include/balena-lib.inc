@@ -515,15 +515,28 @@ balena_lib_release_finalize() {
 	local Q3ESR="7|07"
 	local Q4ESR="10"
 	local _final
+
+	# Only finalise releases with matching draft versions
+	_version=$(balena_api_get_version "${_releaseID}" "${_api_env}" "${_token}")
+	_os_version=$(balena_lib_get_os_version)
 	_final=$(balena_api_is_release_final "${_releaseID}" "${_api_env}" "${_token}")
 	if [ "${_final}" = "false" ]; then
+		# 0.0.0 is a reserved version used when the semver is not set
+		if [ "${_version%-*}" != "0.0.0" ] && [ "${_version%-*}" != "${_os_version}" ]; then
+			echo "balena-deploy-block: Version mismatch, OS version is ${_os_version} and draft version is ${_version}"
+			exit 1
+		fi
 		balena_lib_login "${_api_env}" "${_token}"
 		BALENARC_BALENA_URL="${_api_env}" balena release finalize "${_releaseID}"
 	fi
 
 	# Only tag final releases with matching versions
+	_final=$(balena_api_is_release_final "${_releaseID}" "${_api_env}" "${_token}")
+	if [ "${_final}" != "true" ]; then
+			echo "balena-deploy-block: Will only tag final releases - bailing out"
+			exit 1
+	fi
 	_version=$(balena_api_get_version "${_releaseID}" "${_api_env}" "${_token}")
-	_os_version=$(balena_lib_get_os_version)
 	# 0.0.0 is a reserved version used when the semver is not set
 	if [ "${_version%-*}" != "0.0.0" ] && [ "${_version}" != "${_os_version}" ]; then
 		echo "balena-deploy-block: Version mismatch, OS version is ${_os_version} and deployed version is ${_version}"
