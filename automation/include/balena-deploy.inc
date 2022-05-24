@@ -360,6 +360,9 @@ balena_deploy_block() {
 	if [ ! -f "${_work_dir}/balena.yml" ]; then
 		if [ -f "${device_dir}/balena.yml" ]; then
 			cp "${device_dir}/balena.yml" "${_work_dir}"
+		else
+			_contract=$(balena_lib_build_contract $(balena_lib_get_slug ${_device_type}))
+			cp "${_contract}" "${_work_dir}/balena.yml"
 		fi
 	fi
 

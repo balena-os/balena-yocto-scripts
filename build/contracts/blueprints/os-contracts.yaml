@@ -1,0 +1,30 @@
+selector:
+  sw.os: 1
+  sw.os-image: 1
+  hw.device-type: 1
+  arch.sw: 1
+output:
+  filename: balena.yml
+  imageName: "{{this.children.hw.device-type.slug}}-{{this.children.sw.os.slug}}"
+  slug: "{{this.children.hw.device-type.slug}}-{{this.children.sw.os.slug}}"
+  path: "{{this.children.hw.device-type.slug}}/{{this.children.sw.os.slug}}"
+  requires:
+    - type: hw.device-type
+      arch: "{{this.children.arch.sw.slug}}"
+    - type: sw.os-image
+      arch: "{{this.children.sw.os.slug}}"
+  template:
+    - name: os-contract
+      data: >-
+        name: "{{this.sw.os.name}} for {{this.hw.device-type.name}}"
+
+        type: sw.block
+
+        description: "{{this.sw.os.name}} for a {{this.hw.device-type.name}}"
+
+        provides:
+          - type: sw.os
+            slug: "{{this.sw.os.slug}}"
+          - type: hw.device-type
+            slug: "{{this.hw.device-type.slug}}"
+        composedOf: [ "{{this.sw.os.slug}}", "{{this.hw.device-type.slug}}" ]
