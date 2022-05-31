@@ -1,4 +1,33 @@
 - commits:
+    - subject: "balena-lib: balena_lib_release_finalize: Pass the correct arguments"
+      hash: e28b745d4ba121b639ba79dad2377f051fe5d3e2
+      body: |
+        The balena_api_fetch_fleet_tag requires a slug as first argument, not
+        a fleet that can contain the organization too.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-lib: Tag ESR fleets with patch independent tags"
+      hash: d51ecb6d91fe6ecf91de1ecde4fff700f7f88e67
+      body: |
+        Otherwise patch updates of ESR branches move the ESR phase when they
+        should not. For example, if 2022.1.1 is current, 2022.1.2 is also
+        current and should not move 2022.1.1 to sunset.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.7
+  title: "'balena-lib: Tag ESR fleets with patch independent tags'"
+  date: 2022-05-31T19:39:43.444Z
+- commits:
     - subject: "balena-lib: Check versions before finalizing"
       hash: 0ae1389a69b857b466b4eef81396d5f1b6bc4ae6
       body: |
