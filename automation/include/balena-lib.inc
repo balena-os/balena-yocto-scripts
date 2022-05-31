@@ -516,6 +516,7 @@ balena_lib_release_finalize() {
 	local Q4ESR="10"
 	local _final
 	local _x_version
+	local _slug=${_fleet#*/}
 
 	# Only finalise releases with matching draft versions
 	_version=$(balena_api_get_version "${_releaseID}" "${_api_env}" "${_token}")
@@ -559,9 +560,9 @@ balena_lib_release_finalize() {
 		BALENARC_BALENA_URL=${_api_env} balena tag set meta-balena-base "${META_BALENA_VERSION}" --release "${_releaseID}"
 
 		_x_version="${_os_version%.*}.x"
-		last_current=$(balena_api_fetch_fleet_tag "${_fleet}" "esr-current" "${_api_env}" || true)
-		last_sunset=$(balena_api_fetch_fleet_tag "${_fleet}" "esr-sunset" "${_api_env}" || true)
-		last_next=$(balena_api_fetch_fleet_tag "${_fleet}" "esr-next" "${_api_env}" || true)
+		last_current=$(balena_api_fetch_fleet_tag "${_slug}" "esr-current" "${_api_env}" || true)
+		last_sunset=$(balena_api_fetch_fleet_tag "${_slug}" "esr-sunset" "${_api_env}" || true)
+		last_next=$(balena_api_fetch_fleet_tag "${_slug}" "esr-next" "${_api_env}" || true)
 		if [ "${last_current}" = "null" ]; then
 			echo "[INFO][${_fleet}] Tagging fleet with esr-current: ${_x_version}"
 			BALENARC_BALENA_URL=${_api_env} balena tag set esr-current "${_x_version}" --fleet "${_fleet}"
