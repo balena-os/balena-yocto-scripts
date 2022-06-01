@@ -1,4 +1,21 @@
 - commits:
+    - subject: "balena-lib: release_finalize: Do not retag phase for ESR branch patch"
+      hash: ffdcb572e75b6bddc890710a6c1e4702d08a86a7
+      body: |
+        When we patch an ESR branch, for example from v2022.1.0 to v2022.1.1,
+        do not update the next, current, sunset ESR  phases as they remain the
+        same.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.8
+  title: "'balena-lib: release_finalize: Do not retag phase for ESR branch patch'"
+  date: 2022-06-01T11:14:12.365Z
+- commits:
     - subject: "balena-lib: balena_lib_release_finalize: Pass the correct arguments"
       hash: e28b745d4ba121b639ba79dad2377f051fe5d3e2
       body: |
