@@ -83,7 +83,7 @@ __build_hostos_blocks() {
 				_appname="${_device_type}-${_block}"
 				balena_build_block "${_appname}" "${_device_type}" "${_packages}" "${_balenaos_account}" "${_api_env}"
 				_release_version=$(balena_lib_get_os_version)
-				balena_deploy_block "${_appname}"  "${_device_type}" "${_bootable:-0}" "${_image_path:-"${WORKSPACE}/deploy-jenkins/${_appName}-${_release_version}.docker"}"
+				balena_deploy_block "${_appname}"  "${_device_type}" "${_bootable:-0}" "${_final}" "${_image_path:-"${WORKSPACE}/deploy-jenkins/${_appName}-${_release_version}.docker"}"
 			done
 
 			# Remove packages folder from deploy directory
