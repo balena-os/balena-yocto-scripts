@@ -166,16 +166,8 @@ if [ "$deploy" = "yes" ]; then
 
 	balena_deploy_to_s3 "$MACHINE" "${ESR}" "${deployTo}"
 	balena_deploy_to_dockerhub "${MACHINE}"
-	_image_path=$(find "${WORKSPACE}/build/tmp/deploy/" -name "balena-image-${MACHINE}.docker" -type l || true)
-	if [ -n "${_image_path}" ] && [ -f "${_image_path}" ]; then
-		balena_deploy_block "$(balena_lib_get_slug "${MACHINE}")" "${MACHINE}" "${_bootable:-1}" "${_image_path}" "${deploy}" "${final}"
-	else
-		_state=$(balena_lib_get_dt_state "${MACHINE}")
-		if [ "${_state}" != "DISCONTINUED" ]; then
-			echo "[ERROR]:balena_deploy_hostapp: No hostapp to release"
-			exit 1
-		fi
-	fi
+	blocks=${BLOCKS:-${MACHINE}}
+	balena_deploy "$(balena_lib_get_slug "${MACHINE}")" "${blocks}" "${final}" "${MACHINE}" "${WORKSPACE}/build/tmp/deploy/images/${MACHINE}/"
 
 	if [ "$AMI" = "true" ]; then
 		echo "[INFO] Generating AMI"
