@@ -315,47 +315,44 @@ EOSU
 		'
 }
 
-# Builds and deploys the specified block to BalenaCloud
+# Builds and deploys to BalenaCloud
 # Input arguments;
 #  $1: App name to deploy into
 #  $2: Device type for the app
-#  $3: Bootable flag
-#  $4: Path to the image to deploy
-#  $5: Deploy release to S3 and balenaCloud fleet
-#  $6: Deploy to balenaCloud fleet as draft (default) or final release
-#  $7: Path to the working directory (defaults to device repository root)
-#  $8: BalenaCloud admin account (defaults to balena_os)
-#  $9: BalenaCloud email address (defaults to the balenaCloudEmail enviromental variable)
-#  $10: BalenaCloud password (defaults to the balenaCloudPassword enviromental variable)
-#  $11: ESR release flag (default to "ESR" environment variable)
+#  $3: Deploy to balenaCloud fleet as draft (default) or final release
+#  $4: Block names to deploy (defaults to hostapp)
+#  $5: Path to the working directory (defaults to device repository root)
+#  $6: Bootable flag - defaults to 1
+#  $7: BalenaCloud admin account (defaults to balena_os)
+#  $8: BalenaCloud email address (defaults to the balenaCloudEmail enviromental variable)
+#  $9: BalenaCloud password (defaults to the balenaCloudPassword enviromental variable)
+#  $10: ESR release flag (default to "ESR" environment variable)
 #
-balena_deploy_block() {
+balena_deploy() {
 	local _appName="$1"
 	local _device_type="${2:-${MACHINE}}"
-	local _bootable=${3:-"0"}
-	local _image_path="${4:-""}"
-	local _deploy="${5:-no}"
-	local _final="${6:-no}"
-	local _work_dir="${7:-"${device_dir}"}"
-	local _balenaos_account="${8:-"balena_os"}"
-	local _balenaCloudEmail="${9:-"${balenaCloudEmail}"}"
-	local _balenaCloudPassword="${10:-"${balenaCloudPassword}"}"
-	local _esr="${11}"
-	local _discontinued
+	local _final="${3:-no}"
+	local _blocks="${4:-"${MACHINE}"}"
+	local _work_dir="${5:-"${device_dir}"}"
+	local _bootable=${6:-"1"}
+	local _balenaos_account="${7:-"balena_os"}"
+	local _balenaCloudEmail="${8:-"${balenaCloudEmail}"}"
+	local _balenaCloudPassword="${9:-"${balenaCloudPassword}"}"
+	local _esr="${10}"
 	local _api_env=$(balena_lib_environment)
+	local _discontinued
 
 	[ -z "${_device_type}" ] && echo "Device type is required" && return
 	_discontinued=$(balena_lib_get_dt_state "${_device_type}")
 	if [ "${_discontinued}" = "DISCONTINUED" ]; then
-		echo "[INFO]: balena_deploy_block: Not deploying discontinued device type."
+		echo "[INFO]: balena_deploy: Not deploying discontinued device type."
 		return
 	fi
 
 	[ -z "${_appName}" ] && echo "App name is required" && return
-	if [ -f "${_image_path}" ]; then
-		_image_path="$(readlink --canonicalize "${_image_path}")"
-	fi
+	[ -z "${_blocks}" ] && echo "Block names are required" && return
 	_esr=${_esr:-"${ESR}"}
+	[ ! -d "${_work_dir}" ] && mkdir "${_work_dir}"
 
 	if [ ! -f "${_work_dir}/balena.yml" ]; then
 		if [ -f "${device_dir}/balena.yml" ]; then
@@ -373,6 +370,7 @@ balena_deploy_block() {
 	docker run --rm -t \
 		-e APPNAME="${_appName}" \
 		-e API_ENV="${_api_env}" \
+		-e BLOCKS="${_blocks}" \
 		-e BALENAOS_TOKEN="$(balena_lib_token "${_api_env}")" \
 		-e BALENAOS_ACCOUNT="${_balenaos_account}" \
 		-e META_BALENA_VERSION="$(balena_lib_get_meta_balena_base_version)" \
@@ -380,13 +378,11 @@ balena_deploy_block() {
 		-e MACHINE="${_device_type}" \
 		-e VERBOSE="${VERBOSE}" \
 		-e BOOTABLE="${_bootable}" \
-		-e DEPLOY="${_deploy}" \
 		-e FINAL="${_final}" \
 		-e ESR="${_esr:-"false"}" \
 		-e balenaCloudEmail="${_balenaCloudEmail}" \
 		-e balenaCloudPassword="${_balenaCloudPassword}" \
 		-e ESR="${_esr}" \
-		-v "${_image_path}":/host/appimage.docker \
 		-v "${device_dir}":/work \
 		-v "${_work_dir}":/deploy \
 		--privileged \
@@ -395,7 +391,7 @@ balena_deploy_block() {
 	balena_lib_docker_remove_helper_images "balena-push-env"
 }
 
-# Builds and deploys the specified block to BalenaCloud
+# Builds the specified block
 # Input arguments;
 #  $1: App name to deploy into
 #  $2: Device type for the app
