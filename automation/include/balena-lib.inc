@@ -430,7 +430,7 @@ balena_lib_get_dt_arch() {
 #
 #
 # Output:
-#  Label value in stdout or null
+#  Label value in stdout or nothing
 #
 balena_lib_get_label_from_image() {
 	local _image_id="${1}"
@@ -438,7 +438,9 @@ balena_lib_get_label_from_image() {
 	local _value
 
 	_value=$(docker inspect "${_image_id}" | jq -r '.[].Config.Labels["'"${_label}"'"]')
-	echo "${_value}"
+	if [ "${_value}" != "null" ]; then
+		echo "${_value}"
+	fi
 }
 
 
