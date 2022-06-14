@@ -165,7 +165,6 @@ if [ "$deploy" = "yes" ]; then
 	echo "[INFO] Starting deployment..."
 
 	balena_deploy_to_s3 "$MACHINE" "${ESR}" "${deployTo}"
-	balena_deploy_to_dockerhub "${MACHINE}"
 	_image_path=$(find "${WORKSPACE}/build/tmp/deploy/" -name "balena-image-${MACHINE}.docker" -type l || true)
 	if [ -n "${_image_path}" ] && [ -f "${_image_path}" ]; then
 		balena_deploy_block "$(balena_lib_get_slug "${MACHINE}")" "${MACHINE}" "${_bootable:-1}" "${_image_path}" "${deploy}" "${final}"
