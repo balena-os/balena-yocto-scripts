@@ -98,7 +98,10 @@ __find_contract_by_slug() {
 	local _contracts
 	local _slug
 
-	_contracts=$(find "${device_dir}/contracts/" -name "contract.json" -print 2>/dev/null)
+	_contracts=$(find "${device_dir}" -maxdepth 1 -name "balena.yml" -print 2>/dev/null)
+	if [ -z "${_contracts}" ]; then
+		_contracts=$(find "${device_dir}/contracts/" -name "contract.json" -print 2>/dev/null)
+	fi
 	for contract in ${_contracts}; do
 		_slug=$(jq --raw-output .slug < "${contract}")
 		if [ "${_slug}" = "${_tslug}" ]; then
