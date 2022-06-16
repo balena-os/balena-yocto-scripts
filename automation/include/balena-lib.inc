@@ -465,13 +465,14 @@ balena_lib_release() {
 	local _releaseID=""
 	local _status=""
 	local _debug=""
+	local _version
 
 	[ -z "${_appName}" ] && >&2 echo "balena_lib_release: Application name is required" && exit 1
 	_apiEnv=${_apiEnv:-"$(balena_lib_environment)"}
 	_path=${_path:-"$(pwd)"}
+	_version=$(balena_lib_get_os_version)
 	if [ -f "${_path}/balena.yml" ]; then
 		_contract_version=$(awk '/version:/ {print $2}' "${_path}/balena.yml")
-		_version=$(balena_lib_get_os_version)
 		if [ "${_contract_version}" != "${_version}" ]; then
 			>&2 echo "balena_lib_release: Version mismatch, contract ${_contract_version} os ${_version}"
 			return 1
@@ -489,7 +490,7 @@ balena_lib_release() {
 	if [ -n "${_image_id}" ]; then
 		_releaseID=$(BALENARC_BALENA_URL="${_apiEnv}" balena deploy "${_appName}" "${_image_id}" --source "${_path}" ${_status} ${_debug} | sed -n 's/.*Release: //p')
 	else
-		_releaseID=$(BALENARC_BALENA_URL="${_apiEnv}" balena deploy "${_appName}" --build --source "${_path}" ${_status} ${_debug} | sed -n 's/.*Release: //p')
+		_releaseID=$(BALENARC_BALENA_URL="${_apiEnv}" balena deploy "${_appName}" --build --source "${_path}" --cache-from ${_appName#*/}:${_version}  ${_status} ${_debug} | sed -n 's/.*Release: //p')
 	fi
 	[ -n "${_releaseID}" ] && >&2 echo "Deployed ${_image_id} to ${_appName} as ${_status##--} at ${_releaseID}"
 	echo "${_releaseID}"
