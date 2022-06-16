@@ -14,12 +14,13 @@ usage() {
 Usage: ${script_name} [OPTIONS]
     -d Device type name
     -a Balena API environment
-    -b HostOS block names
-    -p Deploy as final version
+    -b OS block names
+    -p Deploy (defaults to no)
+    -f Deploy as final version (defaults to draft)
     -t Balena API token
     -n Registry namespace
     -s Shared build directory
-    -c Balena account (defaults to balena_os)
+    -c Balena organization (defaults to balena_os)
     -h Display usage
 EOF
 	exit 0
@@ -35,7 +36,8 @@ __build_hostos_blocks() {
 	local _blocks="${3}"
 	local _api_env="${4}"
 	local _balenaos_account="${5}"
-	local _final="${6:-"no"}"
+	local _final="${6:-no}"
+	local _deploy="${7:-no}"
 	local _hostos_blocks=""
 	local _appname
 	local _appnames
@@ -79,15 +81,15 @@ __build_hostos_blocks() {
 
 			_packages=$(balena_lib_contract_fetch_composedOf_list "${_block}" "${_device_type}" "${_version}" "sw.package.yocto.${_package_type}")
 			for _block in ${_blocks}; do
-				local _release_version
 				_appname="${_device_type}-${_block}"
 				balena_build_block "${_appname}" "${_device_type}" "${_packages}" "${_balenaos_account}" "${_api_env}"
-				_release_version=$(balena_lib_get_os_version)
-				balena_deploy_block "${_appname}"  "${_device_type}" "${_bootable:-0}" "${_image_path:-"${WORKSPACE}/deploy-jenkins/${_appName}-${_release_version}.docker"}"
+				if [ "${_deploy}" = "yes" ]; then
+					balena_deploy "${_appname}"  "${_device_type}" "${_final:-no}" "${_block}" "${_bootable:-0}" "${_image_path:-"${WORKSPACE}/deploy-jenkins/"}"
+				fi
 			done
 
 			# Remove packages folder from deploy directory
-			rm -rf "${_deploy_dir}/${_package_type}"
+			rm -rf "${_deploy_dir:?}/${_package_type}"
 		fi
 		echo "${_hostos_blocks}"
 	fi
@@ -102,7 +104,8 @@ main() {
 	local _shared_dir
 	local _hostos_blocks
 	local _balenaos_account
-	local _final
+	local _final="no"
+	local _deploy="no"
 	local _esr=false
 	## Sanity checks
 	if [ ${#} -lt 1 ] ; then
@@ -119,7 +122,8 @@ main() {
 				s) _shared_dir="${OPTARG}" ;;
 				c) _balenaos_account="${OPTARG}" ;;
 				e) _esr=true ;;
-				p) _final="yes";;
+				p) _deploy="${OPTARG}" ;;
+				f) _final="${OPTARG}";;
 				h) usage;;
 				*) usage;exit 1;;
 			esac
@@ -137,7 +141,7 @@ main() {
 		[ -n "${_namespace}" ] && echo "Setting dockerhub account to ${_namespace}" && export NAMESPACE=${_namespace}
 		_balenaos_account=${_balenaos_account:-balena_os}
 
-		_hostos_blocks=$(__build_hostos_blocks "${_device_type}" "${_shared_dir}" "${_blocks}" "${_api_env}" "${_balenaos_account}" "${_final}")
+		_hostos_blocks=$(__build_hostos_blocks "${_device_type}" "${_shared_dir}" "${_blocks}" "${_api_env}" "${_balenaos_account}" "${_final}" "${_deploy}")
 	fi
 }
 
