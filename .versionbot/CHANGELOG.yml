@@ -1,4 +1,102 @@
 - commits:
+    - subject: "balena-*-block: Source includes from / as well as inside device
+        repositories"
+      hash: 7f9e9787e2489a9214eca59c0bf91e0d622118a2
+      body: |
+        This allows to use these scripts from container images that contain
+        the include files in the container root folder.
+
+        It simplifies the Dockerfiles for block builder containers.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-build-block: Allow to specify the deploy dir"
+      hash: 88a6ce75f8c9dc4a114dcae498bc67dc346ca0e8
+      body: |
+        This allows to use the script outside of the Jenkins context.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-lib: Use balena.yml if present"
+      hash: 893e75f648b343ad9afc4c16bf13b64e608f9a26
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-deploy-block.sh: Deploy using compose files"
+      hash: c912a1400e64b34ee0ff92e50d0bcd029fdc13a5
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-deploy: Deploy using compose files"
+      hash: 430872d3363cd5e53daa4b6daa4faef9541bdaf5
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-docker: Move compose file creation function from
+        balena-deploy.inc"
+      hash: 73dcf9e7f210fff43c9a984fb561b7acb6743b3a
+      body: |
+        The function is only called from within the balena-push-env container
+        that already contains the balena-docker.inc script include.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-lib: balena_lib_release: Use local cache if available"
+      hash: cac3f1edb93e1d3eb5e6ba2a1d77d9c28e5b9574
+      body: |
+        Use a `--cache-from <block>:<version>` to allow deployment to use images
+        cached locally, for example when a hostapp or an OS block has been built
+        and loaded into the local docker cache.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-lib: get_label_from_image: Return nothing if not found"
+      hash: 6f5ebb35f5736434f15123f2382f4d4eaa156713
+      body: |
+        It's easier to check its return value if it returns nothing without an
+        actual match.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.9
+  title: "'balena-deploy: Use docker cache when creating compose file'"
+  date: 2022-06-21T21:11:38.856Z
+- commits:
     - subject: "balena-lib: release_finalize: Do not retag phase for ESR branch patch"
       hash: ffdcb572e75b6bddc890710a6c1e4702d08a86a7
       body: |
