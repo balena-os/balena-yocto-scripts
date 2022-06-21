@@ -3,8 +3,14 @@
 set -e
 
 script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-source "/balena-api.inc"
-source "/balena-lib.inc"
+if [ -f "/balena-lib.inc" ] && [ -f "/balena-api.inc" ] && [ -f "/balena-docker.inc" ]; then
+	source "/balena-lib.inc"
+	source "/balena-api.inc"
+else
+	automation_dir=$( cd "${script_dir}/.." && pwd )
+	source "${automation_dir}/include/balena-lib.inc"
+	source "${automation_dir}/include/balena-api.inc"
+fi
 
 # Input checks
 [ -z "${APPNAME}" ] && echo "The block's app name needs to be defined" && exit 1

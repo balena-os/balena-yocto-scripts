@@ -1,9 +1,17 @@
 #!/bin/bash
 set -e
 
-source /balena-docker.inc
-source /balena-lib.inc
-source /balena-api.inc
+script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+if [ -f "/balena-lib.inc" ] && [ -f "/balena-api.inc" ] && [ -f "/balena-docker.inc" ]; then
+	source "/balena-lib.inc"
+	source "/balena-api.inc"
+	source "/balena-docker.inc"
+else
+	automation_dir=$( cd "${script_dir}/.." && pwd )
+	source "${automation_dir}/include/balena-lib.inc"
+	source "${automation_dir}/include/balena-api.inc"
+	source "${automation_dir}/include/balena-docker.inc"
+fi
 
 trap 'balena_docker_stop fail' SIGINT SIGTERM
 
