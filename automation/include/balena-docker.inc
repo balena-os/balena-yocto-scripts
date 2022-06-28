@@ -165,3 +165,145 @@ balena_docker_image_retrieve() {
 	export IMAGEID=${_image_id}
 	echo "${_image_id}"
 }
+
+# Initialize a compose file in the specified path
+#
+# Input:
+# $1: Path to create the compose file into
+__init_compose() {
+	local _path="${1}"
+	[ -z "${_path}" ] && return
+	cat << EOF > "${_path}/docker-compose.yml"
+version: '2'
+services:
+EOF
+}
+
+# Add a compose service
+#
+# Inputs:
+# $1: Path to the directory holding the compose file - will be created if needed
+# $2: Name of the service to be added
+# $3: Image digest for the service
+# $4: Image class: fileset, overlay or service (default)
+# $5: Image reboot required: 0 (default) or 1
+# $6: Image engine type: boot, root or data (default)
+# $6: Image is bootable, false (default) or true
+#
+# Outputs:
+#    Compose file in the specified path
+#
+__add_compose_service() {
+	local _path=$1
+	local _service_name=$2
+	local _image=$3
+	local _image_class=$4
+	local _image_reboot=$5
+	local _image_engine=$6
+	local _bootable=$7
+
+	[ -z "${_path}" ] || [ -z "${_service_name}" ] || [ -z "${_image}" ] && return
+	_image_class=${_image_class:-"service"}
+	_image_reboot=${_image_reboot:-0}
+	_image_engine=${_image_engine:-"data"}
+	_bootable=${_bootable:-"false"}
+
+	if [ ! -f "${_path}/docker-compose.yml" ]; then
+		__init_compose "${_path}"
+	fi
+	printf "  %s:\n" "${_service_name}" >> "${_path}/docker-compose.yml"
+	# Check if image is local (service_name:version)
+	if [ "${_image}" != "${_service_name}:*" ]; then
+		printf "    image: %s\n" "${_image}" >> "${_path}/docker-compose.yml"
+	else
+		printf "    build: %s\n" "${_service_name}" >> "${_path}/docker-compose.yml"
+		mkdir "${_path}/${_service_name}"
+		echo "FROM ${_image}" > "${_path}/${_service_name}/Dockerfile"
+	fi
+	printf "    labels:\n" >> "${_path}/docker-compose.yml"
+	if [ -n "${_image_class}" ]; then
+		printf "      %s: %s\n" \""${BALENA_HOSTOS_BLOCK_CLASS}"\" \""${_image_class}"\" >> "${_path}/docker-compose.yml"
+	fi
+	if [ "${_image_reboot}" = "1" ]; then
+		printf "      %s: '1'\n" \""${BALENA_HOSTOS_BLOCK_REQUIRES_REBOOT}"\" >> "${_path}/docker-compose.yml"
+	fi
+	if [ -n "${_image_engine}" ]; then
+		printf "      %s: %s\n" \""${BALENA_HOSTOS_BLOCK_STORE}"\" \""${_image_engine}"\" >> "${_path}/docker-compose.yml"
+	fi
+	if [ "${_bootable}" = "true" ]; then
+		printf "      %s: %s\n" \""${BALENA_HOSTOS_BLOCK_BOOTABLE}"\" \""${_bootable}"\" >> "${_path}/docker-compose.yml"
+	fi
+}
+
+# Creates a compose file
+#
+# Inputs:
+# $1: Device type to build for
+# $2: Balena API environment (default to balena-cloud.com)
+# $3: BalenaOS version - defaults to current device repository tag
+# $4: BalenaOS token
+# $5: HostOS blocks - defaults to hostapp block
+# $6: Working dir - if not provided uses a temporary directory
+#
+# Outputs:
+#    Path where the compose file is created
+#
+balena_docker_create_compose_file() {
+	local _device_type="$1"
+	local _apiEnv="$2"
+	local _version="$3"
+	local _token="$4"
+	local _blocks="${5:-${_device_type}}"
+	local _work_dir="${6:-$(mktemp -d)}"
+	local _block_image
+	local _class
+	local _store
+	local _reboot_required
+	local _block
+	local _image_id
+	local _local_image
+	local _bootable
+	local _release_path="${_work_dir}/release"
+
+	[ -z "${_device_type}" ] && return
+	_version=${_version:-$(balena_lib_get_os_version)}
+	_apiEnv=${_apiEnv:-"balena-cloud.com"}
+
+	mkdir -p "${_release_path}"
+	[ -z "${_blocks}" ] && >&2 echo "Blocks are required" && return 1
+	for _block in ${_blocks}; do
+		# Try to find a hostapp container image first
+		_local_image=$(readlink --canonicalize $(find "${_work_dir}" -name "balena-image-${_block}.docker") || true)
+		if [ -z "${_local_image}" ]; then
+			# If not, try to find a block container image
+			_local_image=$(readlink --canonicalize $(find "${_work_dir}" -name "${_block}-${_version}.docker") || true)
+		fi
+		if [ -n "${_local_image}" ]; then
+			_image_id=$(balena_docker_image_retrieve "${_local_image}")
+			docker tag "${_image_id}" "${_block}:${_version}"
+			_block_image="${_block}:${_version}"
+		else
+			_block_image=$(balena_api_fetch_image_from_app "${_block}" "${_version}" "${_apiEnv}")
+			if [ -z "${_block_image}" ] || [ "${_block_image}" = "" ]; then
+				>&2 echo "[${_block}] No such image for ${_version} in ${_apiEnv}"
+				continue
+			fi
+			_image_id=$(balena_docker_image_retrieve "${_block_image}")
+		fi
+		if [ -z "${_image_id}" ] || [ "${_image_id}" = "" ]; then
+			>&2 echo "[${_block}] Could not find image for ${_version} in ${_apiEnv}"
+			return 1
+		fi
+		# Container images created by importing a tarball and saving (like the Yocto docker image class does) do not contain labels
+		# Hence, if no labels are found default to hostapp values, class service, root store and bootable.
+		_class=$(balena_lib_get_label_from_image "${_image_id}" "${BALENA_HOSTOS_BLOCK_CLASS}")
+		[ -z "${_class}" ] && class="service"
+		_store=$(balena_lib_get_label_from_image "${_image_id}" "${BALENA_HOSTOS_BLOCK_STORE}")
+		[ -z "${_store}" ] && _store="root"
+		_reboot_required=$(balena_lib_get_label_from_image "${_image_id}" "${BALENA_HOSTOS_BLOCK_REQUIRES_REBOOT}")
+		[ -z "${_reboot_required}" ] && _reboot_required="1"
+		_bootable=$(balena_api_is_bootable "${_block}" "${_apiEnv}" "${_token}")
+		__add_compose_service "${_release_path}" "${_block}" "${_block_image}" "${_class}" "${_reboot_required}" "${_store}" "${_bootable}"
+	done
+	echo "${_release_path}"
+}

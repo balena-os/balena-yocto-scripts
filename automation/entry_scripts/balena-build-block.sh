@@ -3,8 +3,14 @@
 set -e
 
 script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-source "${script_dir}/balena-api.inc"
-source "${script_dir}/balena-lib.inc"
+if [ -f "/balena-lib.inc" ] && [ -f "/balena-api.inc" ] && [ -f "/balena-docker.inc" ]; then
+	source "/balena-lib.inc"
+	source "/balena-api.inc"
+else
+	automation_dir=$( cd "${script_dir}/.." && pwd )
+	source "${automation_dir}/include/balena-lib.inc"
+	source "${automation_dir}/include/balena-api.inc"
+fi
 
 # Input checks
 [ -z "${APPNAME}" ] && echo "The block's app name needs to be defined" && exit 1
@@ -12,6 +18,7 @@ source "${script_dir}/balena-lib.inc"
 [ -z "${PACKAGES}" ] && echo "list of packages to install without dependencies" && exit 1
 [ -z "${RELEASE_VERSION}" ] && echo "A release version needs to be defined" && exit 1
 [ -z "${WORKSPACE}" ] && echo "Workspace needs to be defined" && exit 1
+DEPLOY_DIR="${DEPLOY_DIR:-"${WORKSPACE}/deploy-jenkins"}"
 
 [ -z "${PACKAGE_TYPE}" ] && PACKAGE_TYPE="ipk"
 
@@ -63,10 +70,10 @@ echo "LABEL ${BALENA_HOSTOS_BLOCK_REQUIRES_REBOOT}=1"  >> "${TMPDIR}/Dockerfile"
 echo "LABEL ${BALENA_HOSTOS_BLOCK_STORE}=data" >> "${TMPDIR}/Dockerfile"
 
 # Copy local package feed to context if available from previous build step
-if [ -d "${WORKSPACE}/deploy-jenkins/${PACKAGE_TYPE}" ]; then
+if [ -d "${DEPLOY_DIR}/${PACKAGE_TYPE}" ]; then
 	ARCH_LIST=""
 	mkdir -p "${TMPDIR}/feed"
-	cp -r "${WORKSPACE}/deploy-jenkins/${PACKAGE_TYPE}" "${TMPDIR}/feed/"
+	cp -r "${DEPLOY_DIR}/${PACKAGE_TYPE}" "${TMPDIR}/feed/"
 	# Extract package architecture list from feed
 	# Each architecture is one directory
 	while IFS=$'\n' read -r dir; do
@@ -75,7 +82,7 @@ if [ -d "${WORKSPACE}/deploy-jenkins/${PACKAGE_TYPE}" ]; then
 		else
 			ARCH_LIST="${ARCH_LIST} ${dir}"
 		fi
-	done< <(find "${WORKSPACE}/deploy-jenkins/${PACKAGE_TYPE}" -mindepth 1 -maxdepth 1 -type d | xargs -I{} basename {})
+	done< <(find "${DEPLOY_DIR}/${PACKAGE_TYPE}" -mindepth 1 -maxdepth 1 -type d | xargs -I{} basename {})
 else
 	proto=${FEED_URL%:*}
 	if [ -z "${FEED_URL}" ] || [ "${proto}" = "file" ]; then
@@ -91,8 +98,8 @@ docker rmi -f $(docker images --filter "label=${BALENA_HOSTOS_BLOCK_CLASS}" --fo
 
 if balena build --logs --nocache --deviceType "${MACHINE}" --arch "${ARCH}" --buildArg PACKAGES="${PACKAGES}" --buildArg ARCH_LIST="${ARCH_LIST}" --buildArg NAMESPACE="${NAMESPACE:-resin}"; then
 	image_id=$(docker images --filter "label=${BALENA_HOSTOS_BLOCK_CLASS}" --format "{{.ID}}")
-	mkdir -p "${WORKSPACE}/deploy-jenkins"
-	docker save "${image_id}" > "${WORKSPACE}/deploy-jenkins/${APPNAME}-${RELEASE_VERSION}.docker"
+	mkdir -p "${DEPLOY_DIR}"
+	docker save "${image_id}" > "${DEPLOY_DIR}/${APPNAME}-${RELEASE_VERSION}.docker"
 else
 	echo "[ERROR] Fail to build"
 	exit 1

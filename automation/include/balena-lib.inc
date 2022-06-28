@@ -98,7 +98,10 @@ __find_contract_by_slug() {
 	local _contracts
 	local _slug
 
-	_contracts=$(find "${device_dir}/contracts/" -name "contract.json" -print 2>/dev/null)
+	_contracts=$(find "${device_dir}" -maxdepth 1 -name "balena.yml" -print 2>/dev/null)
+	if [ -z "${_contracts}" ]; then
+		_contracts=$(find "${device_dir}/contracts/" -name "contract.json" -print 2>/dev/null)
+	fi
 	for contract in ${_contracts}; do
 		_slug=$(jq --raw-output .slug < "${contract}")
 		if [ "${_slug}" = "${_tslug}" ]; then
@@ -430,7 +433,7 @@ balena_lib_get_dt_arch() {
 #
 #
 # Output:
-#  Label value in stdout or null
+#  Label value in stdout or nothing
 #
 balena_lib_get_label_from_image() {
 	local _image_id="${1}"
@@ -438,7 +441,9 @@ balena_lib_get_label_from_image() {
 	local _value
 
 	_value=$(docker inspect "${_image_id}" | jq -r '.[].Config.Labels["'"${_label}"'"]')
-	echo "${_value}"
+	if [ "${_value}" != "null" ]; then
+		echo "${_value}"
+	fi
 }
 
 
@@ -463,13 +468,14 @@ balena_lib_release() {
 	local _releaseID=""
 	local _status=""
 	local _debug=""
+	local _version
 
 	[ -z "${_appName}" ] && >&2 echo "balena_lib_release: Application name is required" && exit 1
 	_apiEnv=${_apiEnv:-"$(balena_lib_environment)"}
 	_path=${_path:-"$(pwd)"}
+	_version=$(balena_lib_get_os_version)
 	if [ -f "${_path}/balena.yml" ]; then
 		_contract_version=$(awk '/version:/ {print $2}' "${_path}/balena.yml")
-		_version=$(balena_lib_get_os_version)
 		if [ "${_contract_version}" != "${_version}" ]; then
 			>&2 echo "balena_lib_release: Version mismatch, contract ${_contract_version} os ${_version}"
 			return 1
@@ -487,7 +493,7 @@ balena_lib_release() {
 	if [ -n "${_image_id}" ]; then
 		_releaseID=$(BALENARC_BALENA_URL="${_apiEnv}" balena deploy "${_appName}" "${_image_id}" --source "${_path}" ${_status} ${_debug} | sed -n 's/.*Release: //p')
 	else
-		_releaseID=$(BALENARC_BALENA_URL="${_apiEnv}" balena deploy "${_appName}" --build --source "${_path}" ${_status} ${_debug} | sed -n 's/.*Release: //p')
+		_releaseID=$(BALENARC_BALENA_URL="${_apiEnv}" balena deploy "${_appName}" --build --source "${_path}" --cache-from ${_appName#*/}:${_version}  ${_status} ${_debug} | sed -n 's/.*Release: //p')
 	fi
 	[ -n "${_releaseID}" ] && >&2 echo "Deployed ${_image_id} to ${_appName} as ${_status##--} at ${_releaseID}"
 	echo "${_releaseID}"
