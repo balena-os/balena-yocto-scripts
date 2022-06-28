@@ -270,7 +270,7 @@ balena_deploy_to_s3() {
 
 	local _s3_cmd="s4cmd --access-key=${_s3_access_key} --secret-key=${_s3_secret_key}"
 	local _s3_sync_opts="--recursive --API-ACL=${_s3_policy}"
-	docker pull ${_namespace}/balena-img:master
+	docker pull "${_namespace}/balena-img:4.1.2"
 	docker run --rm -t \
 		-e BASE_DIR=/host/images \
 		-e S3_CMD="$_s3_cmd" \
