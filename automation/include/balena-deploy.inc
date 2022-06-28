@@ -231,7 +231,7 @@ balena_deploy_to_s3() {
 		_s3_version_hostos="$(balena_lib_get_meta_balena_version)"
 	fi
 
-	[ -z "${_namespace}" ] && _namespace=${NAMESPACE:-"resin"}
+	[ -z "${_namespace}" ] && _namespace=${NAMESPACE:-"balena"}
 	[ -z "${_esr}" ] && _esr="${_esr:-"${ESR:-false}"}"
 	local _s3_deploy_dir="${device_dir}/deploy-s3"
 	local _s3_deploy_images_dir="$_s3_deploy_dir/$_slug/$_s3_version_hostos"
@@ -270,7 +270,7 @@ balena_deploy_to_s3() {
 
 	local _s3_cmd="s4cmd --access-key=${_s3_access_key} --secret-key=${_s3_secret_key}"
 	local _s3_sync_opts="--recursive --API-ACL=${_s3_policy}"
-	docker pull ${_namespace}/resin-img:master
+	docker pull "${_namespace}/balena-img:4.1.2"
 	docker run --rm -t \
 		-e BASE_DIR=/host/images \
 		-e S3_CMD="$_s3_cmd" \
