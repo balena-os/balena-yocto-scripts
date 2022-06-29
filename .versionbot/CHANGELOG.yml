@@ -1,4 +1,19 @@
 - commits:
+    - subject: "automation: Stop deploying images to dockerhub"
+      hash: 988886a34945b9e9993abbcf651824b774910740
+      body: |
+        We are now using just the internal registry.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.10
+  title: "'automation: Stop deploying images to dockerhub'"
+  date: 2022-06-29T14:59:41.195Z
+- commits:
     - subject: "balena-deploy: pin balena-img to v4.1.2"
       hash: 5a9efbc151127e6bb806627ba4949327cd54b776
       body: |
