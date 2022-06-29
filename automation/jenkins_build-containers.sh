@@ -6,7 +6,7 @@ set -ev
 
 SCRIPTPATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 REVISION=$(cd "${SCRIPTPATH}" && git rev-parse --short=7 HEAD)
-NAMESPACE=${NAMESPACE:-resin}
+NAMESPACE=${NAMESPACE:-balena}
 
 source "${SCRIPTPATH}/include/balena-lib.inc"
 

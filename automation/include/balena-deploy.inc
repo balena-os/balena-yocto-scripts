@@ -132,71 +132,6 @@ balena_deploy_artifacts () {
 	fi
 }
 
-# Deploy docker images to dockerhub registry
-#
-# Inputs:
-#
-# $1: Device type name
-# $2: Account to deploy to (production | staging) (defaults to deployTo enviromental variable)
-# $3: Account namespace to use (defaults to resin)
-#
-balena_deploy_to_dockerhub () {
-	local _device_type="${1:-${MACHINE}}"
-	local _deploy_to="${2:-"${deployTo}"}"
-	local _namespace="${3:-resin}"
-	local _version
-	local _private
-	local _docker_repo
-	local _exported_image_path
-	local _slug
-	local _tag
-	local _hostapp_image
-	local _discontinued
-
-	[ -z "${_device_type}" ] && echo "[balena_deploy_to_dockerhub] Device type is required" && return 1
-	_discontinued=$(balena_lib_get_dt_state "${_device_type}")
-	if [ "${_discontinued}" = "DISCONTINUED" ]; then
-		echo "[INFO]: balena_deploy_to_dockerhub: Not deploying discontinued device type."
-		return
-	fi
-
-	_version=$(balena_lib_get_os_version)
-
-	_private=$(balena_api_is_dt_private "${_device_type}")
-
-	_exported_image_path=$(readlink --canonicalize "${device_dir}/build/tmp/deploy/images/${_device_type}/balena-image-${_device_type}.docker")
-
-	_slug=$(balena_lib_get_slug "${_device_type}")
-	[ -z "${_namespace}" ] && _namespace="${NAMESPACE:="resin"}"
-
-	local _docker_repo="${_namespace}/resinos"
-	if [ "${_deploy_to}" = "staging" ]; then
-		_docker_repo="${_namespace}/resinos-staging"
-	fi
-	# Make sure the tags are valid
-	# https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
-	_tag="$(echo "${_version}-${_slug}" | sed 's/[^a-z0-9A-Z_.-]/_/g')"
-
-	balena_lib_dockerhub_login
-
-	echo "[INFO] Pushing image to dockerhub $_docker_repo:$_tag..."
-
-	if [ ! -f "${_exported_image_path}" ]; then
-		echo "[ERROR] The build didn't produce a valid image."
-		return 1
-	fi
-
-	_hostapp_image=$(docker load --quiet -i "$_exported_image_path" | cut -d: -f1 --complement | tr -d ' ')
-	docker tag "$_hostapp_image" "$_docker_repo:$_tag"
-
-	# We only push to dockerhub if it is a public image.
-	if [ "$_private" = "false" ]; then
-		docker push "$_docker_repo":"$_tag"
-	fi
-
-	docker rmi -f "$_hostapp_image"
-}
-
 # Deploy artifacts to S3
 #
 # Inputs:
@@ -283,7 +218,7 @@ balena_deploy_to_s3() {
 		-e DEPLOYER_UID="$(id -u)" \
 		-e DEPLOYER_GID="$(id -g)" \
 		-e DEVICE_STATE="${_state}" \
-		-v "$_s3_deploy_dir":/host/images "${_namespace}"/resin-img:master /bin/sh -e -c ' \
+		-v "$_s3_deploy_dir":/host/images "${_namespace}"/balena-img:master /bin/sh -e -c ' \
 			VERBOSE=${VERBOSE:-0}
 			[ "${VERBOSE}" = "verbose" ] && set -x
 			apt-get -y update
@@ -366,7 +301,7 @@ balena_deploy_block() {
 		fi
 	fi
 
-	NAMESPACE=${NAMESPACE:-resin}
+	NAMESPACE=${NAMESPACE:-balena}
 	if ! balena_lib_docker_pull_helper_image "Dockerfile_balena-push-env" balena_yocto_scripts_revision; then
 		return 1
 	fi
@@ -419,7 +354,7 @@ balena_build_block() {
 	fi
 	docker run --rm -t \
 		-e APPNAME="${_appName}" \
-		-e NAMESPACE="${NAMESPACE:-resin}" \
+		-e NAMESPACE="${NAMESPACE:-balena}" \
 		-e RELEASE_VERSION="$(balena_lib_get_os_version)" \
 		-e PACKAGES="${_packages}" \
 		-e VERBOSE="${VERBOSE}" \

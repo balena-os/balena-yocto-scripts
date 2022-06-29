@@ -1,4 +1,4 @@
-ARG NAMESPACE="resin"
+ARG NAMESPACE="balena"
 ARG TAG="latest"
 FROM ${NAMESPACE}/balena-push-env:${TAG}
 

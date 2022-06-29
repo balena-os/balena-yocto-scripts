@@ -134,7 +134,7 @@ main() {
 		[ -z "${_shared_dir}" ] && echo "Shared directory is required" && exit 1
 		_blocks="${_blocks:-"${hostOSBlocks}"}"
 		[ -z "${_blocks}" ] && echo "No block names provided - nothing to do" && exit 1
-		[ -n "${_namespace}" ] && echo "Setting dockerhub account to ${_namespace}" && export NAMESPACE=${_namespace}
+		[ -n "${_namespace}" ] && echo "Setting registry account to ${_namespace}" && export NAMESPACE=${_namespace}
 		_balenaos_account=${_balenaos_account:-balena_os}
 
 		_hostos_blocks=$(__build_hostos_blocks "${_device_type}" "${_shared_dir}" "${_blocks}" "${_api_env}" "${_balenaos_account}" "${_final}")
