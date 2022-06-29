@@ -218,7 +218,7 @@ balena_deploy_to_s3() {
 		-e DEPLOYER_UID="$(id -u)" \
 		-e DEPLOYER_GID="$(id -g)" \
 		-e DEVICE_STATE="${_state}" \
-		-v "$_s3_deploy_dir":/host/images "${_namespace}"/resin-img:master /bin/sh -e -c ' \
+		-v "$_s3_deploy_dir":/host/images "${_namespace}"/balena-img:master /bin/sh -e -c ' \
 			VERBOSE=${VERBOSE:-0}
 			[ "${VERBOSE}" = "verbose" ] && set -x
 			apt-get -y update
