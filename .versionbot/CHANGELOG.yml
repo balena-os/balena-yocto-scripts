@@ -1,4 +1,41 @@
 - commits:
+    - subject: "balena-deploy: Use balena-img instead of resin-img"
+      hash: 93a91f27b8538d60b45d0f25eb1fddf512e31e52
+      body: |
+        The resin-img is no longer maintained and the deployment of raw images
+        as well as flasher requires features only available in balena-img.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: Global rename from dockerhub resin to balena accounts
+      hash: 6f28a6fed6d28f713312b8e856cf6bc6a8bba045
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "automation: Stop deploying images to dockerhub"
+      hash: 988886a34945b9e9993abbcf651824b774910740
+      body: |
+        We are now using just the internal registry.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.10
+  title: "'Global rename from dockerhub resin to balena accounts'"
+  date: 2022-06-29T14:41:44.861Z
+- commits:
     - subject: "balena-deploy: pin balena-img to v4.1.2"
       hash: 5a9efbc151127e6bb806627ba4949327cd54b776
       body: |
