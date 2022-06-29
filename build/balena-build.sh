@@ -59,7 +59,7 @@ balena_build_run_barys() {
 	local _docker_run_args="${9:-"--rm"}"
 	local _dl_dir
 	local _sstate_dir
-	local _namespace="${NAMESPACE:-"resin"}"
+	local _namespace="${NAMESPACE:-"balena"}"
 
 	[ -z "${_device_type}" ] && echo "Device type is required"  && exit 1
 	[ -z "${_shared_dir}" ] && echo "Shared directory path is required"  && exit 1

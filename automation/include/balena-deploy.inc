@@ -301,7 +301,7 @@ balena_deploy_block() {
 		fi
 	fi
 
-	NAMESPACE=${NAMESPACE:-resin}
+	NAMESPACE=${NAMESPACE:-balena}
 	if ! balena_lib_docker_pull_helper_image "Dockerfile_balena-push-env" balena_yocto_scripts_revision; then
 		return 1
 	fi
@@ -354,7 +354,7 @@ balena_build_block() {
 	fi
 	docker run --rm -t \
 		-e APPNAME="${_appName}" \
-		-e NAMESPACE="${NAMESPACE:-resin}" \
+		-e NAMESPACE="${NAMESPACE:-balena}" \
 		-e RELEASE_VERSION="$(balena_lib_get_os_version)" \
 		-e PACKAGES="${_packages}" \
 		-e VERBOSE="${VERBOSE}" \

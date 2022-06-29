@@ -21,7 +21,7 @@ if [ "${deployTo}" = 'production' ]; then
     BALENA_ENV='balena-cloud.com'
 fi
 
-NAMESPACE=${NAMESPACE:-resin}
+NAMESPACE=${NAMESPACE:-balena}
 
 # shellcheck disable=SC1091,SC2154
 source "${automation_dir}/include/balena-lib.inc"

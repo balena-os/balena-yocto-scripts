@@ -3,7 +3,7 @@
 [ "${VERBOSE}" = "verbose" ] && set -x
 set -e
 
-NAMESPACE=${NAMESPACE:-resin}
+NAMESPACE=${NAMESPACE:-balena}
 
 print_help() {
 	echo -e "Script options:\n\

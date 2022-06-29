@@ -8,7 +8,7 @@ include_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 device_dir=$( if cat /proc/self/cgroup | grep -q docker && [ -d "/work" ]; then cd "/work" && pwd; else cd "${include_dir}/../../.." && pwd; fi )
 BALENA_YOCTO_SCRIPTS_REVISION=$(cd "${include_dir}" && git rev-parse --short=7 HEAD || true)
 
-NAMESPACE="${NAMESPACE:-"resin"}"
+NAMESPACE="${NAMESPACE:-"balena"}"
 
 # Return the latest tag of the device repository
 balena_lib_get_os_version() {

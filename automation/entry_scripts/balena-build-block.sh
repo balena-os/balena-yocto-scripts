@@ -42,7 +42,7 @@ balena_docker_wait
 
 # Only support overlay images for the time being. Labels to be parametrized from contract in future.
 cat << 'EOF' > ${TMPDIR}/Dockerfile
-ARG NAMESPACE=resin
+ARG NAMESPACE=balena
 ARG TAG=latest
 FROM ${NAMESPACE}/yocto-block-build-env:${TAG} AS builder
 ARG PACKAGES
@@ -89,7 +89,7 @@ pushd "${TMPDIR}"
 # Clean local docker of labelled hostos images
 docker rmi -f $(docker images --filter "label=${BALENA_HOSTOS_BLOCK_CLASS}" --format "{{.ID}}" | tr '\n' ' ') 2> /dev/null || true
 
-if balena build --logs --nocache --deviceType "${MACHINE}" --arch "${ARCH}" --buildArg PACKAGES="${PACKAGES}" --buildArg ARCH_LIST="${ARCH_LIST}" --buildArg NAMESPACE="${NAMESPACE:-resin}"; then
+if balena build --logs --nocache --deviceType "${MACHINE}" --arch "${ARCH}" --buildArg PACKAGES="${PACKAGES}" --buildArg ARCH_LIST="${ARCH_LIST}" --buildArg NAMESPACE="${NAMESPACE:-balena}"; then
 	image_id=$(docker images --filter "label=${BALENA_HOSTOS_BLOCK_CLASS}" --format "{{.ID}}")
 	mkdir -p "${WORKSPACE}/deploy-jenkins"
 	docker save "${image_id}" > "${WORKSPACE}/deploy-jenkins/${APPNAME}-${RELEASE_VERSION}.docker"
