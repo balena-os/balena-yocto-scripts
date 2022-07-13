@@ -494,6 +494,30 @@ balena_lib_release() {
 }
 
 #
+# Check whether a version is ESR format
+#
+# Arguments:
+#
+# 1: balenaOS version
+#
+# Returns: Success (0) if ESR, 1 otherwise.
+#
+balena_lib_is_esr() {
+    local _os_version="${1}"
+	local Q1ESR="1|01"
+	local Q2ESR="4|04"
+	local Q3ESR="7|07"
+	local Q4ESR="10"
+    _regex="^[1-3][0-9]{3}\.${Q1ESR}|${Q2ESR}|${Q3ESR}|${Q4ESR}\.[0-9]*$"
+
+    if ! echo "${_os_version}" | grep -Eq "${_regex}"; then
+      >&2 echo "Invalid ESR release ${_os_version}"
+      return 1
+    fi
+	return 0
+}
+
+#
 # Finalize release and create release tags
 #
 # Arguments:
@@ -510,10 +534,6 @@ balena_lib_release_finalize() {
 	local _api_env="${3}"
 	local _token="${4}"
 	local _esr="${5}"
-	local Q1ESR="1|01"
-	local Q2ESR="4|04"
-	local Q3ESR="7|07"
-	local Q4ESR="10"
 	local _final
 	local _x_version
 	local _slug=${_fleet#*/}
@@ -551,10 +571,7 @@ balena_lib_release_finalize() {
 	echo "[INFO] Tagging release ${_releaseID} with version ${_os_version}"
 	BALENARC_BALENA_URL=${_api_env} balena tag set version "${_os_version}" --release "${_releaseID}"
 	if [ "$_esr" = "true" ]; then
-		_regex="^[1-3][0-9]{3}\.${Q1ESR}|${Q2ESR}|${Q3ESR}|${Q4ESR}\.[0-9]*$"
-
-		if ! echo "${_os_version}" | grep -Eq "${_regex}"; then
-			>&2 echo "Invalid ESR release ${_os_version}"
+		if ! balena_lib_is_esr "${_os_version}"; then
 			exit 1
 		fi
 		BALENARC_BALENA_URL=${_api_env} balena tag set meta-balena-base "${META_BALENA_VERSION}" --release "${_releaseID}"
