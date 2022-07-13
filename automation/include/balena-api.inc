@@ -459,6 +459,69 @@ balena_api_fetch_release_json() {
 	return "$?"
 }
 
+# Returns the releaseID for a given draft release version
+#
+# Draft versions have semver + revision in the semver filed
+#
+# release_type: "draft"
+# revision: null
+# semver: "2.99.27+rev5"
+# semver_build: "rev5"
+# semver_major: 2
+# semver_minor: 99
+# semver_patch: 27
+#
+# Final versions split semver from revision
+#
+# release_type: "final"
+# revision: 0
+# semver: "2.99.27"
+# semver_build: ""
+# semver_major: 2
+# semver_minor: 99
+# semver_patch: 27
+#
+# Arguments:
+#
+# $1: Fleet name
+# $2: Release version
+# $3: Balena target environment
+# $4: Balena API token
+#
+# Return:
+# 	Release ID or null if failure.
+# Result:
+# 	Success or failure
+balena_api_get_draft_releaseID() {
+	local _fleetName=$1
+	local _semver="${2}"
+	local _apiEnv="${3}"
+	local _token="${4}"
+	local _json
+
+	_apiEnv=${_apiEnv:-$(balena_lib_environment)}
+	_token=${_token:-$(balena_lib_token)}
+	_fleetID=$(balena_api_appID_from_appName "${_fleetName}" "${_apiEnv}" "${_token}")
+	if [ "${_fleetID}" = "null" ]; then
+		>&2 echo "[${_fleetName}] No such application"
+		return 1
+	fi
+
+	if [ -n "${_token}" ]; then
+		_json=$(${CURL} -XGET -H "Content-type: application/json" "https://api.${_apiEnv}/${TRANSLATION}/release?\$filter=(belongs_to__application%20eq%20${_fleetID})%20and%20(semver%20eq%20%27${_semver}%27))" -H "Authorization: Bearer ${_token}")
+	else
+		_json=$(${CURL} -XGET -H "Content-type: application/json" "https://api.${_apiEnv}/${TRANSLATION}/release?\$filter=(belongs_to__application%20eq%20${_fleetID})%20and%20(semver%20eq%20%27${_semver}%27))")
+	fi
+	__pp_json "${_json}"
+	_releaseID=$(echo "${_json}" | jq -r '.d[0].id')
+	_final=$(echo "${_json}" | jq -r '.d[0].is_final')
+	if [ "${_final}" = "1" ]; then
+		>&2 echo "[${_fleetName}][${relaseID}] Not a draft version "
+		return 1
+	fi
+	echo "${_releaseID}"
+}
+
 # Returns the computed version for a given release
 # Arguments:
 #
