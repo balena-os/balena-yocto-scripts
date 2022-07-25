@@ -153,6 +153,47 @@ done
 	echo "${_appID}"
 }
 
+# Sets the class of the application
+# Arguments:
+#
+# $1: Application name
+# $2: Application class (fleet | block | app)
+# $3: Balena target environment
+# $4: Balena environment token
+#
+# Result:
+# 	Application ID of the app or null
+__set_class() {
+	local _appName="$1"
+	local _class="$2"
+	local _apiEnv="$3"
+	local _token="$4"
+	[ -z "${_appName}" ] && >&2 echo "Application name is required" && return 1
+	local _appID=""
+	local _json=""
+	local _post_data
+	_appID=$(balena_api_appID_from_appName "${_appName}" "${_apiEnv}" "${_token}")
+	if [ "${_appID}" = "null" ]; then
+		>&2 echo "[${_appName}] No such application"
+		return 1
+	fi
+	while read -r -d '' _post_data <<-EOF
+{
+	"is_of__class": "${_class}"
+}
+EOF
+do
+	# This avoid read returning error from not finding a newline termination
+	:
+done
+	_json=$(${CURL} -XPATCH "https://api.${_apiEnv}/${TRANSLATION}/application(${_appID})" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}" --data "${_post_data}")
+	__check_fail "${_json}" "[${_appName}]: Failed to set class" && return 1
+	_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/application(${_appID})?\$filter=(is_of__class%20eq%20'${_class}')" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}")
+	__pp_json "${_json}"
+	__dlog "[${_appName}] Application ID is ${_appID}"
+	echo "${_appID}"
+}
+
 # Sets an  application public
 # Arguments:
 #
@@ -356,6 +397,10 @@ balena_api_create_public_app() {
 		_appID=$(__set_public_app "${_appName}" "${_apiEnv}" "${_token}" "${_url}")
 		if [ -n "${_appID}" ] && [ "${_appID}" != "null" ]; then
 			>&2 echo "[${_appName}] Application ${_appID} has been created as public"
+		fi
+		_appID=$(__set_class "${_appName}" "app" "${_apiEnv}" "${_token}")
+		if [ -n "${_appID}" ] && [ "${_appID}" != "null" ]; then
+			>&2 echo "[${_appName}] Application ${_appID} has been set as app"
 		fi
 		if [ "${_bootable}" = "1" ]; then
 			__set_bootable_app "${_appName}" "${_apiEnv}" "${_token}"
