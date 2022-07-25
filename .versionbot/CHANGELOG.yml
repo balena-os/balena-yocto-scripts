@@ -1,4 +1,20 @@
 - commits:
+    - subject: "balena-api: On hostapp creation, set class to app"
+      hash: 3bb4995b8bedcfe83b75c3ef6151725828dd1eb8
+      body: |
+        Applications can be fleet, blocks or apps, and hostapps need to be set
+        as apps.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.11
+  title: "'balena-api: On hostapp creation, set class to app'"
+  date: 2022-07-25T17:11:36.181Z
+- commits:
     - subject: "balena-deploy: Use balena-img instead of resin-img"
       hash: 93a91f27b8538d60b45d0f25eb1fddf512e31e52
       body: |
