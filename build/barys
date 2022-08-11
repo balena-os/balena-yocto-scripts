@@ -502,6 +502,17 @@ if [ "$USE_OLD_SYNTAX" == "yes" ]; then
         sed -i 's/.*LAYERSERIES_COMPAT_balena-common.*/LAYERSERIES_COMPAT_balena-common = "pyro rocko sumo thud warrior dunfell"/g' ${BALENA_COMMON_LAYER}/conf/layer.conf
         log "Reverted to the old bitbake syntax in meta-balena-common layer."
     fi
+
+    BALENA_RUST_LAYER="${SCRIPTPATH}/../../layers/meta-balena/meta-balena-rust"
+    if [ -d "${BALENA_RUST_LAYER}" ]; then
+        if ! command -v python3 &> /dev/null ; then
+            log ERROR "Python3 needs to be installed to perform conversion from the new bitbake syntax to the old one."
+        else
+            python3 ${SCRIPTPATH}/../automation/conversion_scripts/revert-overrides.py ${BALENA_RUST_LAYER}
+            sed -i 's/.*LAYERSERIES_COMPAT_balena-rust.*/LAYERSERIES_COMPAT_balena-rust = "pyro rocko sumo thud warrior dunfell"/g' ${BALENA_RUST_LAYER}/conf/layer.conf
+            log "Reverted to the old bitbake syntax in meta-balena-rust layer."
+        fi
+    fi
 fi
 
 log "BalenaOS build initialized in directory: $BUILD_DIR."
