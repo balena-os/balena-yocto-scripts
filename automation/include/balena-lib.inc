@@ -349,7 +349,7 @@ balena_lib_get_deploy_artifact() {
 	return 0
 }
 
-# Retrieve device state from device type JSON file
+# Retrieve device state from API
 #
 # Inputs:
 # $1: Device type name
@@ -358,19 +358,22 @@ balena_lib_get_deploy_artifact() {
 # 0 on success 1 on failure
 #
 # Outputs:
-# device state in stdout if successful
+# If success, DISCONTINUED in stdout if hostapp is archived, RELEASED otherwise.
+# No output in case of failure
 #
 balena_lib_get_dt_state() {
 	local _device_type="${1}"
+	local _archived
 	local _state
-	local _device_type_json="${device_dir}/${_device_type}.json"
-
-	if [ ! -f "${_device_type_json}" ]; then
-		>&2 echo "[balena_lib_get_dt_state]: Device type JSON not found"
+	_state="RELEASED"
+	if _archived=$(balena_api_is_archived "${_device_type}"); then
+		if [ "${_archived}" = "1" ]; then
+			_state="DISCONTINUED"
+		fi
+	else
+		>&2 echo "[]: Failed to get archived state for ${_device_type}"
 		return 1
 	fi
-
-	_state=$(jq --raw-output '.state' "${_device_type_json}")
 	echo "${_state}"
 	return 0
 }
