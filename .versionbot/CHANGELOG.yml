@@ -1,4 +1,19 @@
 - commits:
+    - subject: "jenkins_build.sh: Add building and deployment of blocks"
+      hash: 7a2f8260eb18f066f55ea296b85c8cf730532660
+      body: |
+        If blocks are defined in the job, build and deploy them.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.9
+  title: "'Add hostapp to hostos'"
+  date: 2022-08-12T09:49:39.366Z
+- commits:
     - subject: "balena-lib: release_finalize: Do not retag phase for ESR branch patch"
       hash: ffdcb572e75b6bddc890710a6c1e4702d08a86a7
       body: |
