@@ -176,7 +176,7 @@ if [ "$deploy" = "yes" ]; then
 		fi
 	fi
 
-	if [ "$AMI" = "true" ]; then
+	if [ "$AMI" = "true" ] && [ "${final}" = "yes" ]; then
 		echo "[INFO] Generating AMI"
 		export automation_dir
 		export MACHINE
