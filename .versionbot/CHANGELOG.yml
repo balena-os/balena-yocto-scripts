@@ -1,4 +1,18 @@
 - commits:
+    - subject: "jenkins_build: Only deploy AMI after deploying a final release"
+      hash: cfa6879d11a98c112a2e16fd40b6443a7fa6a838
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.13
+  title: "'jenkins_build: Only deploy AMI after deploying a final release'"
+  date: 2022-10-21T15:03:17.022Z
+- commits:
     - subject: "barys: Add balena-rust to syntax conversion step"
       hash: 2fb2b25a2bc6c226f3d4d570a2bfb261585ed283
       body: |
