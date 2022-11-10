@@ -7,7 +7,7 @@ S3_ACCESS_KEY=${STAGING_S3_ACCESS_KEY}
 S3_SECRET_KEY=${STAGING_S3_SECRET_KEY}
 S3_REGION=${STAGING_S3_REGION:-us-east-1}
 S3_BUCKET=${STAGING_S3_BUCKET:-resin-staging-img}
-BALENACLI_TOKEN=${BALENAOS_STAGING_TOKEN}
+BALENACLI_TOKEN=${BALENABLOCKS_TOKEN}
 BALENA_ENV='balena-staging.com'
 
 # shellcheck disable=SC2154
@@ -17,7 +17,6 @@ if [ "${deployTo}" = 'production' ]; then
     S3_SECRET_KEY=${PRODUCTION_S3_SECRET_KEY}
     S3_REGION=${PRODUCTION_S3_REGION:-us-east-1}
     S3_BUCKET=${PRODUCTION_S3_BUCKET:-resin-production-img-cloudformation}
-    BALENACLI_TOKEN=${BALENAOS_PRODUCTION_TOKEN}
     BALENA_ENV='balena-cloud.com'
 fi
 
