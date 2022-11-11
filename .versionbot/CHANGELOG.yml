@@ -1,4 +1,22 @@
 - commits:
+    - subject: "jenkins_generate_ami: use a different token"
+      hash: 3fcb9cb302b3f50e5fd8943fdafe2934fb0de182
+      body: >
+        The AMI preload application no longer lives in the balena_os
+        organization
+
+        so allow to provide a different token.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.14
+  title: "'jenkins_generate_ami: use a different token'"
+  date: 2022-11-10T15:10:52.071Z
+- commits:
     - subject: "jenkins_build: Only deploy AMI after deploying a final release"
       hash: cfa6879d11a98c112a2e16fd40b6443a7fa6a838
       body: ""
