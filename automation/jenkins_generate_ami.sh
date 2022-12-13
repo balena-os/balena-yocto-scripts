@@ -62,7 +62,8 @@ elif [ "${JSON_ARCH}" = "aarch64" ]; then
 fi
 
 APP_SUFFIX="${JSON_ARCH}"
-BALENA_PRELOAD_APP="cloud-config-${APP_SUFFIX}"
+BALENA_PRELOAD_ORG="${BALENA_PRELOAD_ORG:-balenablocks}"
+BALENA_PRELOAD_APP="${BALENA_PRELOAD_ORG}/cloud-config-${APP_SUFFIX}"
 BALENA_PRELOAD_COMMIT="${BALENA_PRELOAD_COMMIT:-current}"
 
 # shellcheck disable=SC1004,SC2154
