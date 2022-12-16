@@ -7,7 +7,7 @@ S3_ACCESS_KEY=${STAGING_S3_ACCESS_KEY}
 S3_SECRET_KEY=${STAGING_S3_SECRET_KEY}
 S3_REGION=${STAGING_S3_REGION:-us-east-1}
 S3_BUCKET=${STAGING_S3_BUCKET:-resin-staging-img}
-BALENACLI_TOKEN=${BALENABLOCKS_TOKEN}
+BALENACLI_TOKEN=${STAGING_BALENABLOCKS_TOKEN}
 BALENA_ENV='balena-staging.com'
 
 # shellcheck disable=SC2154
@@ -18,6 +18,7 @@ if [ "${deployTo}" = 'production' ]; then
     S3_REGION=${PRODUCTION_S3_REGION:-us-east-1}
     S3_BUCKET=${PRODUCTION_S3_BUCKET:-resin-production-img-cloudformation}
     BALENA_ENV='balena-cloud.com'
+    BALENACLI_TOKEN=${PRODUCTION_BALENABLOCKS_TOKEN}
 fi
 
 NAMESPACE=${NAMESPACE:-balena}
@@ -61,7 +62,8 @@ elif [ "${JSON_ARCH}" = "aarch64" ]; then
 fi
 
 APP_SUFFIX="${JSON_ARCH}"
-BALENA_PRELOAD_APP="cloud-config-${APP_SUFFIX}"
+BALENA_PRELOAD_ORG="${BALENA_PRELOAD_ORG:-balenablocks}"
+BALENA_PRELOAD_APP="${BALENA_PRELOAD_ORG}/cloud-config-${APP_SUFFIX}"
 BALENA_PRELOAD_COMMIT="${BALENA_PRELOAD_COMMIT:-current}"
 
 # shellcheck disable=SC1004,SC2154
