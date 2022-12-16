@@ -1,9 +1,22 @@
 - commits:
+    - subject: "workflows: add flowzone"
+      hash: 025f8399061f4a0ca6651d643c8c2016c8b1cfa7
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.15
+  title: ""
+  date: 2022-12-16T10:49:48.888Z
+- commits:
     - subject: "jenkins_generate_ami: use a different token"
       hash: 3fcb9cb302b3f50e5fd8943fdafe2934fb0de182
       body: >
-        The AMI preload application no longer lives in the balena_os
-        organization
+        The AMI preload application no longer lives in the balena_os organization
 
         so allow to provide a different token.
       footer:
@@ -1348,8 +1361,7 @@
         name"
       hash: 7d2e3911defedc500b3b1ded3268dbe74bb523b0
       body: >
-        This removes the necessity for the DT being named generic-*. It also
-        means
+        This removes the necessity for the DT being named generic-*. It also means
 
         all the DTs of the same architecture will preload the same app.
       footer:
@@ -1451,8 +1463,7 @@
     - subject: "balena-api: Do not use balena_lib_resolve_aliases"
       hash: d50cee134436914b4960254abd0a5cf28b40f764
       body: >
-        That function is now for internal use, replace with
-        balena_lig_get_slug()
+        That function is now for internal use, replace with balena_lig_get_slug()
 
         which is clearer.
       footer:
@@ -1684,8 +1695,7 @@
     - subject: "balena-lib: contracts: Add package list fetcher"
       hash: f2e5ce081f9ef39bcff364ce4a8e9a9d0d806590
       body: >
-        Add functions to retrieve a package list from a sw.package contract
-        where
+        Add functions to retrieve a package list from a sw.package contract where
 
         a yocto package based hostos block is defined.
       footer:
@@ -1932,8 +1942,7 @@
       subject: "balena-lib: Fix device installation path when running in helper
         container"
       body: >-
-        Several functions require to know where the device installation
-        directory
+        Several functions require to know where the device installation directory
 
         is, and this differs when the scripts are copied to a container.
     - hash: 960f754b2b86a9264155bf9763b148674a5e2db5
@@ -1944,8 +1953,7 @@
       subject: "balena-deploy: Fix device installation path when running in helper
         container"
       body: >-
-        Several functions require to know where the device installation
-        directory
+        Several functions require to know where the device installation directory
 
         is, and this differs when the scripts are copied to a container.
 - version: 1.12.12
@@ -2304,8 +2312,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       subject: "balena-lib: Add commonly used utility functions"
       body: >-
-        Add functions to obtain Balena environment, token and login to the
-        cloud,
+        Add functions to obtain Balena environment, token and login to the cloud,
 
         as well as to retrieve both OS and meta-balena versions.
     - hash: bb538a7010b47b17a11e26f800feed162d712d2f
@@ -2689,8 +2696,7 @@
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       subject: "jenkins-build.sh: Generalized target image names"
       body: >-
-        Do not assume that the target image to push is always a resin-image.
-        This
+        Do not assume that the target image to push is always a resin-image. This
 
         allows to push other type of images like hostapp extensions.
     - hash: 263a755feb557e7e651c7c9bd01f6a2ea355311f
@@ -3501,8 +3507,8 @@
       subject: "Dockerfile_yocto-build-env: Update docker base image to ubuntu 16.04
         (LTS)"
       body: >-
-        Also update nodejs to v8 and remove npm from being installed as the
-        nodejs package
+        Also update nodejs to v8 and remove npm from being installed as the nodejs
+        package
 
         now contains the npm binary and it will conflict when "apt get install"-ing npm.
 
@@ -3523,8 +3529,8 @@
       subject: "jenkins_yocto-build-env.sh: Invalidate cache when building the
         yocto-build-env docker image."
       body: >-
-        We specify "--no-cache" when building the yocto-build-env docker image
-        to get rid of errors during "docker run" such as this one:
+        We specify "--no-cache" when building the yocto-build-env docker image to
+        get rid of errors during "docker run" such as this one:
 
         Error response from daemon: could not find image: no such id: e34890d8e9bcb92938c0891f792b32bd83eec3ad1d50dad90eea779980e09664
 
@@ -3613,8 +3619,8 @@
       subject: "jenkins_build.sh: Copy recursively when dealing with archived build
         artifacts"
       body: >-
-        Archived build artifacts flagging means we are dealing with a directory
-        so we
+        Archived build artifacts flagging means we are dealing with a directory so
+        we
 
         need to be able to copy recursively.
     - hash: d8ddd74d1aa913e7e03defdccfada474faae54a9
@@ -3645,8 +3651,7 @@
         signed-off-by: Florin Sarbu <florin@resin.io>
       subject: "automation/jenkins_build.sh: Allow checkout of forked pull requests"
       body: >-
-        When we checkout a meta-resin revision for building we must also take
-        into
+        When we checkout a meta-resin revision for building we must also take into
 
         consideration that such a revision might be from an external contributor's
 
@@ -3681,8 +3686,7 @@
         signed-off-by: Florin Sarbu <florin@resin.io>
       subject: 'prepare-and-start.sh: Allow the "builder" user to access the SSH keys'
       body: >-
-        We need the user "builder" in the docker build container to be able to
-        use
+        We need the user "builder" in the docker build container to be able to use
 
         the host SSH keys (we need to be able to clone private git repositories using
 
@@ -3880,8 +3884,8 @@
       subject: "jenkins_build.sh: Don't allocate a pseudo-tty when running docker
         container"
       body: >-
-        Not having a tty allocated and available, yocto build will revert to
-        plain text
+        Not having a tty allocated and available, yocto build will revert to plain
+        text
 
         output.
     - hash: 6716d99fc8a138c091c9fcccd1c4f9acee75c3e9
