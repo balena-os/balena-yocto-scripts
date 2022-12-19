@@ -12,8 +12,8 @@ print_help() {
 	\t\t\t (mandatory) Machine to build for. This is a mandatory argument\n
 	\t\t --shared-dir\n\
 	\t\t\t (mandatory) Directory where to store shared downloads and shared sstate.\n
-	\t\t -b | --build-flavor\n\
-	\t\t\t (mandatory) The build flavor. (prod | dev)\n
+	\t\t -d | --os-dev\n\
+	\t\t\t Build an OS development image\n
 	\t\t -a | --additional-variable\n\
 	\t\t\t (optional) Inject additional local.conf variables. The format of the arguments needs to be VARIABLE=VALUE.\n\
 	\t\t --meta-balena-branch\n\
@@ -44,6 +44,7 @@ ESR=${ESR:-false}
 AMI=${AMI:-false}
 BARYS_ARGUMENTS_VAR="--remove-build"
 REMOVE_CONTAINER="--rm"
+OS_DEVELOPMENT=${OS_DEVELOPMENT:-false}
 
 # process script arguments
 args_number="$#"
@@ -98,6 +99,9 @@ while [[ $# -ge 1 ]]; do
 		--esr)
 			ESR="true"
 			;;
+		-d|--os-dev)
+			OS_DEVELOPMENT="true"
+			;;
 		--preserve-build)
 			PRESERVE_BUILD=1
 			BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR//--remove-build/}
@@ -141,6 +145,10 @@ else
 	git checkout --force "$metaBalenaBranch"
 	git submodule update --init --recursive
 	popd > /dev/null 2>&1
+fi
+
+if [ "${OS_DEVELOPMENT}" = "true" ]; then
+	BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -d"
 fi
 
 "${automation_dir}"/../build/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -g "${BARYS_ARGUMENTS_VAR}"
