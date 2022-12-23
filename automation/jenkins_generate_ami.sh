@@ -38,7 +38,11 @@ fi
 YOCTO_IMAGES_PATH="${WORKSPACE}/build/tmp/deploy/images/${MACHINE}"
 
 # TODO: Replace the default value with the value read from the CoffeeScript file once available
-IMAGE_NAME=${IMAGE_NAME:-balena-image-${MACHINE}.balenaos-img}
+if [ -n "${AMI_IMAGE_TYPE}" ] && [ "${AMI_IMAGE_TYPE}" = "installer" ]; then
+    IMAGE_NAME=${IMAGE_NAME:-balena-image-flasher-${MACHINE}.balenaos-img}
+else
+    IMAGE_NAME=${IMAGE_NAME:-balena-image-${MACHINE}.balenaos-img}
+fi
 
 ORIG_IMAGE="${YOCTO_IMAGES_PATH}/${IMAGE_NAME}"
 PRELOADED_IMAGE="$(mktemp -p "${YOCTO_IMAGES_PATH}")"
@@ -51,7 +55,11 @@ VERSION=$(cat < "${YOCTO_IMAGES_PATH}/VERSION_HOSTOS" | sed 's/+/-/g')
 # AMI name format: balenaOS-VERSION-DEVICE_TYPE
 # shellcheck disable=SC2154
 # passed in by Jenkins
-AMI_NAME="balenaOS-${VERSION}-${MACHINE}"
+if [ -n "${AMI_IMAGE_TYPE}" ] && [ "${AMI_IMAGE_TYPE}" = "installer" ]; then
+    AMI_NAME="${AMI_NAME:-balenaOS-${AMI_IMAGE_TYPE}-${VERSION}-${MACHINE}}"
+else
+    AMI_NAME="${AMI_NAME:-balenaOS-${VERSION}-${MACHINE}}"
+fi
 
 # TODO: Can get the mapping from somewhere?
 JSON_ARCH=$(balena_lib_get_dt_arch "${MACHINE}")

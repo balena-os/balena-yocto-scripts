@@ -141,6 +141,7 @@ create_aws_ami() {
     --name "${AMI_NAME}" \
     --architecture "${AMI_ARCHITECTURE}" \
     --virtualization-type hvm \
+    --tpm-support v2.0 \
     --ena-support \
     --root-device-name "${AMI_ROOT_DEVICE_NAME}" \
     --boot-mode "${AMI_BOOT_MODE}" \

@@ -12,8 +12,8 @@ print_help() {
 	\t\t\t (mandatory) Machine to build for. This is a mandatory argument\n
 	\t\t --shared-dir\n\
 	\t\t\t (mandatory) Directory where to store shared downloads and shared sstate.\n
-	\t\t -b | --build-flavor\n\
-	\t\t\t (mandatory) The build flavor. (prod | dev)\n
+	\t\t -d | --os-dev\n\
+	\t\t\t Build an OS development image\n
 	\t\t -a | --additional-variable\n\
 	\t\t\t (optional) Inject additional local.conf variables. The format of the arguments needs to be VARIABLE=VALUE.\n\
 	\t\t --meta-balena-branch\n\
@@ -28,6 +28,9 @@ print_help() {
 	\t\t --preserve-container\n\
 	\t\t\t (optional) Do not delete the yocto build docker container when it exits.\n\
 \t\t\t\t Default is to delete the container where the yocto build is taking place when this container exits.\n
+	\t\t --ami-image-type\n\
+	\t\t\t (optional) Specify image type to use for AMI image creation.\n\
+\t\t\t\t Defaults to using direct boot image, set to *installer* to use the installer image instead .\n\
 	\t\t --esr\n\
 	\t\t\t (optional) Is this an ESR build\n\
 \t\t\t\t Defaults to false.\n"
@@ -44,6 +47,7 @@ ESR=${ESR:-false}
 AMI=${AMI:-false}
 BARYS_ARGUMENTS_VAR="--remove-build"
 REMOVE_CONTAINER="--rm"
+OS_DEVELOPMENT=${OS_DEVELOPMENT:-false}
 
 # process script arguments
 args_number="$#"
@@ -95,8 +99,18 @@ while [[ $# -ge 1 ]]; do
 			fi
 			supervisorVersion="${supervisorVersion:-$2}"
 			;;
+		--ami-image-type)
+			if [ -z "$2" ]; then
+				echo "--ami-image-type argument needs an image type to use , by default it uses the direct boot image)"
+				exit 1
+			fi
+			AMI_IMAGE_TYPE="${AMI_IMAGE_TYPE:-${2}}"
+			;;
 		--esr)
 			ESR="true"
+			;;
+		-d|--os-dev)
+			OS_DEVELOPMENT="true"
 			;;
 		--preserve-build)
 			PRESERVE_BUILD=1
@@ -143,6 +157,10 @@ else
 	popd > /dev/null 2>&1
 fi
 
+if [ "${OS_DEVELOPMENT}" = "true" ]; then
+	BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -d"
+fi
+
 "${automation_dir}"/../build/balena-build.sh -d "${MACHINE}" -s "${JENKINS_PERSISTENT_WORKDIR}" -a "$(balena_lib_environment)" -g "${BARYS_ARGUMENTS_VAR}"
 # Do not check for artifacts as when discontinuing device types build artifacts are not created, but device-type.json needs to be deployed to mark the device as discontinued
 
@@ -180,6 +198,7 @@ if [ "$deploy" = "yes" ]; then
 		echo "[INFO] Generating AMI"
 		export automation_dir
 		export MACHINE
+		export AMI_IMAGE_TYPE
 		"${automation_dir}"/jenkins_generate_ami.sh
 	fi
 
