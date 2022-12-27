@@ -177,6 +177,7 @@ create_aws_ami() {
 cleanup () {
     aws_s3_image_cleanup || true
     aws_ebs_snapshot_cleanup || true
+    cleanup_eol_amis || true
     rm -f "${CONFIG_JSON}" || true
     balena_cleanup_fleet "${_fleet}" || true
 }
@@ -333,6 +334,36 @@ aws_test_instance() {
         fi
     fi
  }
+
+# shellcheck disable=SC2120
+cleanup_eol_amis() {
+    local _date
+    local _snapshots
+    local _period=${1:-"2 years ago"}
+    _date=$(date +%Y-%m-%d -d "${_period}")
+    echo "Cleaning up AMi images older than ${_period}"
+    image_ids=$(aws ec2 describe-images \
+        --filters "Name=name,Values=${AMI_NAME%%-*}-*" \
+        --owners "self" \
+        --query 'Images[?CreationDate<`'"${_date}"'`].[ImageId]' --output text)
+    for image_id in ${image_ids}; do
+        _snapshots="$(aws ec2 describe-images --image-ids "${image_id}" --query 'Images[*].BlockDeviceMappings[*].Ebs.SnapshotId' --output text)"
+        if aws ec2 deregister-image --image-id "${image_id}"; then
+            echo "De-registered AMI ${image_id}"
+            if [ -n "${_snapshots}" ]; then
+                for snapshot in ${_snapshots}; do
+                    if aws ec2 delete-snapshot --snapshot-id "${snapshot}"; then
+                        echo "Removed snapshot ${snapshot}"
+                    else
+                        echo "Could not remove snapshot ${snapshot}"
+                    fi
+                done
+            fi
+        else
+            echo "Could not de-register AMI ${image_id}"
+        fi
+    done
+}
 
 ## MAIN
 
