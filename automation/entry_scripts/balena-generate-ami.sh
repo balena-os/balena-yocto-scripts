@@ -4,6 +4,10 @@
 
 set -e
 
+script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+# shellcheck disable=SC1091
+source "${script_dir}/balena-lib.inc"
+
 AMI_ROOT_DEVICE_NAME=${AMI_ROOT_DEVICE_NAME:-/dev/sda1}
 AMI_EBS_DELETE_ON_TERMINATION=${AMI_EBS_DELETE_ON_TERMINATION:-true}
 AMI_EBS_VOLUME_SIZE=${AMI_EBS_VOLUME_SIZE:-8}
@@ -23,7 +27,9 @@ ensure_all_env_variables_are_set() {
                          AMI_ARCHITECTURE
                          BALENA_PRELOAD_APP
                          BALENARC_BALENA_URL
-                         BALENACLI_TOKEN"
+                         BALENACLI_TOKEN
+                         HOSTOS_VERSION
+                         MACHINE"
 
     for env in $env_variables; do
         [ -z "${!env}" ] && echo "ERROR: Missing env variable: $env" && env_not_set=true
@@ -171,7 +177,162 @@ create_aws_ami() {
 cleanup () {
     aws_s3_image_cleanup || true
     aws_ebs_snapshot_cleanup || true
+    rm -f "${CONFIG_JSON}" || true
+    balena_cleanup_fleet "${_fleet}" || true
 }
+
+balena_setup_fleet() {
+    local _config_json="${1}"
+    local _ami_test_fleet="${2}"
+    local _hostos_version="${3:-${HOSTOS_VERSION}}"
+    local _ami_test_org="${4:-testbot}"
+    local _device_type="${5:-${MACHINE}}"
+    local _uuid
+    local _key_file="${HOME}/.ssh/id_ed25519"
+
+    [ -z "${_ami_test_fleet}" ] && _ami_test_fleet=$(openssl rand -hex 4)
+    [ -z "${_config_json}" ] && echo "Path to config.json output is required" && return 1
+
+    # Create test fleet
+    >&2 echo "Creating ${_ami_test_org}/${_ami_test_fleet}"
+    >&2 balena fleet create "${_ami_test_fleet}" --organization "${_ami_test_org}" --type "${_device_type}"
+
+    # Register a key
+    mkdir -p "$(dirname "${_key_file}")"
+    ssh-keygen -t ed25519 -N "" -q -f "${_key_file}"
+    # shellcheck disable=SC2046
+    >&2 eval $(ssh-agent)
+    >&2 ssh-add
+    balena key add "${_ami_test_fleet}" "${_key_file}.pub"
+
+    _uuid=$(balena device register "${_ami_test_org}/${_ami_test_fleet}" | awk '{print $4}')
+    >&2 echo "Pre-registered device with UUID ${_uuid}"
+
+    >&2 balena config generate --network ethernet --version "${_hostos_version}" --device "${_uuid}" --appUpdatePollInterval 5 --output "${_config_json}"
+    if [ ! -f "${_config_json}" ]; then
+      echo "Unable to generate configuration"
+      return 1
+    else
+        _new_uuid=$(jq -r '.uuid' "${_config_json}")
+        if [ "${_new_uuid}" != "${_uuid}" ]; then
+            echo "Invalid uuid in ${_config_json}"
+            return 1
+        fi
+    fi
+    echo "${_ami_test_org}/${_ami_test_fleet}"
+}
+
+# shellcheck disable=SC2120
+balena_cleanup_fleet() {
+    local _fleet="${1}"
+    local _key_id
+    [ -z "${_fleet}" ] && return
+    balena fleet rm "${_fleet}" --yes || true
+    _key_id=$(balena keys | grep "${_fleet#*/}" | awk '{print $1}')
+    balena key rm "${_key_id}" --yes || true
+}
+
+aws_ami_do_public() {
+    local _ami_image_id="${1}"
+    local _ami_region=${2:-us-east-1}
+    local _ami_snapshot_id
+    [ -z "${_ami_image_id}" ] && echo "AMI image ID is required" && return
+    _ami_snapshot_id=$(aws ec2 describe-images --region="${_ami_region}" --image-ids "${_ami_image_id}" | jq -r '.Images[].BlockDeviceMappings[].Ebs.SnapshotId')
+    if [ -n "${_ami_snapshot_id}" ]; then
+        if aws ec2 modify-snapshot-attribute --region "${_ami_region}" --snapshot-id "${_ami_snapshot_id}" --attribute createVolumePermission --operation-type add --group-names all; then
+            if [ "$(aws ec2 describe-snapshot-attribute --region ${_ami_region} --snapshot-id "${_ami_snapshot_id}" --attribute createVolumePermission | jq -r '.CreateVolumePermissions[].Group')" == "all" ]; then
+                echo "AMI snapshot ${_ami_snapshot_id} is now publicly accessible"
+            else
+                echo "AMI snapshot ${_ami_snapshot_id} could not be made public"
+                return 1
+            fi
+        fi
+    else
+        echo "AMI snapshot ID not found"
+        return 1
+    fi
+
+    if aws ec2 modify-image-attribute \
+        --image-id "${_ami_image_id}" \
+        --launch-permission "Add=[{Group=all}]"; then
+        if [ "$(aws ec2 describe-images --image-ids "${_ami_image_id}" | jq -r '.Images[].Public')" = "true" ]; then
+            echo "AMI with ID ${_ami_image_id} is now public"
+        else
+            echo "Failed to set image with ID ${_ami_image_id} public"
+            return 1
+        fi
+    fi
+}
+
+aws_test_instance() {
+    local _ami_name="${1}"
+    local _uuid="${2}"
+    local _config_json="${3}"
+    # Default to a Nitro instance for TPM support
+    local _ami_instance_type="${4:-m5.large}"
+    local _ami_key_name="${5:-jenkins}"
+    # Name: A public
+    local _ami_subnet_id="${6:-subnet-02d18a08ea4058574}"
+    # Name: balena-tests-compute
+    local _ami_security_group_id="${7:-sg-057937f4d89d9d51c}"
+    local _ami_image_id
+    local _instance_id
+    local _output=""
+
+    [ -z "${_ami_name}" ] && echo "The AMI to instantiate needs to be defined" && return 1
+    [ -z "${_uuid}" ] && echo "The device UUID needs to be defined" && return 1
+    [ -z "${_config_json}" ] && echo "The path to config.json needs to be defined" && return 1
+    [ -n "${_config_json}" ] && [ ! -f "${_config_json}" ] && echo "${_config_json} does not exist" && return 1
+
+    _ami_image_id=$(aws ec2 describe-images --filters "Name=name,Values=${_ami_name}" --query 'Images[*].[ImageId]' --output text)
+    if [ -z "${_ami_image_id}" ]; then
+        echo "No ${_ami_name} AMI found."
+        exit 1
+    fi
+
+    echo "Instantiating ${_ami_image_id} with key ${_ami_key_name} in subnet ${_ami_subnet_id} and security group ${_ami_security_group_id}"
+    _instance_id=$(aws ec2 run-instances --image-id "${_ami_image_id}" --count 1 \
+        --instance-type "${_ami_instance_type}" --key-name "${_ami_key_name}" \
+        --tag-specifications \
+        "ResourceType=instance,Tags=[{Key=Name,Value=test-${_ami_name}}]" \
+        "ResourceType=volume,Tags=[{Key=Name,Value=test-${_ami_name}}]" \
+        --subnet-id "${_ami_subnet_id}" \
+        --security-group-ids "${_ami_security_group_id}" \
+        --user-data "file://${_config_json}" | jq -r '.Instances[0].InstanceId')
+    if [ -z "${_instance_id}" ]; then
+        echo "Error instantiating ${_ami_image_id} on ${_ami_instance_type}"
+        return 1
+    fi
+
+    # Give it time to spin up
+    sleep 2m
+
+    # Check supervisor is healthy
+    _loops=30
+    until echo 'balena ps -q -f name=balena_supervisor | xargs balena inspect | \
+        jq -r ".[] | select(.State.Health.Status!=null).Name + \":\" + .State.Health.Status"; exit' | \
+        balena ssh "${_uuid}" | grep -q ":healthy"; do
+            echo "Waiting for supervisor..."
+            sleep "$(( (RANDOM % 30) + 30 ))s";
+            _loops=$(( _loops - 1 ))
+            if [ ${_loops} -lt 0 ]; then
+                echo "Timed out without supervisor health check pass"
+                break
+            fi
+    done
+
+    if [ -n "${_instance_id}" ]; then
+        echo "Terminating instance ${_instance_id}"
+        aws ec2 terminate-instances --instance-ids "${_instance_id}"
+    fi
+
+    if [ ${_loops} -gt 0 ]; then
+        # Make AMI public
+        if ! aws_ami_do_public "${_ami_image_id}"; then
+            exit 1
+        fi
+    fi
+ }
 
 ## MAIN
 
@@ -179,7 +340,7 @@ cleanup () {
 
 ensure_all_env_variables_are_set
 
-trap "cleanup" EXIT
+trap "cleanup" ERR EXIT
 
 balena login -t "${BALENACLI_TOKEN}"
 
@@ -189,3 +350,11 @@ create_aws_ebs_snapshot "${IMAGE}" ebs_snapshot_id s3_image_url
 # shellcheck disable=SC2154
 # ebs_snapshot_id defined with eval in create_aws_ebs_snapshot function
 create_aws_ami "${ebs_snapshot_id}" ami_id
+
+CONFIG_JSON="$(mktemp)"
+_fleet=$(balena_setup_fleet "${CONFIG_JSON}")
+UUID=$(jq -r '.uuid' "${CONFIG_JSON}")
+
+if [ -n "${UUID}" ]; then
+    aws_test_instance "${AMI_NAME}" "${UUID}" "${CONFIG_JSON}"
+fi

@@ -94,6 +94,8 @@ docker run --rm -t \
     -e BALENACLI_TOKEN="${BALENACLI_TOKEN}" \
     -e BALENA_PRELOAD_COMMIT="${BALENA_PRELOAD_COMMIT}" \
     -e IMAGE="${PRELOADED_IMAGE}" \
+    -e MACHINE="${MACHINE}" \
+    -e HOSTOS_VERSION="$(balena_lib_get_os_version)" \
     -w "${WORKSPACE}" \
     "${NAMESPACE}/balena-generate-ami-env:${balena_yocto_scripts_revision}" /balena-generate-ami.sh
 
