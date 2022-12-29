@@ -203,7 +203,7 @@ balena_setup_fleet() {
     _uuid=$(balena device register "${_ami_test_org}/${_ami_test_fleet}" | awk '{print $4}')
     >&2 echo "Pre-registered device with UUID ${_uuid}"
 
-    >&2 balena config generate --network ethernet --version "${_hostos_version}" --device "${_uuid}" --appUpdatePollInterval 5 --output "${_config_json}"
+    >&2 balena config generate --network ethernet --version "${_hostos_version}" --device "${_uuid}" --appUpdatePollInterval 5 --output "${_config_json}" --dev
     if [ ! -f "${_config_json}" ]; then
       echo "Unable to generate configuration"
       return 1
@@ -235,9 +235,9 @@ aws_test_instance() {
     local _ami_instance_type="${4:-m5.large}"
     local _ami_key_name="${5:-jenkins}"
     # Name: A public
-    local _ami_subnet_id="${6:-subnet-02d18a08ea4058574}"
+    local _ami_subnet_id="${6:-subnet-6ddcb708}"
     # Name: balena-tests-compute
-    local _ami_security_group_id="${7:-sg-057937f4d89d9d51c}"
+    local _ami_security_group_id="${7:-sg-0fbe5c9da454cf051}"
     local _ami_image_id
     local _instance_id
     local _output=""
