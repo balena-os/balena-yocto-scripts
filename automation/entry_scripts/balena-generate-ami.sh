@@ -136,12 +136,17 @@ create_aws_ami() {
         exit 1
     fi
 
+    # Only supported on x86_64
+    if [ "${AMI_ARCHITECTURE}" = "x86_64" ]; then
+        TPM="--tpm-support v2.0"
+    fi
+
     echo "Creating ${AMI_NAME} AWS AMI image..."
     image_id=$(aws ec2 register-image \
     --name "${AMI_NAME}" \
     --architecture "${AMI_ARCHITECTURE}" \
     --virtualization-type hvm \
-    --tpm-support v2.0 \
+    ${TPM} \
     --ena-support \
     --root-device-name "${AMI_ROOT_DEVICE_NAME}" \
     --boot-mode "${AMI_BOOT_MODE}" \
