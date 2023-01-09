@@ -1,4 +1,20 @@
 - commits:
+    - subject: "balena-generate-ami: Enable TPM support on x86_64 only"
+      hash: 7ee973096d3d93f0006816c310cf41d0d5097d86
+      body: |
+        On aarch64 this fails with
+        "Invalid machineArchitecture value 'arm64' for tpmSupport."
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Michal Toman <michalt@balena.io>
+        signed-off-by: Michal Toman <michalt@balena.io>
+      author: Michal Toman
+      nested: []
+  version: 1.19.18
+  title: ""
+  date: 2023-01-09T08:14:37.524Z
+- commits:
     - subject: "jenkins_generate_ami: support using both live and installer images as
         AMIs"
       hash: fa4fcbb106695ba646a383d4efff3cc325626330
