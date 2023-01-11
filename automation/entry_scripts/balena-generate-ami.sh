@@ -174,7 +174,7 @@ cleanup () {
     aws_ebs_snapshot_cleanup || true
     cleanup_eol_amis || true
     rm -f "${CONFIG_JSON}" || true
-    balena_cleanup_fleet "${_fleet}" || true
+    #balena_cleanup_fleet "${_fleet}" || true
 }
 
 balena_setup_fleet() {
@@ -276,10 +276,10 @@ aws_test_instance() {
     done;' || true)
 
     # Terminate instance
-    if [ -n "${_instance_id}" ]; then
-        echo "Terminating instance ${_instance_id}"
-        aws ec2 terminate-instances --instance-ids "${_instance_id}"
-    fi
+#    if [ -n "${_instance_id}" ]; then
+#        echo "Terminating instance ${_instance_id}"
+#        aws ec2 terminate-instances --instance-ids "${_instance_id}"
+#    fi
 
     if [ "${_output}" == "pass" ]; then
         # Make AMI public
