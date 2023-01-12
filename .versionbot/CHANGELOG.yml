@@ -1,4 +1,52 @@
 - commits:
+    - subject: "jenkins_generate_ami: use balena_os tokens instead of org specific
+        token"
+      hash: 86cdd9373e05e56ee30c34ed933e885bd3dca96c
+      body: |
+        No need to complicate the job configuration with two tokens if we can do
+        with one.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "jenkins_build: respect the preserve build flag"
+      hash: c59e549e9d715a6697aa38580471b64d00e73713
+      body: |
+        Do not remove the build directory if the preserve build flag is set.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-generate-ami: cleanup images after deployment"
+      hash: b6dac862ee64b57156f95ae194c04e94658f21e0
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-generate-ami: test image before making it public"
+      hash: be23a1fe2a304a13576128e6153d451fdb069e71
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.18
+  title: ""
+  date: 2023-01-12T12:05:22.500Z
+- commits:
     - subject: "jenkins_generate_ami: support using both live and installer images as
         AMIs"
       hash: fa4fcbb106695ba646a383d4efff3cc325626330
