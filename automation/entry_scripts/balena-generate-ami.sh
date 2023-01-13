@@ -67,15 +67,6 @@ aws_s3_image_cleanup() {
       s3_image_url=""
 }
 
-
-aws_ebs_snapshot_cleanup() {
-    [ -n "${ebs_snapshot_id}" ] && \
-      echo "* Removing snapshot from ebs..." && \
-      aws ec2 delete-snapshot --snapshot-id "${ebs_snapshot_id}" && \
-      ebs_snapshot_id=""
-}
-
-
 create_aws_ebs_snapshot() {
 
     local img=$1
@@ -176,7 +167,6 @@ create_aws_ami() {
 
 cleanup () {
     aws_s3_image_cleanup || true
-    aws_ebs_snapshot_cleanup || true
     cleanup_eol_amis || true
     rm -f "${CONFIG_JSON}" || true
     balena_cleanup_fleet "${_fleet}" || true
