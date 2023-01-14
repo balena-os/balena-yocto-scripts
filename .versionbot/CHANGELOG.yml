@@ -1,4 +1,64 @@
 - commits:
+    - subject: "balena-generate-ami: do not remove AMI snapshot"
+      hash: 7022aa4933c5134d22b1f9f7e60c9e76fecca36a
+      body: |
+        This snapshot is attached to the AMI and can only be removed after
+        de-registering the AMI.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "jenkins_generate_ami: use balena_os tokens instead of org specific
+        token"
+      hash: 526fe49137cd619162d4e1307b977d1aa85401b0
+      body: |
+        No need to complicate the job configuration with two tokens if we can do
+        with one.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "jenkins_build: respect the preserve build flag"
+      hash: 30ff6dc19dafe9f7860df65c5552e4a25061a37b
+      body: |
+        Do not remove the build directory if the preserve build flag is set.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-generate-ami: cleanup images after deployment"
+      hash: 9c9d16e927a472aa06ef7e08ae63d3167747b166
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-generate-ami: test image before making it public"
+      hash: 561d67921c0f4251dc4ccdbe41864bc0a565524c
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.19
+  title: ""
+  date: 2023-01-14T17:40:18.215Z
+- commits:
     - subject: "balena-generate-ami: Enable TPM support on x86_64 only"
       hash: 7ee973096d3d93f0006816c310cf41d0d5097d86
       body: |
