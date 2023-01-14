@@ -206,4 +206,6 @@ fi
 
 # Cleanup
 # Keep this after writing all artifacts
-rm -rf $WORKSPACE/build
+if [ "${PRESERVE_BUILD}" != "1" ]; then
+	rm -rf $WORKSPACE/build
+fi

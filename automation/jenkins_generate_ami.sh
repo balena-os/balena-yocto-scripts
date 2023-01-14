@@ -7,7 +7,7 @@ S3_ACCESS_KEY=${STAGING_S3_ACCESS_KEY}
 S3_SECRET_KEY=${STAGING_S3_SECRET_KEY}
 S3_REGION=${STAGING_S3_REGION:-us-east-1}
 S3_BUCKET=${STAGING_S3_BUCKET:-resin-staging-img}
-BALENACLI_TOKEN=${STAGING_BALENABLOCKS_TOKEN}
+BALENACLI_TOKEN=${BALENAOS_STAGING_TOKEN}
 BALENA_ENV='balena-staging.com'
 
 # shellcheck disable=SC2154
@@ -18,7 +18,7 @@ if [ "${deployTo}" = 'production' ]; then
     S3_REGION=${PRODUCTION_S3_REGION:-us-east-1}
     S3_BUCKET=${PRODUCTION_S3_BUCKET:-resin-production-img-cloudformation}
     BALENA_ENV='balena-cloud.com'
-    BALENACLI_TOKEN=${PRODUCTION_BALENABLOCKS_TOKEN}
+    BALENACLI_TOKEN=${BALENAOS_PRODUCTION_TOKEN}
 fi
 
 NAMESPACE=${NAMESPACE:-balena}
@@ -94,6 +94,8 @@ docker run --rm -t \
     -e BALENACLI_TOKEN="${BALENACLI_TOKEN}" \
     -e BALENA_PRELOAD_COMMIT="${BALENA_PRELOAD_COMMIT}" \
     -e IMAGE="${PRELOADED_IMAGE}" \
+    -e MACHINE="${MACHINE}" \
+    -e HOSTOS_VERSION="$(balena_lib_get_os_version)" \
     -w "${WORKSPACE}" \
     "${NAMESPACE}/balena-generate-ami-env:${balena_yocto_scripts_revision}" /balena-generate-ami.sh
 
