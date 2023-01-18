@@ -1,4 +1,19 @@
 - commits:
+    - subject: "jenkins_generate_ami: default to pull cloud-config apps from balena_os"
+      hash: 0e3f9ca33265d1fc84244a4e3e86b9e7a7c85715
+      body: |
+        These applications have been moved to the `balena_os` organization.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.20
+  title: ""
+  date: 2023-01-18T08:56:44.815Z
+- commits:
     - subject: "balena-generate-ami: do not remove AMI snapshot"
       hash: 7022aa4933c5134d22b1f9f7e60c9e76fecca36a
       body: |
