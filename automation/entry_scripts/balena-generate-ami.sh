@@ -261,7 +261,6 @@ aws_test_instance() {
     local _config_json="${3}"
     # Default to a Nitro instance for TPM support
     local _ami_instance_type="${4:-m5.large}"
-    local _ami_key_name="${5:-jenkins}"
     # Name: A public
     local _ami_subnet_id="${6:-subnet-02d18a08ea4058574}"
     # Name: balena-tests-compute
@@ -283,7 +282,7 @@ aws_test_instance() {
 
     echo "Instantiating ${_ami_image_id} with key ${_ami_key_name} in subnet ${_ami_subnet_id} and security group ${_ami_security_group_id}"
     _instance_id=$(aws ec2 run-instances --image-id "${_ami_image_id}" --count 1 \
-        --instance-type "${_ami_instance_type}" --key-name "${_ami_key_name}" \
+        --instance-type "${_ami_instance_type}" \
         --tag-specifications \
         "ResourceType=instance,Tags=[{Key=Name,Value=test-${_ami_name}}]" \
         "ResourceType=volume,Tags=[{Key=Name,Value=test-${_ami_name}}]" \
