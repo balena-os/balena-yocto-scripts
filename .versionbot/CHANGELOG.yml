@@ -1,4 +1,21 @@
 - commits:
+    - subject: "balene-generate-ami: remove key name"
+      hash: cebc5f30447785bdbad8260f0975bd1f9f261a9b
+      body: >
+        No need to provide a key name as the instance only needs to be accessible
+
+        via balenaCloud.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.21
+  title: ""
+  date: 2023-01-19T12:37:05.534Z
+- commits:
     - subject: "jenkins_generate_ami: default to pull cloud-config apps from balena_os"
       hash: 0e3f9ca33265d1fc84244a4e3e86b9e7a7c85715
       body: |
