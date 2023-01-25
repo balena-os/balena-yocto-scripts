@@ -21,6 +21,8 @@ ensure_all_env_variables_are_set() {
     local env_variables="AWS_ACCESS_KEY_ID
                          AWS_SECRET_ACCESS_KEY
                          AWS_DEFAULT_REGION
+                         AWS_SECURITY_GROUP_ID
+                         AWS_SUBNET_ID
                          S3_BUCKET
                          IMAGE
                          AMI_NAME
@@ -259,12 +261,12 @@ aws_test_instance() {
     local _ami_name="${1}"
     local _uuid="${2}"
     local _config_json="${3}"
-    # Default to a Nitro instance for TPM support
-    local _ami_instance_type="${4:-m5.large}"
     # Name: A public
-    local _ami_subnet_id="${6:-subnet-02d18a08ea4058574}"
+    local _ami_subnet_id="${4:-subnet-02d18a08ea4058574}"
     # Name: balena-tests-compute
-    local _ami_security_group_id="${7:-sg-057937f4d89d9d51c}"
+    local _ami_security_group_id="${5:-sg-057937f4d89d9d51c}"
+    # Default to a Nitro instance for TPM support
+    local _ami_instance_type="${6:-m5.large}"
     local _ami_image_id
     local _instance_id
     local _output=""
@@ -376,5 +378,5 @@ _fleet=$(balena_setup_fleet "${CONFIG_JSON}")
 UUID=$(jq -r '.uuid' "${CONFIG_JSON}")
 
 if [ -n "${UUID}" ]; then
-    aws_test_instance "${AMI_NAME}" "${UUID}" "${CONFIG_JSON}"
+    aws_test_instance "${AMI_NAME}" "${UUID}" "${CONFIG_JSON}" "${AWS_SUBNET_ID}" "${AWS_SECURITY_GROUP_ID}"
 fi
