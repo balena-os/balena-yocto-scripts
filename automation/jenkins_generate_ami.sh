@@ -9,6 +9,8 @@ S3_REGION=${STAGING_S3_REGION:-us-east-1}
 S3_BUCKET=${STAGING_S3_BUCKET:-resin-staging-img}
 BALENACLI_TOKEN=${BALENAOS_STAGING_TOKEN}
 BALENA_ENV='balena-staging.com'
+AWS_SUBNET_ID="subnet-0d73c1f0da85add17"
+AWS_SECURITY_GROUP_ID="sg-09dd285d11b681946"
 
 # shellcheck disable=SC2154
 # passed in by Jenkins
@@ -19,6 +21,8 @@ if [ "${deployTo}" = 'production' ]; then
     S3_BUCKET=${PRODUCTION_S3_BUCKET:-resin-production-img-cloudformation}
     BALENA_ENV='balena-cloud.com'
     BALENACLI_TOKEN=${BALENAOS_PRODUCTION_TOKEN}
+    AWS_SUBNET_ID="subnet-02d18a08ea4058574"
+    AWS_SECURITY_GROUP_ID="sg-057937f4d89d9d51c"
 fi
 
 NAMESPACE=${NAMESPACE:-balena}
@@ -96,6 +100,8 @@ docker run --rm -t \
     -e IMAGE="${PRELOADED_IMAGE}" \
     -e MACHINE="${MACHINE}" \
     -e HOSTOS_VERSION="$(balena_lib_get_os_version)" \
+    -e AWS_SUBNET_ID="${AWS_SUBNET_ID}" \
+    -e AWS_SECURITY_GROUP_ID="${AWS_SECURITY_GROUP_ID}" \
     -w "${WORKSPACE}" \
     "${NAMESPACE}/balena-generate-ami-env:${balena_yocto_scripts_revision}" /balena-generate-ami.sh
 
