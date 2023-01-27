@@ -94,6 +94,7 @@ create_aws_ebs_snapshot() {
       --disk-container "Description=balenaOs,Format=RAW,UserBucket={S3Bucket=${S3_BUCKET},S3Key=preloaded-images/${s3_key}}" | jq -r .ImportTaskId)
 
     echo "* Created a AWS import snapshot task with id ${import_task_id}. Waiting for completition... (Timeout: $IMPORT_SNAPSHOT_TIMEOUT_MINS mins)"
+    eval "$__s3_image_url='${s3_url}'"
     while true; do
         status="$(get_value_from_ebs_snapshot_import_task "${import_task_id}" Status)"
         [ "$status" = "completed" ] && break
@@ -114,7 +115,6 @@ create_aws_ebs_snapshot() {
     echo "* AWS import snapshot task complete. SnapshotId: ${snapshot_id}"
 
     eval "$__snapshot_id='${snapshot_id}'"
-    eval "$__s3_image_url='${s3_url}'"
 }
 
 
