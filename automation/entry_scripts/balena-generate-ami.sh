@@ -233,7 +233,7 @@ aws_ami_do_public() {
     _ami_snapshot_id=$(aws ec2 describe-images --region="${_ami_region}" --image-ids "${_ami_image_id}" | jq -r '.Images[].BlockDeviceMappings[].Ebs.SnapshotId')
     if [ -n "${_ami_snapshot_id}" ]; then
         if aws ec2 modify-snapshot-attribute --region "${_ami_region}" --snapshot-id "${_ami_snapshot_id}" --attribute createVolumePermission --operation-type add --group-names all; then
-            if [ "$(aws ec2 describe-snapshot-attribute --region ${_ami_region} --snapshot-id "${_ami_snapshot_id}" --attribute createVolumePermission | jq -r '.CreateVolumePermissions[].Group')" == "all" ]; then
+            if [ "$(aws ec2 describe-snapshot-attribute --region "${_ami_region}" --snapshot-id "${_ami_snapshot_id}" --attribute createVolumePermission | jq -r '.CreateVolumePermissions[].Group')" == "all" ]; then
                 echo "AMI snapshot ${_ami_snapshot_id} is now publicly accessible"
             else
                 echo "AMI snapshot ${_ami_snapshot_id} could not be made public"
@@ -283,6 +283,7 @@ aws_test_instance() {
     fi
 
     echo "Instantiating ${_ami_image_id} with key ${_ami_key_name} in subnet ${_ami_subnet_id} and security group ${_ami_security_group_id}"
+    echo "Instantiating ${_ami_image_id} in subnet ${_ami_subnet_id} and security group ${_ami_security_group_id}"
     _instance_id=$(aws ec2 run-instances --image-id "${_ami_image_id}" --count 1 \
         --instance-type "${_ami_instance_type}" \
         --tag-specifications \
