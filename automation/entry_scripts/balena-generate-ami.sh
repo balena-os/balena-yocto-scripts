@@ -14,7 +14,7 @@ AMI_EBS_VOLUME_SIZE=${AMI_EBS_VOLUME_SIZE:-8}
 AMI_EBS_VOLUME_TYPE=${AMI_EBS_VOLUME_TYPE:-gp2}
 AMI_BOOT_MODE=${AMI_BOOT_MODE:-uefi}
 
-IMPORT_SNAPSHOT_TIMEOUT_MINS=${IMPORT_SNAPSHOT_TIMEOUT_MINS:-15}
+IMPORT_SNAPSHOT_TIMEOUT_MINS=${IMPORT_SNAPSHOT_TIMEOUT_MINS:-30}
 
 ensure_all_env_variables_are_set() {
     local env_not_set=""
@@ -77,7 +77,7 @@ create_aws_ebs_snapshot() {
 
     local snapshot_id
     local status
-    local wait_secs=2
+    local wait_secs=10
     local secs_waited=0
     # https://github.com/koalaman/shellcheck/wiki/SC2155#correct-code-1
     local s3_key
