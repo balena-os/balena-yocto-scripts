@@ -269,6 +269,7 @@ aws_test_instance() {
     local _ami_instance_type="${6:-m5.large}"
     local _ami_image_id
     local _instance_id
+    local _instance_arch
     local _output=""
 
     [ -z "${_ami_name}" ] && echo "The AMI to instantiate needs to be defined" && return 1
@@ -282,8 +283,12 @@ aws_test_instance() {
         exit 1
     fi
 
-    echo "Instantiating ${_ami_image_id} with key ${_ami_key_name} in subnet ${_ami_subnet_id} and security group ${_ami_security_group_id}"
-    echo "Instantiating ${_ami_image_id} in subnet ${_ami_subnet_id} and security group ${_ami_security_group_id}"
+    _instance_arch=$(aws ec2 describe-images --image-ids "${_ami_image_id}" | jq -r '.Images[0].Architecture')
+    if [ "${_instance_arch}" = "arm64" ]; then
+        _ami_instance_type="a1.large"
+    fi
+
+    echo "Instantiating ${_ami_image_id} in subnet ${_ami_subnet_id} and security group ${_ami_security_group_id} in ${_ami_instance_type}"
     _instance_id=$(aws ec2 run-instances --image-id "${_ami_image_id}" --count 1 \
         --instance-type "${_ami_instance_type}" \
         --tag-specifications \
