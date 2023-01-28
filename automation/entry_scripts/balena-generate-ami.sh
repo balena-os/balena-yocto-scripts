@@ -14,7 +14,7 @@ AMI_EBS_VOLUME_SIZE=${AMI_EBS_VOLUME_SIZE:-8}
 AMI_EBS_VOLUME_TYPE=${AMI_EBS_VOLUME_TYPE:-gp2}
 AMI_BOOT_MODE=${AMI_BOOT_MODE:-uefi}
 
-IMPORT_SNAPSHOT_TIMEOUT_MINS=${IMPORT_SNAPSHOT_TIMEOUT_MINS:-15}
+IMPORT_SNAPSHOT_TIMEOUT_MINS=${IMPORT_SNAPSHOT_TIMEOUT_MINS:-30}
 
 ensure_all_env_variables_are_set() {
     local env_not_set=""
@@ -77,7 +77,7 @@ create_aws_ebs_snapshot() {
 
     local snapshot_id
     local status
-    local wait_secs=2
+    local wait_secs=10
     local secs_waited=0
     # https://github.com/koalaman/shellcheck/wiki/SC2155#correct-code-1
     local s3_key
@@ -94,6 +94,7 @@ create_aws_ebs_snapshot() {
       --disk-container "Description=balenaOs,Format=RAW,UserBucket={S3Bucket=${S3_BUCKET},S3Key=preloaded-images/${s3_key}}" | jq -r .ImportTaskId)
 
     echo "* Created a AWS import snapshot task with id ${import_task_id}. Waiting for completition... (Timeout: $IMPORT_SNAPSHOT_TIMEOUT_MINS mins)"
+    eval "$__s3_image_url='${s3_url}'"
     while true; do
         status="$(get_value_from_ebs_snapshot_import_task "${import_task_id}" Status)"
         [ "$status" = "completed" ] && break
@@ -114,7 +115,6 @@ create_aws_ebs_snapshot() {
     echo "* AWS import snapshot task complete. SnapshotId: ${snapshot_id}"
 
     eval "$__snapshot_id='${snapshot_id}'"
-    eval "$__s3_image_url='${s3_url}'"
 }
 
 
@@ -233,7 +233,7 @@ aws_ami_do_public() {
     _ami_snapshot_id=$(aws ec2 describe-images --region="${_ami_region}" --image-ids "${_ami_image_id}" | jq -r '.Images[].BlockDeviceMappings[].Ebs.SnapshotId')
     if [ -n "${_ami_snapshot_id}" ]; then
         if aws ec2 modify-snapshot-attribute --region "${_ami_region}" --snapshot-id "${_ami_snapshot_id}" --attribute createVolumePermission --operation-type add --group-names all; then
-            if [ "$(aws ec2 describe-snapshot-attribute --region ${_ami_region} --snapshot-id "${_ami_snapshot_id}" --attribute createVolumePermission | jq -r '.CreateVolumePermissions[].Group')" == "all" ]; then
+            if [ "$(aws ec2 describe-snapshot-attribute --region "${_ami_region}" --snapshot-id "${_ami_snapshot_id}" --attribute createVolumePermission | jq -r '.CreateVolumePermissions[].Group')" == "all" ]; then
                 echo "AMI snapshot ${_ami_snapshot_id} is now publicly accessible"
             else
                 echo "AMI snapshot ${_ami_snapshot_id} could not be made public"
@@ -269,6 +269,7 @@ aws_test_instance() {
     local _ami_instance_type="${6:-m5.large}"
     local _ami_image_id
     local _instance_id
+    local _instance_arch
     local _output=""
 
     [ -z "${_ami_name}" ] && echo "The AMI to instantiate needs to be defined" && return 1
@@ -282,7 +283,12 @@ aws_test_instance() {
         exit 1
     fi
 
-    echo "Instantiating ${_ami_image_id} with key ${_ami_key_name} in subnet ${_ami_subnet_id} and security group ${_ami_security_group_id}"
+    _instance_arch=$(aws ec2 describe-images --image-ids "${_ami_image_id}" | jq -r '.Images[0].Architecture')
+    if [ "${_instance_arch}" = "arm64" ]; then
+        _ami_instance_type="a1.large"
+    fi
+
+    echo "Instantiating ${_ami_image_id} in subnet ${_ami_subnet_id} and security group ${_ami_security_group_id} in ${_ami_instance_type}"
     _instance_id=$(aws ec2 run-instances --image-id "${_ami_image_id}" --count 1 \
         --instance-type "${_ami_instance_type}" \
         --tag-specifications \
