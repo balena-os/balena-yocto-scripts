@@ -1,4 +1,51 @@
 - commits:
+    - subject: "balena-generate-ami: increase import snapshot timeout"
+      hash: 42434c60b0d86bccf45114cde0d55998399e59b8
+      body: |
+        The aarch64 images are timing out on import.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-generate-ami: remove s3 temporary image if snapshot import
+        times out"
+      hash: 0d01c648eb65883099579e03ef914c29bf814e1b
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-generate-ami: match instance type with image type"
+      hash: 98c1601e106a1fe194fd6c1339b33b67a57a578a
+      body: |
+        When using an amd64 AMI, use a suitable A1 Graviton instance to test it.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-generate-ami: fix linter warnings"
+      hash: 799fb7e6618ababbfe14c1ee6ee2763e25517538
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.23
+  title: ""
+  date: 2023-01-28T10:53:40.736Z
+- commits:
     - subject: "balena-generate-ami: allow for staging deployments"
       hash: aa127c8c3066c94c5904834f8a18be1e2e6ee39a
       body: ""
