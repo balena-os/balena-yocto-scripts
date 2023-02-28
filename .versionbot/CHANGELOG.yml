@@ -1,4 +1,20 @@
 - commits:
+    - subject: "balena-api: ignore quotes from API replies"
+      hash: ad7065112eee4e6e3865ef5581e4c53676536459
+      body: |
+        The balenaAPI has replied both `OK` and `"OK"` to patch requests. Accept
+        any of them as long as they contain OK.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.24
+  title: ""
+  date: 2023-02-28T18:19:17.093Z
+- commits:
     - subject: "balena-generate-ami: increase import snapshot timeout"
       hash: 42434c60b0d86bccf45114cde0d55998399e59b8
       body: |
