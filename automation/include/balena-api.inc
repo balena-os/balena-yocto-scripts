@@ -36,10 +36,10 @@ __dlog() {
 __check_fail() {
 	local _json
 	local _msg
-	_json="$1"
-	_msg="$2"
+	_json="${1%\"}"
+	_msg="${2}"
 
-	if [ "${_json}" != "OK" ]; then
+	if [ "${_json#\"}" != "OK" ]; then
 		__pp_json "${_json}"
 		__dlog "${_msg}"
 		return 0
