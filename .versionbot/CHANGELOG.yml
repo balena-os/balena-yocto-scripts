@@ -1,4 +1,18 @@
 - commits:
+    - subject: "Dockerfile: yocto-build-env: update balenaCLI to 14.5.15"
+      hash: 5fe3f9a353668d9197d7f32c0f7cd3789606202b
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.25
+  title: ""
+  date: 2023-03-01T10:00:57.712Z
+- commits:
     - subject: "balena-api: ignore quotes from API replies"
       hash: ad7065112eee4e6e3865ef5581e4c53676536459
       body: |
