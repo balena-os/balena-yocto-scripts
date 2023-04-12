@@ -1,4 +1,20 @@
 - commits:
+    - subject: "balena-lib: Do not return error if no balena user token is available"
+      hash: e335e248305cda86ce55f934b2b3ba8202f17454
+      body: |
+        The balena API token is only required for private device access so don't
+        fail if there is not one available.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.26
+  title: ""
+  date: 2023-04-12T15:18:36.631Z
+- commits:
     - subject: "Dockerfile: yocto-build-env: update balenaCLI to 14.5.15"
       hash: 5fe3f9a353668d9197d7f32c0f7cd3789606202b
       body: ""
