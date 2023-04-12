@@ -226,7 +226,7 @@ balena_lib_token() {
 		if [ -f "${HOME}/.balena/token" ]; then
 			_token="$(cat "${HOME}/.balena/token")"
 		else
-			return
+			return 0
 		fi
 	fi
 	echo "${_token}"
