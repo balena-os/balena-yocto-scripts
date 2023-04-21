@@ -475,8 +475,8 @@ if [ "x$BUILD_HISTORY" == "xyes" ]; then
     echo 'BUILDHISTORY_COMMIT = "1"' >>conf/local.conf
 fi
 for pair in $ADDITIONAL_VARIABLES; do
-    variable=$(echo "$pair" | awk -F= '{print $1}')
-    value=$(echo "$pair" | awk -F= '{print $2}')
+    variable=$(echo "$pair" | cut -d= -f1)
+    value=$(echo "$pair" | cut -d= -f2-)
     echo "$variable=\"$value\"" >> conf/local.conf
 done
 
