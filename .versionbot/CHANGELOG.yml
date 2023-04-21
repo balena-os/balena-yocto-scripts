@@ -1,4 +1,26 @@
 - commits:
+    - subject: "barys: fix removal of equals sign from argval"
+      hash: 8855ad4d31b45187e4007763b6bb084e08974807
+      body: |
+        When parsing additional variables to be passed to the bitbake build,
+        keys and values are split using equals as a delimiter. However, the
+        splitting process does not split only on the first occurrence, which
+        results in removing equals signs from the value as well. This is
+        problematic with base64 encoded strings, which are padded with equals
+        signs.
+
+        Split only on the first occurrence, leaving the value intact.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Joseph Kogut <joseph@balena.io>
+        signed-off-by: Joseph Kogut <joseph@balena.io>
+      author: Joseph Kogut
+      nested: []
+  version: 1.19.27
+  title: ""
+  date: 2023-04-21T22:08:39.297Z
+- commits:
     - subject: "balena-lib: Do not return error if no balena user token is available"
       hash: e335e248305cda86ce55f934b2b3ba8202f17454
       body: |
