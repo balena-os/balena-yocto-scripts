@@ -31,6 +31,9 @@ print_help() {
 	\t\t --ami-image-type\n\
 	\t\t\t (optional) Specify image type to use for AMI image creation.\n\
 \t\t\t\t Defaults to using direct boot image, set to *installer* to use the installer image instead .\n\
+	\t\t --bb-args\n\
+	\t\t\t (optional) Pass extra bitbake arguments\n\
+\t\t\t\t Defaults to false.\n\
 	\t\t --esr\n\
 	\t\t\t (optional) Is this an ESR build\n\
 \t\t\t\t Defaults to false.\n"
@@ -121,6 +124,13 @@ while [[ $# -ge 1 ]]; do
 			;;
 		--ami)
 			AMI="true"
+			;;
+		--bb-args)
+			if [ -z "$2" ]; then
+				echo "--bb-args argument needs to be specified"
+				exit 1
+			fi
+			BARYS_ARGUMENTS_VAR="$BARYS_ARGUMENTS_VAR --bitbake-args ${2}"
 			;;
 	esac
 	shift
