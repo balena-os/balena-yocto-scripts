@@ -257,6 +257,29 @@ aws_ami_do_public() {
     fi
 }
 
+aws_ami_do_private() {
+    local _ami_image_id="${1}"
+    local _ami_region=${2:-us-east-1}
+    [ -z "${_ami_image_id}" ] && echo "AMI image ID is required" && return 1
+
+    if [ "$(aws ec2 describe-images --image-ids "${_ami_image_id}" | jq -r '.Images[].Public')" = "true" ]; then
+        echo "Turning AMI with ID ${_ami_image_id} private"
+        if aws ec2 modify-image-attribute \
+            --image-id "${_ami_image_id}" \
+            --launch-permission '{"Remove":[{"Group":"all"}]}'; then
+            if [ "$(aws ec2 describe-images --image-ids "${_ami_image_id}" | jq -r '.Images[].Public')" = "false" ]; then
+                echo "AMI with ID ${_ami_image_id} is now private"
+            else
+                echo "Failed to set image with ID ${_ami_image_id} private"
+                return 1
+            fi
+        fi
+    else
+        echo "Image with ID ${_ami_image_id} is already private"
+    fi
+    return 0
+}
+
 aws_test_instance() {
     local _ami_name="${1}"
     local _uuid="${2}"
@@ -325,14 +348,42 @@ aws_test_instance() {
     fi
 
     if [ ${_loops} -gt 0 ]; then
-        # Make AMI public
-        if ! aws_ami_do_public "${_ami_image_id}"; then
-            exit 1
+        if aws_public_quota; then
+            # Make AMI public
+            if ! aws_ami_do_public "${_ami_image_id}"; then
+                exit 1
+            fi
         fi
     fi
  }
 
+# From https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-quotas.html
+# The maximum number of public AMIs per region, including the Recycle Bin, is 5.
+AWS_AMI_PUBLIC_QUOTA=5
+# We have x86_64 and aarch64, and want one slot free for customers requests
+AWS_AMI_PUBLIC_ARCH_QUOTA=$(((AWS_AMI_PUBLIC_QUOTA - 1)/2))
+aws_public_quota() {
+    _ami_public_images_count=$(aws ec2 describe-images \
+        --owners "self" \
+        --filters "Name=name,Values="${AMI_NAME%%-*} "Name=architecture,Values="${AMI_ARCHITECTURE} "Name=is-public,Values=true"  \
+        | jq '.Images | length')
+    if [ "${_ami_public_images_count}" -ge "${AWS_AMI_PUBLIC_ARCH_QUOTA}"  ]; then
+        # Make oldest AMI of this architecture private to preserve the public AMI quota
+        _ami_oldest_image_id=$(aws ec2 describe-images \
+            --owners "self" \
+            --filters "Name=name,Values=${AMI_NAME%%-*}" "Name=architecture,Values=${AMI_ARCHITECTURE}" "Name=is-public,Values=true" \
+            --query 'sort_by(Images, &CreationDate)[0].ImageId')
+        if [ -n "${_ami_oldest_image_id}" ]; then
+            if ! aws_ami_do_private "${_ami_oldest_image_id}"; then
+                exit 1
+            fi
+        fi
+    fi
+}
+
 # shellcheck disable=SC2120
+# From https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-quotas.html
+# The maximum number of public and private AMIs allowed per Region iz 50000.
 cleanup_eol_amis() {
     local _date
     local _snapshots
