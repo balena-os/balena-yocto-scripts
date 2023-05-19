@@ -271,11 +271,12 @@ balena_deploy_block() {
 	local _image_path="${4:-""}"
 	local _deploy="${5:-no}"
 	local _final="${6:-no}"
-	local _work_dir="${7:-"${device_dir}"}"
-	local _balenaos_account="${8:-"balena_os"}"
-	local _balenaCloudEmail="${9:-"${balenaCloudEmail}"}"
-	local _balenaCloudPassword="${10:-"${balenaCloudPassword}"}"
-	local _esr="${11}"
+	local _sb_feature_flag="${7:-no}"
+	local _work_dir="${8:-"${device_dir}"}"
+	local _balenaos_account="${9:-"balena_os"}"
+	local _balenaCloudEmail="${10:-"${balenaCloudEmail}"}"
+	local _balenaCloudPassword="${11:-"${balenaCloudPassword}"}"
+	local _esr="${12}"
 	local _discontinued
 	local _api_env=$(balena_lib_environment)
 
@@ -318,6 +319,7 @@ balena_deploy_block() {
 		-e DEPLOY="${_deploy}" \
 		-e FINAL="${_final}" \
 		-e ESR="${_esr:-"false"}" \
+		-e SECURE_BOOT_FEATURE_FLAG="${_sb_feature_flag:-"no"}" \
 		-e balenaCloudEmail="${_balenaCloudEmail}" \
 		-e balenaCloudPassword="${_balenaCloudPassword}" \
 		-e ESR="${_esr}" \

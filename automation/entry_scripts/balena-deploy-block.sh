@@ -27,6 +27,9 @@ fi
 
 if [ -f "/deploy/balena.yml" ]; then
 	echo -e "\nversion: $(balena_lib_get_os_version)" >> "/deploy/balena.yml"
+	if [ "${SECURE_BOOT_FEATURE_FLAG}" = "yes" ]; then
+		sed -i '/provides:/a \  - type: sw.feature\n    slug: secureboot' "/deploy/balena.yml"
+	fi
 fi
 
 echo "[INFO] Deploying  to ${BALENAOS_ACCOUNT}/$APPNAME"
