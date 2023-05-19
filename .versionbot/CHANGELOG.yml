@@ -1,4 +1,21 @@
 - commits:
+    - subject: "balena-deploy: add secureBoot feature into contract"
+      hash: 67e694d63918e9911de99f497c39d84dfef28df7
+      body: |
+        When building signed images, add the secureBoot feature flag into the
+        OS contract. This is needed for other components to identify secureBoot
+        compatible software releases.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.29
+  title: ""
+  date: 2023-05-19T11:42:58.818Z
+- commits:
     - subject: "jenkins_build: accept bitbake extra arguments"
       hash: 6847515a46b62726e24156f6ce05365dd4f00ea8
       body: ""
