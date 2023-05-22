@@ -27,6 +27,7 @@ ensure_all_env_variables_are_set() {
                          IMAGE
                          AMI_NAME
                          AMI_ARCHITECTURE
+                         AMI_SECUREBOOT
                          BALENA_PRELOAD_APP
                          BALENARC_BALENA_URL
                          BALENACLI_TOKEN
@@ -40,6 +41,32 @@ ensure_all_env_variables_are_set() {
     if [ "$env_not_set" = "true" ]; then exit 1; fi
 }
 
+configure_installer_image() {
+    local image=$1
+    local config_json=$(mktemp)
+    cat << EOF > "${config_json}"
+{
+    "deviceType": "${MACHINE}",
+    "installer": {
+        "secureboot": true
+    }
+}
+EOF
+
+    if [ -z "${AMI_SECUREBOOT}" ] || [ "${AMI_SECUREBOOT}" = "false" ]; then
+        return
+    fi
+
+    echo "* Configuring installer image"
+    balena os configure "${image}"\
+      --debug \
+      --fleet "${BALENA_PRELOAD_APP}" \
+      --config-network ethernet \
+      --version "${HOSTOS_VERSION}"\
+      --device-type "${MACHINE}"\
+      --config "${config_json}"
+    rm -rf "${config_json}"
+}
 
 deploy_preload_app_to_image() {
 
@@ -423,6 +450,7 @@ trap "cleanup" ERR EXIT
 
 balena login -t "${BALENACLI_TOKEN}"
 
+configure_installer_image "${IMAGE}"
 # shellcheck disable=SC2153
 deploy_preload_app_to_image "${IMAGE}"
 create_aws_ebs_snapshot "${IMAGE}" ebs_snapshot_id s3_image_url
