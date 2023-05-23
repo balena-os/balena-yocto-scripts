@@ -1,4 +1,36 @@
 - commits:
+    - subject: "generate_ami: opt-in secure boot when using signed images"
+      hash: 7925369a76060ad9e2adb16856e78cd3ca09b02c
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-generate-ami: comply with default AMI quotas"
+      hash: 27d34aa2a35b0bf6d7c1ffb563c1ad65d773e1fc
+      body: >
+        Comply with AWS public AMI quota, taking into account we have two
+
+        architectures that publish AMI images and we need free slots for custom
+
+        version request.
+
+
+        Make the oldest public image back to private before publishing a new image.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.30
+  title: ""
+  date: 2023-05-23T18:02:32.156Z
+- commits:
     - subject: "balena-deploy: add secureBoot feature into contract"
       hash: 67e694d63918e9911de99f497c39d84dfef28df7
       body: |
