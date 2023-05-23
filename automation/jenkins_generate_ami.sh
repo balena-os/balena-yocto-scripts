@@ -56,11 +56,20 @@ cp "${ORIG_IMAGE}" "${PRELOADED_IMAGE}"
 # AMI names must be between 3 and 128 characters long, and may contain letters, numbers, '(', ')', '.', '-', '/' and '_'
 VERSION=$(cat < "${YOCTO_IMAGES_PATH}/VERSION_HOSTOS" | sed 's/+/-/g')
 
+AMI_SECUREBOOT="false"
+if [ -n "${SIGN_API_URL}" ]; then
+    AMI_SECUREBOOT="true"
+fi
+
 # AMI name format: balenaOS-VERSION-DEVICE_TYPE
 # shellcheck disable=SC2154
 # passed in by Jenkins
 if [ -n "${AMI_IMAGE_TYPE}" ] && [ "${AMI_IMAGE_TYPE}" = "installer" ]; then
-    AMI_NAME="${AMI_NAME:-balenaOS-${AMI_IMAGE_TYPE}-${VERSION}-${MACHINE}}"
+    if [ "${AMI_SECUREBOOT}" = "true" ]; then
+        AMI_NAME="${AMI_NAME:-balenaOS-${AMI_IMAGE_TYPE}-secureboot-${VERSION}-${MACHINE}}"
+    else
+        AMI_NAME="${AMI_NAME:-balenaOS-${AMI_IMAGE_TYPE}-${VERSION}-${MACHINE}}"
+    fi
 else
     AMI_NAME="${AMI_NAME:-balenaOS-${VERSION}-${MACHINE}}"
 fi
@@ -92,6 +101,7 @@ docker run --rm -t \
     -e AWS_SESSION_TOKEN="${S3_SESSION_TOKEN}" \
     -e AMI_NAME="${AMI_NAME}" \
     -e AMI_ARCHITECTURE="${AMI_ARCHITECTURE}" \
+    -e AMI_SECUREBOOT="${AMI_SECUREBOOT}" \
     -e S3_BUCKET="${S3_BUCKET}" \
     -e BALENA_PRELOAD_APP="${BALENA_PRELOAD_APP}" \
     -e BALENARC_BALENA_URL="${BALENA_ENV}" \
