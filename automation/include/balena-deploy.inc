@@ -34,6 +34,7 @@ balena_deploy_artifacts () {
 	local _archive
 	local _device_state
 	local _yocto_build_deploy
+	local _yocto_licenses_deploy
 	local _slug
 
 
@@ -47,6 +48,7 @@ balena_deploy_artifacts () {
 	_archive=$(jq --raw-output '.yocto.archive' "$_device_type_json")
 	_device_state=$(jq --raw-output '.state' "${_device_type_json}")
 	_yocto_build_deploy="${device_dir}/build/tmp/deploy/images/${_device_type}"
+	_yocto_licenses_deploy="${device_dir}/build/tmp/deploy/licenses/"
 	_slug=$(jq --raw-output '.slug' "${_device_type_json}")
 
 	[ -z "${_preserve_build}" ] && rm -rf "${_deploy_dir}"
@@ -62,6 +64,10 @@ balena_deploy_artifacts () {
 	cp -v "$_yocto_build_deploy/VERSION_HOSTOS" "$_deploy_dir"
 	cp -v "$(readlink --canonicalize "$_yocto_build_deploy/$_image-${_device_type}.manifest")" "$_deploy_dir/$_image-$_device_type.manifest"
 	cp -v "$(readlink --canonicalize "$_yocto_build_deploy/balena-image-$_device_type.docker")" "$_deploy_dir/balena-image.docker"
+
+	if [ -d "${_yocto_licenses_deploy}" ]; then
+		tar -czf "${_deploy_dir}/licenses.tar.gz" -C $(dirname "${_yocto_licenses_deploy}") $(basename "${_yocto_licenses_deploy}")
+	fi
 
 	test "${_slug}" = "edge" && return
 
