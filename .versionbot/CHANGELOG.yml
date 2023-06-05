@@ -1,4 +1,19 @@
 - commits:
+    - subject: "balena-deploy: add a compressed licenses tarball to the deploy
+        artifacts"
+      hash: 13ab5d114a679cca3a2df41230e4ad611e1c8292
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.31
+  title: ""
+  date: 2023-06-05T15:07:23.610Z
+- commits:
     - subject: "generate_ami: opt-in secure boot when using signed images"
       hash: 7925369a76060ad9e2adb16856e78cd3ca09b02c
       body: ""
