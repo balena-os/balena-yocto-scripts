@@ -76,8 +76,12 @@ balena_deploy_artifacts () {
 		return
 	fi
 
-	cp -v "$_yocto_build_deploy/kernel_modules_headers.tar.gz" "$_deploy_dir" || true
-	cp -v "$_yocto_build_deploy/kernel_source.tar.gz" "$_deploy_dir" || true
+	if [ -f "$_yocto_build_deploy/kernel_modules_headers.tar.gz" ]; then
+		cp -v "$_yocto_build_deploy/kernel_modules_headers.tar.gz" "$_deploy_dir" || true
+	fi
+	if [ -f "$_yocto_build_deploy/kernel_source.tar.gz" ]; then
+		cp -v "$_yocto_build_deploy/kernel_source.tar.gz" "$_deploy_dir" || true
+	fi
 	if [ "${_compressed}" != 'true' ]; then
 		# uncompressed, just copy and we're done
 		cp -v "$(readlink --canonicalize "$_yocto_build_deploy/$_deploy_artifact")" "$_deploy_dir/image/balena.img"
