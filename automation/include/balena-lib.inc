@@ -349,32 +349,6 @@ balena_lib_get_deploy_artifact() {
 	return 0
 }
 
-# Retrieve device state from device type JSON file
-#
-# Inputs:
-# $1: Device type name
-#
-# Returns:
-# 0 on success 1 on failure
-#
-# Outputs:
-# device state in stdout if successful
-#
-balena_lib_get_dt_state() {
-	local _device_type="${1}"
-	local _state
-	local _device_type_json="${device_dir}/${_device_type}.json"
-
-	if [ ! -f "${_device_type_json}" ]; then
-		>&2 echo "[balena_lib_get_dt_state]: Device type JSON not found"
-		return 1
-	fi
-
-	_state=$(jq --raw-output '.state' "${_device_type_json}")
-	echo "${_state}"
-	return 0
-}
-
 # Provide a contract slug given a Yocto machine type
 #
 # Inputs:
