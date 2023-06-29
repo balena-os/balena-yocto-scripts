@@ -32,7 +32,6 @@ balena_deploy_artifacts () {
 	local _deploy_raw_artifact
 	local _compressed
 	local _archive
-	local _device_state
 	local _yocto_build_deploy
 	local _yocto_licenses_deploy
 	local _slug
@@ -46,7 +45,6 @@ balena_deploy_artifacts () {
 	_deploy_raw_artifact=$(jq --raw-output '.yocto.deployRawArtifact // empty' "${_device_type_json}")
 	_compressed=$(jq --raw-output '.yocto.compressed' "${_device_type_json}")
 	_archive=$(jq --raw-output '.yocto.archive' "$_device_type_json")
-	_device_state=$(jq --raw-output '.state' "${_device_type_json}")
 	_yocto_build_deploy="${device_dir}/build/tmp/deploy/images/${_device_type}"
 	_yocto_licenses_deploy="${device_dir}/build/tmp/deploy/licenses/"
 	_slug=$(jq --raw-output '.slug' "${_device_type_json}")
@@ -55,10 +53,6 @@ balena_deploy_artifacts () {
 	mkdir -p "${_deploy_dir}/image"
 
 	cp -v "$_device_type_json" "$_deploy_dir/device-type.json"
-	if [ "${_device_state}" = "DISCONTINUED" ]; then
-	       echo "${_device_type} is discontinued so only device-type.json will be deployed as build artifact."
-	       return
-	fi
 
 	cp -v "$_yocto_build_deploy/VERSION" "$_deploy_dir"
 	cp -v "$_yocto_build_deploy/VERSION_HOSTOS" "$_deploy_dir"
@@ -158,23 +152,17 @@ balena_deploy_to_s3() {
 	local _namespace="${4}"
 	local _slug
 	local _artifact
-	local _state
 	local _s3_bucket
 	local _s3_bucket_prefix
 	local _s3_bucket_suffix
 	local _is_private
-	local _s3_version_hostos
+	local _s3_version_hostos="$(balena_lib_get_os_version)"
 
 	_slug=$(balena_lib_get_slug "${_device_type}")
 	_artifact=$(balena_lib_get_deploy_artifact "${_device_type}")
-	_state=$(balena_lib_get_dt_state "${_device_type}")
 
 	[ -z "${_device_type}" ] && echo "[balena_deploy_to_s3] Device type is required" && return 1
-	if [ "${_state}" != "DISCONTINUED" ]; then
-		_s3_version_hostos="$(balena_lib_get_os_version)"
-	else
-		_s3_version_hostos="$(balena_lib_get_meta_balena_version)"
-	fi
+	[ -z "${_s3_version_hostos}" ] && echo "[balena_deploy_to_s3] No hostOS version found" && return 1
 
 	[ -z "${_namespace}" ] && _namespace=${NAMESPACE:-"balena"}
 	[ -z "${_esr}" ] && _esr="${_esr:-"${ESR:-false}"}"
@@ -227,7 +215,6 @@ balena_deploy_to_s3() {
 		-e VERBOSE="${VERBOSE}" \
 		-e DEPLOYER_UID="$(id -u)" \
 		-e DEPLOYER_GID="$(id -g)" \
-		-e DEVICE_STATE="${_state}" \
 		-v "$_s3_deploy_dir":/host/images "${_namespace}"/balena-img:master /bin/sh -e -c ' \
 			VERBOSE=${VERBOSE:-0}
 			[ "${VERBOSE}" = "verbose" ] && set -x
@@ -241,7 +228,7 @@ set -e
 VERBOSE=${VERBOSE:-0}
 [ "${VERBOSE}" = "verbose" ] && set -x
 echo "${BUILD_VERSION}" > "/host/images/${SLUG}/latest"
-if [ "$DEPLOY_ARTIFACT" = "docker-image" ] || [ "$DEVICE_STATE" = "DISCONTINUED" ]; then
+if [ "$DEPLOY_ARTIFACT" = "docker-image" ]; then
 	echo "WARNING: No raw image prepare step for docker images only artifacts or discontinued device types."
 else
 	/usr/src/app/node_modules/.bin/ts-node /usr/src/app/scripts/prepare.ts
@@ -287,15 +274,9 @@ balena_deploy_block() {
 	local _balenaCloudEmail="${10:-"${balenaCloudEmail}"}"
 	local _balenaCloudPassword="${11:-"${balenaCloudPassword}"}"
 	local _esr="${12}"
-	local _discontinued
 	local _api_env=$(balena_lib_environment)
 
 	[ -z "${_device_type}" ] && echo "Device type is required" && return
-	_discontinued=$(balena_lib_get_dt_state "${_device_type}")
-	if [ "${_discontinued}" = "DISCONTINUED" ]; then
-		echo "[INFO]: balena_deploy_block: Not deploying discontinued device type."
-		return
-	fi
 
 	[ -z "${_appName}" ] && echo "App name is required" && return
 	if [ -f "${_image_path}" ]; then
