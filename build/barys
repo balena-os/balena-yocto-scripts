@@ -33,7 +33,6 @@ LOGFILE=`pwd`/`basename "$0"`.log
 MACHINES=
 BITBAKEARGS=
 EXIT_CODE=0
-SKIP_DISCONTINUED=no
 USE_OLD_SYNTAX=yes
 NEW_SYNTAX_RELEASES=("honister" "kirkstone")
 
@@ -314,9 +313,6 @@ while [[ $# -ge 1 ]]; do
             ADDITIONAL_VARIABLES="$ADDITIONAL_VARIABLES $2"
             shift
             ;;
-        --skip-discontinued)
-            SKIP_DISCONTINUED=yes
-            ;;
         -i|--interactive)
             read -p "Select machines. Space separated or empty for all: " m
             MACHINES=$m
@@ -540,10 +536,6 @@ else
         fi
         if [ -z "$IMAGE" ] || [ "z$IMAGE" == "znull" ]; then
           log ERROR "No target image defined for $machine."
-        fi
-        if [ "$SKIP_DISCONTINUED" = "yes" ] && [ "$(jq -r '.state' "$json")" = "DISCONTINUED" ]; then
-            log WARN "Skip discontinued requested: build for $machine skipped."
-            continue
         fi
         log "Run build for $machine: MACHINE=$machine bitbake $IMAGE $BITBAKEARGS"
         log "This might take a while ..."
