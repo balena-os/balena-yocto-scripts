@@ -202,11 +202,8 @@ if [ "$deploy" = "yes" ]; then
 	if [ -n "${_image_path}" ] && [ -f "${_image_path}" ]; then
 		balena_deploy_block "$(balena_lib_get_slug "${MACHINE}")" "${MACHINE}" "${_bootable:-1}" "${_image_path}" "${deploy}" "${final}" "${secureBoot}"
 	else
-		_state=$(balena_lib_get_dt_state "${MACHINE}")
-		if [ "${_state}" != "DISCONTINUED" ]; then
-			echo "[ERROR]:balena_deploy_hostapp: No hostapp to release"
-			exit 1
-		fi
+		echo "[ERROR]:balena_deploy_hostapp: No hostapp to release"
+		exit 1
 	fi
 
 	if [ "$AMI" = "true" ] && [ "${final}" = "yes" ]; then
