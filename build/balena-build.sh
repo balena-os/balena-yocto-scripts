@@ -114,7 +114,6 @@ balena_build_run_barys() {
 		-a BALENA_API_TOKEN=${_token} \
 		--shared-downloads /yocto/shared-downloads \
 		--shared-sstate /yocto/shared-sstate \
-		--skip-discontinued \
 		--rm-work
 
 	if [ "${_keep_helpers}" = "0" ]; then

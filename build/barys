@@ -123,9 +123,6 @@ function help {
     echo -e "\t\t Enable build history."
     echo -e "\t\t Default: no."
 
-    echo -e "\t--skip-discontinued"
-    echo -e "\t\t Don't build device types that are discontinued."
-
     echo -e "\t-i | --interactive"
     echo -e "\t\t Run tool in interactive mode."
     echo -e "\t\t Default: no."
