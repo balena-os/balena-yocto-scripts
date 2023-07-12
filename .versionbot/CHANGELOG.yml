@@ -1,4 +1,34 @@
 - commits:
+    - subject: Remove all traces of --skip-discontinued
+      hash: c0974ffb5f64818dcb5040d233348dd95c8e6c40
+      body: >
+        This option was removed in
+        https://github.com/balena-os/balena-yocto-scripts/pull/313
+      footer:
+        Change-type: patch
+        change-type: patch
+        Changelog-entry: Remove all traces of --skip-discontinued
+        changelog-entry: Remove all traces of --skip-discontinued
+        Signed-off-by: Florin Sarbu <florin@balena.io>
+        signed-off-by: Florin Sarbu <florin@balena.io>
+      author: Florin Sarbu
+      nested: []
+    - subject: "barys: Remove documenting the --skip-discontinued option"
+      hash: 0bd9144ebed207734e7eecb584306b74b25ed53d
+      body: >
+        This option was removed in
+        https://github.com/balena-os/balena-yocto-scripts/pull/313
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Florin Sarbu <florin@balena.io>
+        signed-off-by: Florin Sarbu <florin@balena.io>
+      author: Florin Sarbu
+      nested: []
+  version: 1.19.34
+  title: ""
+  date: 2023-07-12T07:04:24.994Z
+- commits:
     - subject: Update device-types package from v10.3.0 to v10.5.1
       hash: 4bd1b5ed1298013cc2c4e766822b0e6869e83a47
       body: |
