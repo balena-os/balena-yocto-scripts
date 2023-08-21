@@ -96,9 +96,9 @@ balena_build_run_barys() {
 		-v "${_sstate_dir}":/yocto/shared-sstate \
 		-v "${SSH_AUTH_SOCK}":/tmp/ssh-agent \
 		-e SSH_AUTH_SOCK=/tmp/ssh-agent \
-		-e BUILDER_UID="$(id -u)" \
+		-e BUILDER_UID="${BUILDER_UID:-$(id -u)}" \
 		-e VERBOSE="${VERBOSE}" \
-		-e BUILDER_GID="$(id -g)" \
+		-e BUILDER_GID="${BUILDER_GID:-$(id -g)}" \
 		-e BALENA_TOKEN="${_token}" \
 		-e API_ENV="${_api_env}" \
 		--name $BUILD_CONTAINER_NAME \
