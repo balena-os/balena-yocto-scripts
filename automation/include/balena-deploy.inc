@@ -199,6 +199,10 @@ balena_deploy_to_s3() {
 	_is_private=$(balena_api_is_dt_private "${_device_type}")
 	if [ "${_is_private}" = "false" ]; then
 		_s3_policy="public-read"
+	elif [ -z "${_is_private}" ] || [ "${_is_private}" = "null" ]; then
+		# If _is_private is empty, or a null value, the curl to retrieve it has failed
+		echo "[ERROR] Device type not found..."
+		return 1
 	fi
 
 	local _s3_cmd="s4cmd --access-key=${_s3_access_key} --secret-key=${_s3_secret_key}"
