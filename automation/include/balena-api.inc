@@ -432,10 +432,6 @@ balena_api_is_dt_private() {
 	_token=$(balena_lib_token)
 
 	_is_private=$(${CURL} -XGET -H "Content-type: application/json" -H "Authorization: bearer ${_token}" --silent --retry 5 "https://api.${_api_env}/${TRANSLATION}/device_type?\$filter=slug%20eq%20%27${_slug}%27&\$select=slug,is_private" | jq -r '.d[0].is_private')
-	if [ -z "${_is_private}" ] || [ "${_is_private}" = "null" ]; then
-		>&2 echo "[] Device type not found, assuming private"
-		echo "true"
-	fi
 	echo "${_is_private}"
 }
 
