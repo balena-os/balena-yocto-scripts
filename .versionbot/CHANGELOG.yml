@@ -1,4 +1,28 @@
 - commits:
+    - subject: "balena-deploy: fail if device type not found"
+      hash: 14896d0846e52ce45ed5b14e2b62cb965983c44a
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+    - subject: "balena-api: Dont assume private if can't get DT"
+      hash: ae7c2e15e7ce6ee3588e1026653f0e54ff7c39f8
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+  version: 1.19.35
+  title: ""
+  date: 2023-09-28T08:26:37.671Z
+- commits:
     - subject: Remove all traces of --skip-discontinued
       hash: c0974ffb5f64818dcb5040d233348dd95c8e6c40
       body: >
