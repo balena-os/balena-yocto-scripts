@@ -1,4 +1,19 @@
 - commits:
+    - subject: "Dockerfile_yocto-build-env: Add screen"
+      hash: 7ca8164eec0ba2903b5a463166fdb2d9370d3ba4
+      body: |
+        To enable us to use `bitbake -c devshell foo` in container
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex J Lennon <ajlennon@dynamicdevices.co.uk>
+        signed-off-by: Alex J Lennon <ajlennon@dynamicdevices.co.uk>
+      author: Alex J Lennon
+      nested: []
+  version: 1.19.37
+  title: ""
+  date: 2023-10-10T13:49:21.732Z
+- commits:
     - subject: "flowzone: allow external contributions"
       hash: e44cdd1b12d22ffb6d93408e794defee812436c2
       body: ""
