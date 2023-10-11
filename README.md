@@ -26,6 +26,7 @@ test.bb: I added a test
 I'm going to explain here what my commit does in a way that history
 would be useful.
 
+Change-type: patch
 Signed-off-by: Joe Developer <joe.developer@example.com>
 ```
 
