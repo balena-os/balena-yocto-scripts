@@ -1,4 +1,20 @@
 - commits:
+    - subject: "Dockerfile_yocto-build-env: Install rsync and uudecode host
+        dependencies"
+      hash: 20a981f81a47cf86c62efb57838baa4d45776560
+      body: |
+        These are required for the UCM-iMX9 build
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alexnadru Costache <alexandru@balena.io>
+        signed-off-by: Alexnadru Costache <alexandru@balena.io>
+      author: Alexandru Costache
+      nested: []
+  version: 1.19.39
+  title: ""
+  date: 2023-10-20T13:47:52.543Z
+- commits:
     - subject: README.md ChangeType is needed for PR so add to README example
       hash: 9f554545b218b3d00af08f1b6971605a1617ed22
       body: ""
