@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CURL="curl -s"
+CURL="curl --silent --retry 10 --location --compressed"
 
 VERBOSE=${VERBOSE:-0}
 [ "${VERBOSE}" = "verbose" ] && set -x
@@ -1064,4 +1064,202 @@ balena_api_is_release_final() {
 	__pp_json "${_json}"
 	_final=$(echo "${_json}" | jq -r '.d[0].is_final')
 	echo "${_final}"
+}
+
+do_http_request() {
+	local _request="${1:-"GET"}"
+	local _errfile
+	local _outfile
+	local _status_code
+
+	_errfile=$(mktemp)
+	_outfile=$(mktemp)
+	if _status_code=$(${CURL} -X"${_request}" -w "%{http_code}" -o "${_outfile}" "${@:2}" 2>"${_errfile}"); then
+		rm -f "${_errfile}"
+		case "${_status_code}" in
+			2*)
+				cat "${_outfile}"
+				rm -f "${_outfile}"
+				return 0
+				;;
+			4*)
+				echo "FAIL $(cat "${_outfile}")" >&2
+				rm -f "${_outfile}"
+				return 1
+				;;
+			5*)
+				echo "ERROR $(cat "${_outfile}")" >&2
+				rm -f "${_outfile}"
+				return 1
+				;;
+			*)
+				echo "WARN $(cat "${_outfile}")" >&2
+				rm -f "${_outfile}"
+				return 1
+				;;
+		esac
+	else
+		echo "WARN $(cat "${_errfile}")" >&2
+		rm -f "${_errfile}" "${_outfile}"
+		return 1
+	fi
+}
+
+do_post() {
+	do_http_request "POST" "$@"
+}
+
+do_delete() {
+	do_http_request "DELETE" "$@"
+}
+
+do_get() {
+	do_http_request "GET" "$@"
+}
+
+# Attaches a file to a release
+# Arguments:
+#
+# $1: Release commit ID
+# $2: Balena target environment
+# $3: Balena API token
+# $4: Local path to asset file
+# $5: Asset key - defaults to file name
+#
+# Return:
+# 	New asset ID
+# Result:
+# 	Success or failure
+balena_api_add_release_asset() {
+	local _release_id="${1}"
+	local _apiEnv="${2}"
+	local _token="${3}"
+	local _asset_path="${4}"
+	local	_asset_key="${5:-$(basename "${_asset_path}")}"
+	local _json
+	local _id
+
+	local TRANSLATION="resin"
+
+	_apiEnv=${_apiEnv:-$(balena_lib_environment)}
+	_token=${_token:-$(balena_lib_token)}
+
+	[ -z "${_token}" ] && >&2 echo "[balena_api_add_release_asset]: Authentication token is required" && return 1
+
+	_json=$(do_post "https://api.${_apiEnv}/${TRANSLATION}/release_asset" -H "Authorization: Bearer ${_token}" --form "release=${_release_id}" --form "asset_key=${_asset_key}" --form "asset=@${_asset_path}")
+	__pp_json "${_json}"
+	_id=$(echo "${_json}" | jq -r '.id')
+	echo "${_id}"
+}
+
+# Outputs a release asset in JSON format
+# Arguments:
+#
+# $1: Release ID
+# $2: Balena target environment
+# $3: Balena API token
+# $4: Asset key
+#
+# Return:
+# 	Release asset in JSON format
+# Result:
+# 	Success or failure
+balena_api_get_release_asset() {
+	local _release_id="${1}"
+	local _apiEnv="${2}"
+	local _token="${3}"
+	local	_asset_key="${4}"
+	local _json
+
+	_apiEnv=${_apiEnv:-$(balena_lib_environment)}
+	_token=${_token:-$(balena_lib_token)}
+
+	[ -z "${_token}" ] && >&2 echo "[balena_api_get_release_asset]: Authentication token is required" && return 1
+	_json=$(balena_api_get_release_assets "${_release_id}" "${_apiEnv}" "${_token}")
+	__pp_json "${_json}"
+	echo "${_json}" | jq -r '.d[0].release_asset[] | select(.asset_key == '\"${_asset_key}\"')'
+}
+
+# Outputs a release asset URL
+# Arguments:
+#
+# $1: Release ID
+# $2: Balena target environment
+# $3: Balena API token
+# $4: Asset key
+#
+# Return:
+# 	Release asset in JSON format
+# Result:
+# 	Success or failure
+balena_api_get_release_asset_url() {
+	local _release_id="${1}"
+	local _apiEnv="${2}"
+	local _token="${3}"
+	local	_asset_key="${4}"
+	local _json
+	local _href
+
+	_apiEnv=${_apiEnv:-$(balena_lib_environment)}
+	_token=${_token:-$(balena_lib_token)}
+
+	[ -z "${_token}" ] && >&2 echo "[balena_api_get_release_asset_url]: Authentication token is required" && return 1
+	_json=$(balena_api_get_release_asset "${_release_id}" "${_apiEnv}" "${_token}" "${_asset_key}")
+	__pp_json "${_json}"
+	_href=$(echo "${_json}" | jq -r '.asset.href')
+	echo "${_href}"
+}
+
+
+# Outputs all release assets in JSON format
+# Arguments:
+#
+# $1: Release ID
+# $2: Balena target environment
+# $3: Balena API token
+#
+# Return:
+# 	Release assets in JSON format
+# Result:
+# 	Success or failure
+balena_api_get_release_assets() {
+	local _release_id="${1}"
+	local _apiEnv="${2}"
+	local _token="${3}"
+	local _json
+
+	local TRANSLATION="resin"
+
+	_apiEnv=${_apiEnv:-$(balena_lib_environment)}
+	_token=${_token:-$(balena_lib_token)}
+
+	[ -z "${_token}" ] && >&2 echo "[balena_api_get_release_assets]: Authentication token is required" && return 1
+	_json=$(do_get "https://api.${_apiEnv}/${TRANSLATION}/release(${_release_id})?\$select=id&\$expand=release_asset" -H "Authorization: Bearer ${_token}")
+	__pp_json "${_json}"
+	echo "${_json}"
+}
+
+
+# Removes a release asset
+# Arguments:
+#
+# $1: Aset ID
+# $2: Balena target environment
+# $3: Balena API token
+#
+# Result:
+# 	Success or failure
+balena_api_delete_release_asset() {
+	local _asset_id="${1}"
+	local _apiEnv="${2}"
+	local _token="${3}"
+	local _json
+
+	local TRANSLATION="resin"
+
+	_apiEnv=${_apiEnv:-$(balena_lib_environment)}
+	_token=${_token:-$(balena_lib_token)}
+
+	[ -z "${_token}" ] && >&2 echo "[balena_api_delete_release_asset]: Authentication token is required" && return 1
+	do_delete "https://api.${_apiEnv}/${TRANSLATION}/release_asset(${_asset_id})" -H "Authorization: Bearer ${_token}"
 }
