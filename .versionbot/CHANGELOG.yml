@@ -1,4 +1,51 @@
 - commits:
+    - subject: "Dockerfiles: update balenaCLI version to 17.2.2"
+      hash: 635816960ec1f836433a397a420292462bafd2c5
+      body: |
+        Update balenaCLI from 14.5.15 to 17.2.2 (current latest)
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-deploy-block.sh: deploy licenses and changelog as release assets"
+      hash: 173ab9a844e9c77f46bd5f022a62fc9100b83002
+      body: |
+        This will make it possible to surface these build artifacts to users.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-deploy: Add changelog to deployed artifacts"
+      hash: 2c55cdc09d5fb38a225b1b11c413de1d5206fb44
+      body: |
+        Deploying the changelog will allow to deploy it as a release asset.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-api: add release assets helper functions"
+      hash: bb9c5762ff424a9ae8df77d5dcebafa262fbe264
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.19.40
+  title: ""
+  date: 2023-11-13T10:19:34.115Z
+- commits:
     - subject: "Dockerfile_yocto-build-env: Install rsync and uudecode host
         dependencies"
       hash: 20a981f81a47cf86c62efb57838baa4d45776560
