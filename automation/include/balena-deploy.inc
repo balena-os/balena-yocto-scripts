@@ -62,6 +62,9 @@ balena_deploy_artifacts () {
 	if [ -d "${_yocto_licenses_deploy}" ]; then
 		tar -czf "${_deploy_dir}/licenses.tar.gz" -C $(dirname "${_yocto_licenses_deploy}") $(basename "${_yocto_licenses_deploy}")
 	fi
+	if [ -f "${device_dir}/CHANGELOG.md" ]; then
+		cp -v "${device_dir}/CHANGELOG.md" "${_deploy_dir}"
+	fi
 
 	test "${_slug}" = "edge" && return
 

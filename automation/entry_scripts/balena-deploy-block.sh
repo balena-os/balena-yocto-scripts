@@ -40,6 +40,20 @@ if [ -z "${_releaseID}" ]; then
 	exit 1
 fi
 
+_assets="$(find /deploy/deploy-jenkins -name licenses.tar.gz) /deploy/CHANGELOG.md"
+_rid=$(balena_api_releaseID_from_commitID "${_releaseID}" "${API_ENV}" "${BALENAOS_TOKEN}")
+for _asset in ${_assets}; do
+	if [ -f "${_asset}" ]; then
+		_aid=$(balena_api_add_release_asset "${_rid}" "${API_ENV}" "${BALENAOS_TOKEN}" "${_asset}")
+		if [ -n "${_aid}" ]; then
+			echo "[INFO] Added ${_asset} with ID ${_aid} to release ${_releaseID}"
+		else
+			echo "[ERROR] Failed to add ${_asset} to release ${_releaseID}"
+			exit 1
+		fi
+	fi
+done
+
 # Legacy hostapp tagging
 if [ "${DEPLOY}" = "yes" ] && [ "${FINAL}" = "yes" ]; then
 	balena_lib_release_finalize "${_releaseID}" "${BALENAOS_ACCOUNT}/${APPNAME}" "${API_ENV}" "${BALENAOS_TOKEN}" "${ESR}"
