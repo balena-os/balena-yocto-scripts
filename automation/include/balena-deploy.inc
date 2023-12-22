@@ -210,7 +210,7 @@ balena_deploy_to_s3() {
 
 	local _s3_cmd="s4cmd --access-key=${_s3_access_key} --secret-key=${_s3_secret_key}"
 	local _s3_sync_opts="--recursive --API-ACL=${_s3_policy}"
-	docker pull "${_namespace}/balena-img:4.1.2"
+	docker pull "${_namespace}/balena-img:6.20.26"
 	docker run --rm -t \
 		-e BASE_DIR=/host/images \
 		-e S3_CMD="$_s3_cmd" \
@@ -222,7 +222,7 @@ balena_deploy_to_s3() {
 		-e VERBOSE="${VERBOSE}" \
 		-e DEPLOYER_UID="$(id -u)" \
 		-e DEPLOYER_GID="$(id -g)" \
-		-v "$_s3_deploy_dir":/host/images "${_namespace}"/balena-img:master /bin/sh -e -c ' \
+		-v "$_s3_deploy_dir":/host/images "${_namespace}"/balena-img:6.20.26 /bin/sh -e -c ' \
 			VERBOSE=${VERBOSE:-0}
 			[ "${VERBOSE}" = "verbose" ] && set -x
 			apt-get -y update
