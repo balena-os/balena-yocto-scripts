@@ -1,4 +1,20 @@
 - commits:
+    - subject: "automation/balena-deploy: Pin to known working version of balena-img"
+      hash: 927310397896f35bd1921202e8b1f30ba3ef47d8
+      body: >
+        As per internal thread
+        https://balena.zulipchat.com/#narrow/stream/345890-balena-io/topic/Jenkins.20build.20failures/near/409602914
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alexandru Costache <alexandru@balena.io>
+        signed-off-by: Alexandru Costache <alexandru@balena.io>
+      author: Alexandru Costache
+      nested: []
+  version: 1.19.41
+  title: ""
+  date: 2023-12-22T16:01:59.872Z
+- commits:
     - subject: "Dockerfiles: update balenaCLI version to 17.2.2"
       hash: 635816960ec1f836433a397a420292462bafd2c5
       body: |
