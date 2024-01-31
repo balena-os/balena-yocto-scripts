@@ -146,13 +146,13 @@ balena_deploy_artifacts () {
 # $1: Device type name
 # $2: ESR flag
 # $3: S3 environmennt to deploy to (production | staging ) (defaults to production)
-# $4: S3 account namespace to use (defaults to resin)
+# $4: Helper image repository
 #
 balena_deploy_to_s3() {
 	local _device_type="${1}"
 	local _esr=${2}
 	local _deploy_to="${3:-"production"}"
-	local _namespace="${4}"
+	local _image_repo="${4}"
 	local _slug
 	local _artifact
 	local _s3_bucket
@@ -167,7 +167,7 @@ balena_deploy_to_s3() {
 	[ -z "${_device_type}" ] && echo "[balena_deploy_to_s3] Device type is required" && return 1
 	[ -z "${_s3_version_hostos}" ] && echo "[balena_deploy_to_s3] No hostOS version found" && return 1
 
-	[ -z "${_namespace}" ] && _namespace=${NAMESPACE:-"balena"}
+	[ -z "${_image_repo}" ] && _image_repo="${HELPER_IMAGE_REPO:-"ghcr.io/balena-os/balena-yocto-scripts"}"
 	[ -z "${_esr}" ] && _esr="${_esr:-"${ESR:-false}"}"
 	local _s3_deploy_dir="${device_dir}/deploy-s3"
 	local _s3_deploy_images_dir="$_s3_deploy_dir/$_slug/$_s3_version_hostos"
@@ -210,7 +210,9 @@ balena_deploy_to_s3() {
 
 	local _s3_cmd="s4cmd --access-key=${_s3_access_key} --secret-key=${_s3_secret_key}"
 	local _s3_sync_opts="--recursive --API-ACL=${_s3_policy}"
-	docker pull "${_namespace}/balena-img:6.20.26"
+	if ! balena_lib_docker_pull_helper_image "docker.io/balena/balena-img" "6.20.26" "" helper_image_id; then
+		return 1
+	fi
 	docker run --rm -t \
 		-e BASE_DIR=/host/images \
 		-e S3_CMD="$_s3_cmd" \
@@ -222,7 +224,7 @@ balena_deploy_to_s3() {
 		-e VERBOSE="${VERBOSE}" \
 		-e DEPLOYER_UID="$(id -u)" \
 		-e DEPLOYER_GID="$(id -g)" \
-		-v "$_s3_deploy_dir":/host/images "${_namespace}"/balena-img:6.20.26 /bin/sh -e -c ' \
+		-v "$_s3_deploy_dir":/host/images "${helper_image_id}" /bin/sh -e -c ' \
 			VERBOSE=${VERBOSE:-0}
 			[ "${VERBOSE}" = "verbose" ] && set -x
 			apt-get -y update
@@ -300,8 +302,8 @@ balena_deploy_block() {
 		fi
 	fi
 
-	NAMESPACE=${NAMESPACE:-balena}
-	if ! balena_lib_docker_pull_helper_image "Dockerfile_balena-push-env" balena_yocto_scripts_revision; then
+	HELPER_IMAGE_REPO="${HELPER_IMAGE_REPO:-"ghcr.io/balena-os/balena-yocto-scripts"}"
+	if ! balena_lib_docker_pull_helper_image "${HELPER_IMAGE_REPO}" "" "balena-push-env" helper_image_id; then
 		return 1
 	fi
 	docker run --rm -t \
@@ -325,9 +327,9 @@ balena_deploy_block() {
 		-v "${device_dir}":/work \
 		-v "${_work_dir}":/deploy \
 		--privileged \
-		"${NAMESPACE}"/balena-push-env:"${balena_yocto_scripts_revision}" /balena-deploy-block.sh
+		"${helper_image_id}" /balena-deploy-block.sh
 
-	balena_lib_docker_remove_helper_images "balena-push-env"
+	balena_lib_docker_remove_helper_images "${HELPER_IMAGE_REPO}"
 }
 
 # Initialize a compose file in the specified path

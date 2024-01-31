@@ -3,7 +3,7 @@
 [ "${VERBOSE}" = "verbose" ] && set -x
 set -e
 
-NAMESPACE=${NAMESPACE:-balena}
+HELPER_IMAGE_REPO="${HELPER_IMAGE_REPO:-"ghcr.io/balena-os/balena-yocto-scripts"}"
 
 print_help() {
 	echo -e "Script options:\n\
