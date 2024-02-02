@@ -1,4 +1,18 @@
 - commits:
+    - subject: Remove unused block-build functions
+      hash: 130d7fb70f4a10755731e898e87610547fe44692
+      body: ""
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.20.0
+  title: ""
+  date: 2024-02-02T16:29:21.897Z
+- commits:
     - subject: "automation/balena-deploy: Pin to known working version of balena-img"
       hash: 927310397896f35bd1921202e8b1f30ba3ef47d8
       body: >
