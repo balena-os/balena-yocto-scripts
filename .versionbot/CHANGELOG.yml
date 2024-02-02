@@ -1,4 +1,32 @@
 - commits:
+    - subject: Return image id after pulling helper images
+      hash: f2fb17399ede63ceaada8c8625a250747745d97a
+      body: |
+        Also refactor the pull helper image functions to
+        support a single repository with multiple variant tags.
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Build and publish helper images with Flowzone
+      hash: 8a15692852f38bfd5158b61b5870dffd8f758a64
+      body: |
+        Rather than build helper images on demand, we will
+        publish them to ghcr.io with every revision of this project.
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.21.0
+  title: ""
+  date: 2024-02-02T18:52:51.154Z
+- commits:
     - subject: Remove unused block-build functions
       hash: 130d7fb70f4a10755731e898e87610547fe44692
       body: ""
