@@ -330,47 +330,6 @@ balena_deploy_block() {
 	balena_lib_docker_remove_helper_images "balena-push-env"
 }
 
-# Builds and deploys the specified block to BalenaCloud
-# Input arguments;
-#  $1: App name to deploy into
-#  $2: Device type for the app
-#  $3: Package list to build the block with
-#  $4: Balena cloud account (defaults to balena_os)
-#  $5: Balena API environment
-#
-balena_build_block() {
-	local _appName="$1"
-	local _device_type="${2:-${MACHINE}}"
-	local _packages="${3:-${PACKAGES}}"
-	local _balenaos_account="${4:-balena_os}"
-	local _api_env="${5:-$(balena_lib_environment)}"
-
-	[ -z "${_appName}" ] && echo "App name is required" && return
-	[ -z "${_device_type}" ] && echo "Device type is required" && return
-	[ -z "${_packages}" ] && echo "Package list is required" && return
-
-	if ! balena_lib_docker_pull_helper_image "Dockerfile_yocto-block-build-env" balena_yocto_scripts_revision; then
-		return 1
-	fi
-	docker run --rm -t \
-		-e APPNAME="${_appName}" \
-		-e NAMESPACE="${NAMESPACE:-balena}" \
-		-e RELEASE_VERSION="$(balena_lib_get_os_version)" \
-		-e PACKAGES="${_packages}" \
-		-e VERBOSE="${VERBOSE}" \
-		-e MACHINE="${_device_type}" \
-		-e TAG="${balena_yocto_scripts_revision}" \
-		-e WORKSPACE=/work \
-		-e balenaCloudEmail="${balenaCloudEmail}" \
-		-e balenaCloudPassword="${balenaCloudPassword}" \
-		-e ESR="${ESR}" \
-		-v "${WORKSPACE:-"${PWD}"}":/work \
-		--privileged \
-		"${NAMESPACE}"/yocto-block-build-env:"${balena_yocto_scripts_revision}" /balena-build-block.sh
-
-	balena_lib_docker_remove_helper_images "yocto-block-build-env"
-}
-
 # Initialize a compose file in the specified path
 #
 # Input:
