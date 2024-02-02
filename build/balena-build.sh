@@ -59,7 +59,7 @@ balena_build_run_barys() {
 	local _docker_run_args="${9:-"--rm"}"
 	local _dl_dir
 	local _sstate_dir
-	local _namespace="${NAMESPACE:-"balena"}"
+	local _image_repo="${HELPER_IMAGE_REPO:-"ghcr.io/balena-os/balena-yocto-scripts"}"
 
 	[ -z "${_device_type}" ] && echo "Device type is required"  && exit 1
 	[ -z "${_shared_dir}" ] && echo "Shared directory path is required"  && exit 1
@@ -86,11 +86,11 @@ balena_build_run_barys() {
 
 	"${DOCKER}" stop $BUILD_CONTAINER_NAME 2> /dev/null || true
 	"${DOCKER}" rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
-	if ! balena_lib_docker_pull_helper_image "Dockerfile_yocto-build-env" balena_yocto_scripts_revision; then
+	if ! balena_lib_docker_pull_helper_image "${HELPER_IMAGE_REPO}" "" "yocto-build-env" helper_image_id; then
 		exit 1
 	fi
 	[ -z "${SSH_AUTH_SOCK}" ] && echo "No SSH_AUTH_SOCK in environment - private repositories won't be accessible to the builder" && SSH_AUTH_SOCK="/dev/null"
-	${DOCKER} run --rm ${__docker_run_args} \
+	${DOCKER} run --rm ${_docker_run_args} \
 		-v "${work_dir}":/work \
 		-v "${_dl_dir}":/yocto/shared-downloads \
 		-v "${_sstate_dir}":/yocto/shared-sstate \
@@ -103,7 +103,7 @@ balena_build_run_barys() {
 		-e API_ENV="${_api_env}" \
 		--name $BUILD_CONTAINER_NAME \
 		--privileged \
-		"${_namespace}"/yocto-build-env:"${balena_yocto_scripts_revision}" \
+		"${helper_image_id}" \
 		/prepare-and-start.sh \
 		--log \
 		--machine "${_device_type}" \
@@ -117,7 +117,7 @@ balena_build_run_barys() {
 		--rm-work
 
 	if [ "${_keep_helpers}" = "0" ]; then
-		balena_lib_docker_remove_helper_images "yocto-build-env"
+		balena_lib_docker_remove_helper_images "${HELPER_IMAGE_REPO}"
 	fi
 }
 

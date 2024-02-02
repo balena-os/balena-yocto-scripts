@@ -25,12 +25,12 @@ if [ "${deployTo}" = 'production' ]; then
     AWS_SECURITY_GROUP_ID="sg-057937f4d89d9d51c"
 fi
 
-NAMESPACE=${NAMESPACE:-balena}
+HELPER_IMAGE_REPO="${HELPER_IMAGE_REPO:-"ghcr.io/balena-os/balena-yocto-scripts"}"
 
 # shellcheck disable=SC1091,SC2154
 source "${automation_dir}/include/balena-lib.inc"
 
-if ! balena_lib_docker_pull_helper_image "Dockerfile_balena-generate-ami-env" balena_yocto_scripts_revision; then
+if ! balena_lib_docker_pull_helper_image "${HELPER_IMAGE_REPO}" "" "yocto-generate-ami-env" helper_image_id; then
     exit 1
 fi
 
@@ -113,6 +113,6 @@ docker run --rm -t \
     -e AWS_SUBNET_ID="${AWS_SUBNET_ID}" \
     -e AWS_SECURITY_GROUP_ID="${AWS_SECURITY_GROUP_ID}" \
     -w "${WORKSPACE}" \
-    "${NAMESPACE}/balena-generate-ami-env:${balena_yocto_scripts_revision}" /balena-generate-ami.sh
+    "${helper_image_id}" /balena-generate-ami.sh
 
 rm -f "${PRELOADED_IMAGE}"

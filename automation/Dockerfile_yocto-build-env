@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:18.04 AS yocto-build-env
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -46,3 +46,13 @@ COPY include/balena-docker.inc /
 COPY entry_scripts/prepare-and-start.sh /
 
 WORKDIR /work
+
+####################
+
+FROM yocto-build-env AS yocto-generate-ami-env
+
+RUN apt-get update && apt-get install -y python3-pip udev && rm -rf /var/lib/apt/lists/*
+RUN pip3 install awscli
+
+COPY include/balena-api.inc include/balena-lib.inc entry_scripts/balena-generate-ami.sh /
+WORKDIR /

@@ -6,9 +6,9 @@ VERBOSE=${VERBOSE:-0}
 
 include_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 device_dir=$( if cat /proc/self/cgroup | grep -q docker && [ -d "/work" ]; then cd "/work" && pwd; else cd "${include_dir}/../../.." && pwd; fi )
-BALENA_YOCTO_SCRIPTS_REVISION=$(cd "${include_dir}" && git rev-parse --short=7 HEAD || true)
 
-NAMESPACE="${NAMESPACE:-"balena"}"
+BALENA_YOCTO_SCRIPTS_VERSION=$(cd "${include_dir}" && head -n1 ../../VERSION)
+HELPER_IMAGE_REPO="${HELPER_IMAGE_REPO:-"ghcr.io/balena-os/balena-yocto-scripts"}"
 
 # Return the latest tag of the device repository
 balena_lib_get_os_version() {
@@ -48,41 +48,36 @@ balena_lib_get_meta_balena_base_version() {
 
 # Pull a helper image building a matching version if required
 # Inputs:
-# $1: Dockerfile name
+# $1: Helper image repository
+# $2: Helper image version (defaults to balena-yocto-scripts version)
+# $3: Helper image variant (e.g. yocto-build-env)
+# $4: Return value variable name
 balena_lib_docker_pull_helper_image() {
-	local _dockerfile_name="$1"
-	local _image_name=""
-	local _image_prefix=""
-	local _retvalue="$2"
-	_image_name="${_dockerfile_name%".template"}"
-	_image_name="${_image_name#"Dockerfile_"}"
-	case ${_dockerfile_name} in
-		*template)
-			_image_prefix="${MACHINE}-"
-			DEVICE_ARCH=$(jq --raw-output '.arch' "$WORKSPACE/$MACHINE.json")
-			export DEVICE_ARCH
-			DEVICE_TYPE=${MACHINE}
-			export DEVICE_TYPE
-			;;
-	esac
+	local _image_repo="${1:-"${HELPER_IMAGE_REPO}"}"
+	local _image_version="${2:-"${BALENA_YOCTO_SCRIPTS_VERSION}"}"
+	local _image_variant="${3:-}"
+	local _retvalue="${4:-helper_image_id}"
 
-	if ! docker pull "${NAMESPACE}"/"${_image_prefix}""${_image_name}":"${BALENA_YOCTO_SCRIPTS_REVISION}"; then
-		JOB_NAME="${JOB_NAME}" DOCKERFILES="${_dockerfile_name}" "${include_dir}/../jenkins_build-containers.sh"
+	local _image_tag="${_image_repo}":"${_image_version}"
+	local _image_id
+
+	if [ -n "${_image_variant}" ]; then
+		_image_tag="${_image_tag}-${_image_variant}"
 	fi
-	eval "$_retvalue"='${BALENA_YOCTO_SCRIPTS_REVISION}'
+
+	docker pull "${_image_tag}"
+	_image_id="$(docker images --format "{{.ID}}" "${_image_tag}")"
+	eval "$_retvalue"='${_image_id}'
 }
 
-# Remove all versions of a  helper image
-# Inputs:
-# $1: Image name
-#
+# Remove all versions of the helper images
 balena_lib_docker_remove_helper_images() {
-	local _image_name="${1}"
+	local _image_repo="${1:-"${HELPER_IMAGE_REPO}"}"
 	local _image_ids
 	local _id
-	_image_ids=$(docker images "${NAMESPACE}/${_image_name}" --format "{{.ID}}")
+	_image_ids=$(docker images "${_image_repo}" --format "{{.ID}}")
 	for _id in ${_image_ids}; do
-		docker rmi -f "${_id}" || true
+		docker rmi -f "${_id}" 2>/dev/null || true
 	done
 }
 
