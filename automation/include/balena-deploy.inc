@@ -264,11 +264,15 @@ EOSU
 #  $4: Path to the image to deploy
 #  $5: Deploy release to S3 and balenaCloud fleet
 #  $6: Deploy to balenaCloud fleet as draft (default) or final release
-#  $7: Path to the working directory (defaults to device repository root)
-#  $8: BalenaCloud admin account (defaults to balena_os)
-#  $9: BalenaCloud email address (defaults to the balenaCloudEmail enviromental variable)
-#  $10: BalenaCloud password (defaults to the balenaCloudPassword enviromental variable)
-#  $11: ESR release flag (default to "ESR" environment variable)
+#  $7: secureBoot feature flag
+#      - if set to yes this adds the secureBoot feature flag into the OS contract
+#      - needed for other components to identify secureBoot compatible software releases
+#  $8: Path to the working directory (defaults to device repository root)
+#  $9: BalenaCloud admin account (defaults to balena_os)
+#  $10: BalenaCloud email address (defaults to the balenaCloudEmail enviromental variable)
+#  $11: BalenaCloud password (defaults to the balenaCloudPassword enviromental variable)
+#  $12: ESR release flag (default to "ESR" environment variable)
+#  $13: Version of the helper image that is used to deploy the block
 #
 balena_deploy_block() {
 	local _appName="$1"
@@ -283,6 +287,7 @@ balena_deploy_block() {
 	local _balenaCloudEmail="${10:-"${balenaCloudEmail}"}"
 	local _balenaCloudPassword="${11:-"${balenaCloudPassword}"}"
 	local _esr="${12}"
+	local _helperImageVersion="${13:-"${BALENA_YOCTO_SCRIPTS_VERSION}"}"
 	local _api_env=$(balena_lib_environment)
 
 	[ -z "${_device_type}" ] && echo "Device type is required" && return
@@ -323,6 +328,7 @@ balena_deploy_block() {
 		-e balenaCloudEmail="${_balenaCloudEmail}" \
 		-e balenaCloudPassword="${_balenaCloudPassword}" \
 		-e ESR="${_esr}" \
+		-e BALENA_YOCTO_SCRIPTS_VERSION="${_helperImageVersion}" \
 		-v "${_image_path}":/host/appimage.docker \
 		-v "${device_dir}":/work \
 		-v "${_work_dir}":/deploy \

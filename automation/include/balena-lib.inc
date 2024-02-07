@@ -7,7 +7,7 @@ VERBOSE=${VERBOSE:-0}
 include_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 device_dir=$( if cat /proc/self/cgroup | grep -q docker && [ -d "/work" ]; then cd "/work" && pwd; else cd "${include_dir}/../../.." && pwd; fi )
 
-BALENA_YOCTO_SCRIPTS_VERSION=$(cd "${include_dir}" && head -n1 ../../VERSION)
+BALENA_YOCTO_SCRIPTS_VERSION="${BALENA_YOCTO_SCRIPTS_VERSION:-"$(cd "${include_dir}" && head -n1 ../../VERSION)"}"
 HELPER_IMAGE_REPO="${HELPER_IMAGE_REPO:-"ghcr.io/balena-os/balena-yocto-scripts"}"
 
 # Return the latest tag of the device repository
