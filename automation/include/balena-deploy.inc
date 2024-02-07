@@ -210,7 +210,7 @@ balena_deploy_to_s3() {
 
 	local _s3_cmd="s4cmd --access-key=${_s3_access_key} --secret-key=${_s3_secret_key}"
 	local _s3_sync_opts="--recursive --API-ACL=${_s3_policy}"
-	if ! balena_lib_docker_pull_helper_image "docker.io/balena/balena-img" "6.20.26" "" helper_image_id; then
+	if ! balena_lib_docker_pull_helper_image "balena/balena-img" "6.20.26" "" helper_image_id; then
 		return 1
 	fi
 	docker run --rm -t \
