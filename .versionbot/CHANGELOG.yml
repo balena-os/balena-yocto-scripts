@@ -1,4 +1,19 @@
 - commits:
+    - subject: "balena-deploy: Remove docker.io when pulling image"
+      hash: bd23b9ad59a1645bce79b0df5ef3879d10774a3a
+      body: |
+        This seems to cause docker images --format to fail
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alexandru Costache <alexandru@balena.io>
+        signed-off-by: Alexandru Costache <alexandru@balena.io>
+      author: Alexandru
+      nested: []
+  version: 1.21.1
+  title: ""
+  date: 2024-02-07T12:39:41.622Z
+- commits:
     - subject: Return image id after pulling helper images
       hash: f2fb17399ede63ceaada8c8625a250747745d97a
       body: |
