@@ -1,4 +1,21 @@
 - commits:
+    - subject: "automation/include: Pass helper image version"
+      hash: 2a8e25e0d0b46b3249c1c77b0c38219ebcdea1f0
+      body: |
+        This is needed by the balena-push-env helper image that needs the
+        balena-yocto-scripts version but has no way of getting that info
+        otherwise.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Florin Sarbu <florin@balena.io>
+        signed-off-by: Florin Sarbu <florin@balena.io>
+      author: Florin Sarbu
+      nested: []
+  version: 1.21.2
+  title: ""
+  date: 2024-02-08T07:44:50.538Z
+- commits:
     - subject: "balena-deploy: Remove docker.io when pulling image"
       hash: bd23b9ad59a1645bce79b0df5ef3879d10774a3a
       body: |
