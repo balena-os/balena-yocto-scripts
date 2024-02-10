@@ -114,7 +114,7 @@ create_aws_ebs_snapshot() {
     # Push to s3 and create the AMI
     echo "* Pushing ${img} to s3://${S3_BUCKET}"
     s3_url="s3://${S3_BUCKET}/preloaded-images/${s3_key}"
-    aws s3 cp "${img}" "${s3_url}"
+    aws s3 cp --sse AES256 "${img}" "${s3_url}"
 
     import_task_id=$(aws ec2 import-snapshot \
       --description "snapshot-${AMI_NAME}" \
