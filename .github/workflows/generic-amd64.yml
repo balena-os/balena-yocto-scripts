@@ -1,0 +1,120 @@
+# This is an approximate example of a single Yocto device-type workflow
+# as it would exist in a device repo.
+
+# It will be duplicated across all device repos with only minor changes
+# to the inputs and the defaults.
+
+# TODO: We need a system to keep these inputs aligned across all device repos
+name: Generic x86_64 (GPT)
+
+on:
+  # With these triggers the Yocto jobs will run
+  # in parallel with the Flowzone jobs, which is fine for now
+  # and allows us to better control what we want to test and when.
+  # It is expected that Flowzone could fail, but yocto jobs will run.
+  pull_request:
+    types: [opened, synchronize, closed]
+    branches:
+      - "main"
+      - "master"
+  pull_request_target:
+    types: [opened, synchronize, closed]
+    branches:
+      - "main"
+      - "master"
+  workflow_dispatch:
+    # limited to 10 inputs for workflow dispatch
+    inputs:
+      environment:
+        description: The GitHub Environment to use for the job(s) (production, staging, etc.)
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      deploy-s3:
+        description: Whether to deploy images to S3
+        required: false
+        type: boolean
+        default: true
+      deploy-hostapp:
+        description: Whether to deploy a hostApp container image to a balena environment
+        required: false
+        type: boolean
+        default: true
+      finalize-hostapp:
+        description: Whether to finalize a hostApp container image to a balena environment
+        required: false
+        type: boolean
+        default: false
+      deploy-esr:
+        description: Enable to deploy ESR
+        required: false
+        type: boolean
+        default: false
+      deploy-ami:
+        description: Whether to deploy an AMI to AWS
+        required: false
+        type: boolean
+        default: false
+      sign-image:
+        description: Whether to sign image for secure boot
+        required: false
+        type: boolean
+        default: false
+      run-tests:
+        description: Whether to run tests
+        required: false
+        type: boolean
+        default: false
+      os-dev:
+        description: Enable OS development features
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  yocto:
+    name: Yocto
+    uses: ./.github/workflows/yocto-build-deploy.yml
+    secrets: inherit
+    with:
+      # runs-on: '[ "ubuntu-latest" ]'
+      # On device repos we need to hardcode: machine
+      # On -some- device repos, we need to also hardcode (defaults will work otherwise):
+      #   for private device types: test-environment
+      #   for device types we use virtualised testing for: test-workers
+      machine: generic-amd64
+      test-environment: bm.balena-dev.com
+      test-workers: qemu
+      # Allow overriding these inputs for manual triggers
+      environment: ${{ inputs.environment || 'balena-staging.com' }}
+      sign-image: ${{ inputs.sign-image || false }}
+      os-dev: ${{ inputs.os-dev || false }}
+      deploy-s3: ${{ inputs.deploy-s3 || true }}
+      deploy-hostapp: ${{ inputs.deploy-hostapp || true }}
+      deploy-ami: ${{ inputs.deploy-ami || false }}
+      deploy-esr: ${{ inputs.deploy-esr || false }}
+      finalize-hostapp: ${{ inputs.finalize-hostapp || false }}
+      run-tests: ${{ inputs.run-tests || true }}
+      # Below inputs are not required on device repos as the defaults should be used
+      device-repo: balena-os/balena-generic
+      device-repo-ref: master 
+
+      # environment: staging
+      # device-repo: balena-os/balena-raspberrypi
+      # device-repo-ref: master
+      # yocto-scripts-ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      # machine: raspberrypi3
+      # sign-image: false
+      # os-dev: false
+      # deploy-s3: true
+      # deploy-hostapp: true
+      # deploy-ami: false
+      # deploy-esr: false
+      # finalize-hostapp: "no"
+      # run-tests: true
+      # test-suites: os
+      # test-environment: balenaos-balenamachine
+      # test-workers: testbot
+      # meta-balena-ref: f2a99b11212c2e3eed74dbc26abc5cf96d3b2726
