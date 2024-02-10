@@ -1,0 +1,683 @@
+name: "Yocto"
+
+on:
+  workflow_call:
+    secrets:
+      BALENA_API_KEY:
+        description: balena API key for deploying releases
+        required: false
+      S3_ACCESS_KEY:
+        description: S3 access key
+        required: false
+      S3_SECRET_KEY:
+        description: S3 secret key
+        required: false
+      DOCKERHUB_USER:
+        description: Dockerhub user for pulling private helper images
+        required: false
+      DOCKERHUB_TOKEN:
+        description: Dockerhub token for pulling private helper images
+        required: false
+      SIGN_KMOD_KEY_APPEND:
+        description: Base64-encoded public key of a kernel module signing keypair
+        required: false
+      # TODO: can this be the same as BALENA_API_KEY?
+      SIGN_API_KEY:
+        description: balena API key that provides access to the signing server
+        required: false
+    inputs:
+      runs-on:
+        description: The runner labels to use for the job(s)
+        required: false
+        type: string
+        default: >
+          [
+            "self-hosted",
+            "X64"
+          ]
+      device-repo:
+        description: balenaOS device repository (owner/repo)
+        required: false
+        type: string
+        default: ${{ github.repository }}
+      device-repo-ref:
+        description: balenaOS device repository tag, branch, or commit to build
+        required: false
+        type: string
+        default: ${{ github.ref }}
+      meta-balena-ref:
+        description: meta-balena ref if not the currently pinned version
+        required: false
+        type: string
+      yocto-scripts-ref:
+        description: balena-yocto-scripts ref if not the currently pinned version
+        required: false
+        type: string
+      machine:
+        description: yocto board name
+        required: true
+        type: string
+      environment:
+        description: The GitHub Environment to use for the job(s) (production, staging, etc.)
+        required: false
+        type: string
+        default: staging
+      deploy-s3:
+        description: Whether to deploy images to S3
+        required: false
+        type: boolean
+        default: true
+      deploy-hostapp:
+        description: Whether to deploy a hostApp container image to a balena environment
+        required: false
+        type: boolean
+        default: true
+      deploy-ami:
+        description: Whether to deploy an AMI to AWS
+        required: false
+        type: boolean
+        default: false
+      sign-image:
+        description: Whether to sign image for secure boot
+        required: false
+        type: boolean
+        default: false
+      os-dev:
+        description: Enable OS development features
+        required: false
+        type: boolean
+        default: false
+      deploy-esr:
+        description: Enable to deploy ESR
+        required: false
+        type: boolean
+        default: false
+
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}-${{ inputs.machine }}
+  # cancel jobs in progress for updated PRs, but not merge or tag events
+  cancel-in-progress: ${{ github.event.action == 'synchronize' }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    environment: ${{ inputs.environment }}
+
+    env:
+      WORKSPACE: ${{ github.workspace }}
+      VERBOSE: verbose
+      MACHINE: "${{ inputs.machine }}"
+      automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
+      BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
+      # Yocto NFS sstate cache host
+      YOCTO_CACHE_HOST: ${{ vars.YOCTO_CACHE_HOST || 'nfs.product-os.io' }}
+      # YOCTO_CACHE_HOST: ""
+      YOCTO_CACHE_DIR: ${{ github.workspace }}/shared/yocto-cache
+      BARYS_ARGUMENTS_VAR: ""
+      # URL for secure boot signing server API
+      SIGN_API_URL: ${{ vars.SIGN_API_URL || 'https://sign.balena-cloud.com' }}
+
+    outputs:
+      hostapp_path: ${{ steps.build.outputs.hostapp_path }}
+      os_version: ${{ steps.build-lib.outputs.os_version }}
+      device_slug: ${{ steps.build-lib.outputs.device_slug }}
+      deploy_artifact: ${{ steps.build-lib.outputs.deploy_artifact }}
+      is_private: ${{ steps.build-lib.outputs.is_private }}
+      dt_arch: ${{ steps.build-lib.outputs.dt_arch }}
+      meta_balena_version: ${{ steps.build-lib.outputs.meta_balena_version }}
+      yocto_scripts_ref: ${{ steps.build-lib.outputs.yocto_scripts_ref }}
+
+    defaults:
+      run:
+        working-directory: .
+        shell: bash --noprofile --norc -eo pipefail -x {0}
+
+    steps:
+      # https://github.com/product-os/flowzone/blob/d92a0f707ca791ea4432306fcb35008848cc9bcb/flowzone.yml#L449-L473
+      - name: Reject unapproved external contributions
+        env:
+          ok_to_test_label: ok-to-test
+          # https://cli.github.com/manual/gh_help_environment
+          GH_DEBUG: "true"
+          GH_PAGER: "cat"
+          GH_PROMPT_DISABLED: "true"
+          GH_REPO: "${{ inputs.device-repo }}"
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        if: |
+          github.event.pull_request.state == 'open' &&
+          github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          pr_labels="$(gh pr view ${{ github.event.pull_request.number }} --json labels -q .labels[].name)"
+
+          for label in "${pr_labels}"
+          do
+            if [[ "$label" =~ "${{ env.ok_to_test_label }}" ]]
+            then
+              gh pr edit ${{ github.event.pull_request.number }} --remove-label "${{ env.ok_to_test_label }}"
+              exit 0
+            fi
+          done
+
+          echo "::error::External contributions must be approved with the label '${{ env.ok_to_test_label }}'. \
+            Please contact a member of the organization for assistance."
+          exit 1
+
+      # this must be done before putting files in the workspace
+      # https://github.com/easimon/maximize-build-space
+      - name: Maximize build space
+        if: contains(fromJSON(inputs.runs-on), 'self-hosted') == false
+        uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c
+        with:
+          root-reserve-mb: "4096"
+          temp-reserve-mb: "1024"
+          swap-size-mb: "4096"
+          remove-dotnet: "true"
+          remove-android: "true"
+          remove-haskell: "true"
+          remove-codeql: "true"
+          remove-docker-images: "true"
+
+      # https://github.com/actions/checkout
+      - name: Clone device repository
+        uses: actions/checkout@v4.1.1
+        with:
+          repository: ${{ inputs.device-repo }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ inputs.device-repo-ref }}
+          submodules: true
+
+      - name: Device repository check
+        run: |
+          if [ "$(yq '.type' repo.yml)" != "yocto-based OS image" ]; then
+            echo "::error::Repository does not appear to be of type 'yocto-based OS image'"
+            exit 1
+          fi
+
+      - name: Update meta-balena submodule to ${{ inputs.meta-balena-ref }}
+        if: inputs.meta-balena-ref != ''
+        working-directory: ./layers/meta-balena
+        run: |
+          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
+          git fetch --all
+          git checkout --force "${{ inputs.meta-balena-ref }}"
+          git submodule update --init --recursive
+
+      - name: Update balena-yocto-scripts submodule to ${{ inputs.yocto-scripts-ref }}
+        if: inputs.yocto-scripts-ref != ''
+        working-directory: ./balena-yocto-scripts
+        run: |
+          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
+          git fetch --all
+          git checkout --force "${{ inputs.yocto-scripts-ref }}"
+          git submodule update --init --recursive
+
+      - name: Set build outputs
+        id: build-lib
+        run: |
+          source "${automation_dir}/include/balena-api.inc"
+          source "${automation_dir}/include/balena-lib.inc"
+
+          ./balena-yocto-scripts/build/build-device-type-json.sh
+
+          device_slug="$(balena_lib_get_slug "${MACHINE}")"
+          echo "device_slug=${device_slug}" >> $GITHUB_OUTPUT
+
+          os_version="$(balena_lib_get_os_version)"
+          echo "os_version=${os_version}" >> $GITHUB_OUTPUT
+
+          meta_balena_version="$(balena_lib_get_meta_balena_base_version)"
+          echo "meta_balena_version=${meta_balena_version}" >> $GITHUB_OUTPUT
+
+          yocto_scripts_ref="$(git submodule status balena-yocto-scripts | awk '{print $1}')"
+          echo "yocto_scripts_ref=${yocto_scripts_ref}" >> $GITHUB_OUTPUT
+
+          deploy_artifact="$(balena_lib_get_deploy_artifact "${MACHINE}")"
+          echo "deploy_artifact=${deploy_artifact}" >> $GITHUB_OUTPUT
+
+          dt_arch="$(balena_lib_get_dt_arch "${MACHINE}")"
+          echo "dt_arch=${dt_arch}" >> $GITHUB_OUTPUT
+
+          is_private="$(balena_api_is_dt_private "${{ inputs.machine }}")"
+          echo "is_private=${is_private}" >> $GITHUB_OUTPUT
+
+          if [ ! -f "${WORKSPACE}/balena.yml" ]; then
+            _contract=$(balena_lib_build_contract "${device_slug}")
+            cp "${_contract}" "${WORKSPACE}/balena.yml"
+          fi
+
+      - name: Enable OS development features
+        if: inputs.os-dev == true
+        run: |
+          if [ "${OS_DEVELOPMENT}" = "true" ]; then
+            echo BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -d" >> $GITHUB_ENV
+          fi
+
+      - name: Enable signed images
+        if: inputs.sign-image == true
+        env:
+          SIGN_API_KEY: "${{ secrets.SIGN_API_KEY }}"
+          SIGN_GRUB_KEY_ID: 2EB29B4CE0132F6337897F5FB8A88D1C62FCC729
+          SIGN_KMOD_KEY_APPEND: "${{ secrets.SIGN_KMOD_KEY_APPEND }}"
+        run: |
+          echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR} -a SIGN_API=${SIGN_API_URL} -a SIGN_API_KEY=${SIGN_API_KEY} -a SIGN_GRUB_KEY_ID=${SIGN_GRUB_KEY_ID} -a SIGN_KMOD_KEY_APPEND=${SIGN_KMOD_KEY_APPEND} --bb-args --no-setscene" >> $GITHUB_ENV
+
+      # the directory is required even if we don't mount the NFS share
+      - name: Create shared cache mount point
+        run: |
+          sudo mkdir -p "${YOCTO_CACHE_DIR}"
+          sudo chown $(id -u):$(id -g) "${YOCTO_CACHE_DIR}"
+
+      - name: Mount shared NFS cache
+        if: env.YOCTO_CACHE_HOST != '' && contains(fromJSON(inputs.runs-on), 'self-hosted')
+        run: |
+          sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${YOCTO_CACHE_DIR}" -o fsc,nolock
+          ls -al "${YOCTO_CACHE_DIR}"/$(whoami)
+
+      - name: Build
+        id: build
+        run: |
+          update-alternatives --set iptables /usr/sbin/iptables-legacy
+          mkdir -p "${YOCTO_CACHE_DIR}/$(whoami)" 2>/dev/null || true
+          
+          ./balena-yocto-scripts/build/balena-build.sh \
+            -d "${MACHINE}" \
+            -t "${{ secrets.BALENA_API_KEY }}" \
+            -s "${YOCTO_CACHE_DIR}/$(whoami)" \
+            -g "${BARYS_ARGUMENTS_VAR}" | tee build.log
+
+          if grep -R "ERROR: " build/tmp/log/*; then
+            exit 1
+          fi
+
+          hostapp_path="$(find ./build/tmp/deploy/ -name "balena-image-${MACHINE}.docker" -type l)"
+          if [ -n "${hostapp_path}" ]; then
+            hostapp_path="$(readlink --canonicalize "${hostapp_path}")"
+            echo "hostapp_path=${hostapp_path}" >> $GITHUB_OUTPUT
+          else
+            echo "::error::No hostapp found in build artifacts"
+            exit 1
+          fi
+
+      - name: Prepare artifacts
+        id: prepare
+        run: |
+          source "${automation_dir}/include/balena-deploy.inc"
+          balena_deploy_artifacts "${{ inputs.machine }}" "${WORKSPACE}/gh-deploy" false
+          tar --auto-compress -cvf "${{ runner.temp }}/build-artifacts.tar.zst" "${WORKSPACE}/gh-deploy"
+
+      # https://github.com/actions/upload-artifact
+      - name: Upload artifacts
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        with:
+          name: build-artifacts
+          path: ${{ runner.temp }}/build-artifacts.tar.zst
+          retention-days: 3
+
+  s3-deploy:
+    name: S3 Deploy
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    environment: ${{ inputs.environment }}
+    needs: build
+    if: inputs.deploy-s3 == true
+
+    env:
+      MACHINE: "${{ inputs.machine }}"
+      BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
+      WORKSPACE: ${{ github.workspace }}
+      VERBOSE: verbose
+      S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
+      S3_BUCKET: ${{ vars.S3_BUCKET || 'resin-production-img-cloudformation' }}
+
+    defaults:
+      run:
+        working-directory: .
+        shell: bash --noprofile --norc -eo pipefail -x {0}
+
+    steps:
+      # TODO: clone balena-yocto-scripts @ yocto_scripts_ref instead
+      # https://github.com/actions/checkout
+      - name: Clone device repository
+        uses: actions/checkout@v4.1.1
+        with:
+          repository: ${{ inputs.device-repo || github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ inputs.device-repo-ref || github.ref }}
+          submodules: true
+
+      - name: Update balena-yocto-scripts submodule to ${{ inputs.yocto-scripts-ref }}
+        if: inputs.yocto-scripts-ref != ''
+        working-directory: ./balena-yocto-scripts
+        run: |
+          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
+          git fetch --all
+          git checkout --force "${{ inputs.yocto-scripts-ref }}"
+          git submodule update --init --recursive
+
+      # https://github.com/actions/download-artifact
+      - name: Download build artifacts
+        uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
+        with:
+          path: ${{ runner.temp }}
+          name: build-artifacts
+
+      - name: Extract build artifacts
+        run: |
+          tar -xvf ${{ runner.temp }}/build-artifacts.tar.zst
+          find .
+
+      - name: Set s3 outputs
+        id: s3-lib
+        run: |
+          echo "s3_policy=private" >> $GITHUB_OUTPUT
+          if [ "${{ needs.build.outputs.is_private }}" = "false" ]; then
+            echo "s3_policy=public-read" >> $GITHUB_OUTPUT
+          fi
+
+          echo "deployer_uid=$(id -u)" >> $GITHUB_OUTPUT
+          echo "deployer_gid=$(id -g)" >> $GITHUB_OUTPUT
+
+          s3_bucket_path="${S3_BUCKET}/images"
+          if [ "${{ inputs.deploy-esr }}" = "true" ]; then
+            s3_bucket_path="${S3_BUCKET}/esr-images"
+          fi
+
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # login required to pull private balena/balena-img image
+      # https://github.com/docker/login-action
+      - name: Login to Docker Hub
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # TODO: use a prebuilt image for this if possible
+      # https://github.com/docker/build-push-action
+      - name: Build helper image
+        id: helper-image
+        uses: docker/build-push-action@v5.1.0
+        with:
+          context: "${{ github.workspace }}/balena-yocto-scripts/automation"
+          file: Dockerfile_s3-deploy-env
+          push: false
+          build-args: |
+            DEPLOYER_UID=${{ steps.s3-lib.outputs.deployer_uid }}
+            DEPLOYER_GID=${{ steps.s3-lib.outputs.deployer_gid }}
+
+      - name: Deploy to S3
+        id: s3-deploy
+        env:
+          BASE_DIR: /host/images
+          S3_CMD: "s4cmd --access-key=${{ secrets.S3_ACCESS_KEY }} --secret-key=${{ secrets.S3_SECRET_KEY }} --API-ServerSideEncryption=AES256"
+          S3_SYNC_OPTS: "--recursive --API-ACL=${{ steps.s3-lib.outputs.s3_policy }}"
+          SLUG: "${{ needs.build.outputs.device_slug }}"
+          DEPLOY_ARTIFACT: "${{ needs.build.outputs.deploy_artifact }}"
+          HOSTOS_VERSION: "${{ needs.build.outputs.os_version }}"
+          # TODO: images path must be found in artifacts
+          IMAGES_PATH: ${{ github.workspace }}/build-artifacts
+        run: |
+          docker run --rm -t --user deployer \
+            -e BASE_DIR \
+            -e S3_CMD \
+            -e S3_SYNC_OPTS \
+            -e S3_BUCKET \
+            -e SLUG \
+            -e DEPLOY_ARTIFACT \
+            -e HOSTOS_VERSION \
+            -v "${IMAGES_PATH}:/host/images" \
+            "${{ steps.helper-image.outputs.imageid }}" /bin/sh -e -c '\
+              echo "${HOSTOS_VERSION}" > "/host/images/${SLUG}/latest"
+              if [ "$DEPLOY_ARTIFACT" != "docker-image" ]; then
+                /usr/src/app/node_modules/.bin/ts-node /usr/src/app/scripts/prepare.ts
+              fi
+              if [ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${HOSTOS_VERSION}/)" ] || [ -n "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${HOSTOS_VERSION}/IGNORE)" ]; then
+                touch /host/images/${SLUG}/${HOSTOS_VERSION}/IGNORE
+                $S3_CMD del -rf s3://${S3_BUCKET}/${SLUG}/${HOSTOS_VERSION}
+                $S3_CMD put /host/images/${SLUG}/${HOSTOS_VERSION}/IGNORE s3://${S3_BUCKET}/${SLUG}/${HOSTOS_VERSION}/
+                $S3_CMD $S3_SYNC_OPTS dsync /host/images/${SLUG}/${HOSTOS_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${HOSTOS_VERSION}/
+                $S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/ --API-ACL=public-read -f
+                $S3_CMD del s3://${S3_BUCKET}/${SLUG}/${HOSTOS_VERSION}/IGNORE
+              else
+                echo "WARNING: Deployment already done for ${SLUG} at version ${HOSTOS_VERSION}"
+              fi
+              '
+
+  ami-deploy:
+    name: AMI Deploy
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    environment: ${{ inputs.environment }}
+    needs: build
+    if: inputs.deploy-ami == true
+
+    env:
+      MACHINE: "${{ inputs.machine }}"
+      BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
+      WORKSPACE: ${{ github.workspace }}
+      VERBOSE: verbose
+      S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
+      S3_BUCKET: ${{ vars.S3_BUCKET || 'resin-production-img-cloudformation' }}
+      AWS_SUBNET_ID: ${{ vars.AWS_SUBNET || 'subnet-02d18a08ea4058574' }}
+      AWS_SECURITY_GROUP_ID: ${{ vars.AWS_SECURITY_GROUP || 'sg-057937f4d89d9d51c' }}
+
+    defaults:
+      run:
+        working-directory: .
+        shell: bash --noprofile --norc -eo pipefail -x {0}
+
+    steps:
+      # TODO: clone balena-yocto-scripts @ yocto_scripts_ref instead
+      # https://github.com/actions/checkout
+      - name: Clone device repository
+        uses: actions/checkout@v4.1.1
+        with:
+          repository: ${{ inputs.device-repo || github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ inputs.device-repo-ref || github.ref }}
+          submodules: true
+
+      - name: Update balena-yocto-scripts submodule to ${{ inputs.yocto-scripts-ref }}
+        if: inputs.yocto-scripts-ref != ''
+        working-directory: ./balena-yocto-scripts
+        run: |
+          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
+          git fetch --all
+          git checkout --force "${{ inputs.yocto-scripts-ref }}"
+          git submodule update --init --recursive
+
+      # https://github.com/actions/download-artifact
+      - name: Download build artifacts
+        uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
+        with:
+          path: ${{ runner.temp }}
+          name: build-artifacts
+
+      - name: Extract build artifacts
+        run: |
+          tar -xvf ${{ runner.temp }}/build-artifacts.tar.zst
+          find .
+
+      - name: Set AMI outputs
+        id: ami-lib
+        run: |
+          if [ "${dt_arch}" = "amd64" ]; then
+            echo "ami_arch=x86_64" >> $GITHUB_OUTPUT
+          elif [ "${dt_arch}" = "aarch64" ]; then
+            echo "ami_arch=arm64" >> $GITHUB_OUTPUT
+          fi
+
+          # AMI name format: balenaOS(-installer?)(-secureboot?)-VERSION-DEVICE_TYPE
+          if [ "${{ inputs.sign-image }}" = "true" ]; then
+            echo "ami_name=balenaOS-secureboot-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
+          else
+            echo "ami_name=balenaOS-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
+          fi
+
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # TODO: use a prebuilt image for this
+      # https://github.com/docker/build-push-action
+      - name: Build helper image
+        id: helper-image
+        uses: docker/build-push-action@v5.1.0
+        with:
+          context: "${{ github.workspace }}/balena-yocto-scripts/automation"
+          file: Dockerfile_yocto-build-env
+          target: yocto-generate-ami-env
+          push: false
+
+      - name: Deploy AMI
+        env:
+          AWS_ACCESS_KEY_ID: "${{ secrets.S3_ACCESS_KEY}}"
+          AWS_SECRET_ACCESS_KEY: "${{ secrets.S3_SECRET_KEY }}"
+          AWS_DEFAULT_REGION: "${{ env.S3_REGION }}"
+          AWS_SESSION_TOKEN: "" # only required if MFA is enabled
+          BALENACLI_TOKEN: ${{ secrets.BALENA_API_KEY }}
+          HOSTOS_VERSION: "${{ needs.build.outputs.os_version }}"
+          AMI_NAME: "${{ steps.ami-lib.outputs.ami_name }}"
+          AMI_ARCHITECTURE: "${{ steps.ami-lib.outputs.ami_arch }}"
+          AMI_SECUREBOOT: "${{ inputs.sign-image }}"
+          BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ steps.ami-lib.outputs.ami_arch }}"
+          BALENA_PRELOAD_COMMIT: current
+          # TODO: image path must be found in artifacts
+          IMAGE: balena-image-${MACHINE}.balenaos-img
+        run: |
+          docker run --rm -t \
+            --privileged \
+            --network host \
+            -v "${WORKSPACE}:${WORKSPACE}" \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -e VERBOSE \
+            -e AWS_ACCESS_KEY_ID \
+            -e AWS_SECRET_ACCESS_KEY \
+            -e AWS_DEFAULT_REGION \
+            -e AWS_SESSION_TOKEN \
+            -e AMI_NAME \
+            -e AMI_ARCHITECTURE \
+            -e AMI_SECUREBOOT \
+            -e S3_BUCKET \
+            -e BALENA_PRELOAD_APP \
+            -e BALENARC_BALENA_URL \
+            -e BALENACLI_TOKEN \
+            -e BALENA_PRELOAD_COMMIT \
+            -e IMAGE \
+            -e MACHINE \
+            -e HOSTOS_VERSION \
+            -e AWS_SUBNET_ID \
+            -e AWS_SECURITY_GROUP_ID \
+            -w "${WORKSPACE}" \
+            "${{ steps.helper-image.outputs.imageid }}" /balena-generate-ami.sh
+
+  balena-deploy:
+    name: HostApp Deploy
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    environment: ${{ inputs.environment }}
+    needs: build
+    if: inputs.deploy-hostapp == true
+
+    env:
+      MACHINE: "${{ inputs.machine }}"
+      BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
+      WORKSPACE: ${{ github.workspace }}
+      VERBOSE: verbose
+      SLUG: "${{ needs.build.outputs.device_slug }}"
+      SECURE_BOOT: "${{ inputs.sign-image }}"
+      SIGN_API_URL: ${{ vars.SIGN_API_URL || 'https://sign.balena-cloud.com' }}
+      API_ENV: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
+      BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
+
+    defaults:
+      run:
+        working-directory: .
+        shell: bash --noprofile --norc -eo pipefail -x {0}
+
+    steps:
+      # TODO: clone balena-yocto-scripts @ yocto_scripts_ref instead
+      # https://github.com/actions/checkout
+      - name: Clone device repository
+        uses: actions/checkout@v4.1.1
+        with:
+          repository: ${{ inputs.device-repo || github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ inputs.device-repo-ref || github.ref }}
+          submodules: true
+
+      # https://github.com/actions/download-artifact
+      - name: Download build artifacts
+        uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
+        with:
+          path: ${{ runner.temp }}
+          name: build-artifacts
+
+      - name: Extract build artifacts
+        run: |
+          tar -xvf ${{ runner.temp }}/build-artifacts.tar.zst
+          find .
+
+      - name: Set deploy outputs
+        run: |
+          if [ -n "${{ inputs.sign-image }}" = "true" ]; then
+            echo "SECURE_BOOT_FEATURE_FLAG=yes" >> $GITHUB_ENV
+          else
+            echo "SECURE_BOOT_FEATURE_FLAG=no" >> $GITHUB_ENV
+          fi
+
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
+      # https://github.com/docker/build-push-action
+      - name: Build helper image
+        id: helper-image
+        uses: docker/build-push-action@v5.1.0
+        with:
+          context: "${{ github.workspace }}/balena-yocto-scripts/automation"
+          file: Dockerfile_yocto-build-env
+          target: yocto-build-env
+          push: false
+
+      # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
+      # https://github.com/balena-io/deploy-to-balena-action/issues/286
+      - name: Deploy to balena
+        env:
+          APPNAME: "${{ needs.build.outputs.device_slug }}"
+          BALENAOS_TOKEN: "${{ secrets.BALENA_API_KEY }}"
+          META_BALENA_VERSION: "${{ needs.build.outputs.meta_balena_version }}"
+          RELEASE_VERSION: "${{ needs.build.outputs.os_version }}"
+          BOOTABLE: 1
+          DEPLOY: yes
+          FINAL: yes
+          ESR: "${{ inputs.deploy-esr }}"
+          balenaCloudEmail:
+          balenaCloudPassword:
+          # TODO: hostapp path must be found in artifacts
+          HOSTAPP_PATH: "${{ needs.build.outputs.hostapp_path }}"
+        run: |
+          docker run --rm -t \
+            --privileged \
+            -e APPNAME \
+            -e API_ENV \
+            -e BALENAOS_TOKEN \
+            -e BALENAOS_ACCOUNT \
+            -e META_BALENA_VERSION \
+            -e RELEASE_VERSION \
+            -e MACHINE \
+            -e VERBOSE \
+            -e BOOTABLE \
+            -e DEPLOY \
+            -e FINAL \
+            -e ESR \
+            -e SECURE_BOOT_FEATURE_FLAG \
+            -e balenaCloudEmail \
+            -e balenaCloudPassword \
+            -v "$(readlink --canonicalize "${HOSTAPP_PATH}")":/host/appimage.docker \
+            -v "${WORKSPACE}":/work \
+            -v "${WORKSPACE}":/deploy \
+            "${{ steps.helper-image.outputs.imageid }}" /balena-deploy-block.sh

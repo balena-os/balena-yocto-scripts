@@ -42,6 +42,8 @@ RUN curl -sSL https://github.com/balena-io/balena-cli/releases/download/v$BALENA
   mv balena-cli/* /usr/bin && \
   rm -rf balena-cli.zip balena-cli
 
+RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
+
 COPY include/balena-docker.inc /
 COPY entry_scripts/prepare-and-start.sh /
 

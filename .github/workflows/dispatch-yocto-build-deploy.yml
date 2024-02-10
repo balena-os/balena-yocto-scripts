@@ -1,0 +1,97 @@
+name: "Dispatch Yocto"
+
+on:
+  pull_request:
+    types: [opened, synchronize, closed]
+    branches:
+      - "main"
+      - "master"
+  pull_request_target:
+    types: [opened, synchronize, closed]
+    branches:
+      - "main"
+      - "master"
+
+  workflow_dispatch:
+    # you may only define up to 10 `inputs` for a `workflow_dispatch` event
+    inputs:
+      device-repo: # only required when testing from non-device repositories
+        description: balenaOS device repository (owner/repo)
+        required: true
+        type: string
+        default: balena-os/balena-generic
+      device-repo-ref: # only required when testing from non-device repositories
+        description: balenaOS device repository tag, branch, or commit to build
+        required: false
+        type: string
+        default: master
+      meta-balena-ref:
+        description: meta-balena ref if not the currently pinned version
+        required: false
+        type: string
+      yocto-scripts-ref:
+        description: balena-yocto-scripts ref if not the currently pinned version
+        required: false
+        type: string
+      machine:
+        description: yocto board name
+        required: true
+        type: string
+        default: generic-amd64
+      environment:
+        description: The GitHub Environment to use for the job(s) (production, staging, etc.)
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+      deploy-s3:
+        description: Whether to deploy images to S3
+        required: false
+        type: boolean
+        default: true
+      deploy-hostapp:
+        description: Whether to deploy a hostApp container image to a balena environment
+        required: false
+        type: boolean
+        default: true
+      deploy-ami: # TODO: can we get this from a source of truth like contracts?
+        description: Whether to deploy an AMI to AWS
+        required: false
+        type: boolean
+        default: false
+      sign-image: # TODO: can we get this from a source of truth like contracts?
+        description: Whether to sign image for secure boot
+        required: false
+        type: boolean
+        default: false
+      # os-dev:
+      #   description: Enable OS development features
+      #   required: false
+      #   type: boolean
+      #   default: false
+      # deploy-esr:
+      #   description: Enable to deploy ESR
+      #   required: false
+      #   type: boolean
+      #   default: false
+
+jobs:
+  yocto-build-deploy:
+    name: Yocto
+    uses: ./.github/workflows/yocto-build-deploy.yml
+    secrets: inherit
+    with:
+      # runs-on: '[ "ubuntu-latest" ]'
+      environment: ${{ inputs.environment || 'staging' }}
+      device-repo: ${{ inputs.device-repo || 'balena-os/balena-generic' }}
+      device-repo-ref: ${{ inputs.device-repo-ref || 'master' }}
+      meta-balena-ref: ${{ inputs.meta-balena-ref }}
+      yocto-scripts-ref: ${{ inputs.yocto-scripts-ref }}
+      machine: ${{ inputs.machine || 'generic-amd64' }}
+      deploy-s3: ${{ inputs.deploy-s3 || false }}
+      deploy-hostapp: ${{ inputs.deploy-hostapp || false }}
+      deploy-ami: ${{ inputs.deploy-ami || false }}
+      sign-image: ${{ inputs.sign-image || false }}
+      # os-dev: ${{ inputs.os-dev || false }}
+      # deploy-esr: ${{ inputs.deploy-esr || false }}
