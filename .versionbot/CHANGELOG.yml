@@ -1,4 +1,18 @@
 - commits:
+    - subject: Enable S3 Server Side Encryption flags
+      hash: 93a2a37249c8262662934e4220c1009a8f22c51c
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.21.3
+  title: ""
+  date: 2024-02-11T13:57:42.525Z
+- commits:
     - subject: "automation/include: Pass helper image version"
       hash: 2a8e25e0d0b46b3249c1c77b0c38219ebcdea1f0
       body: |
