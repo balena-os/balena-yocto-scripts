@@ -1,34 +1,23 @@
-name: "Dispatch Yocto"
+name: "Yocto"
 
 on:
-  pull_request:
-    types: [opened, synchronize, closed]
-    branches:
-      - "main"
-      - "master"
-  pull_request_target:
-    types: [opened, synchronize, closed]
-    branches:
-      - "main"
-      - "master"
-
   workflow_dispatch:
     # you may only define up to 10 `inputs` for a `workflow_dispatch` event
     inputs:
-      device-repo: # only required when testing from non-device repositories
-        description: balenaOS device repository (owner/repo)
-        required: true
-        type: string
-        default: balena-os/balena-generic
-      device-repo-ref: # only required when testing from non-device repositories
-        description: balenaOS device repository tag, branch, or commit to build
-        required: false
-        type: string
-        default: master
-      meta-balena-ref:
-        description: meta-balena ref if not the currently pinned version
-        required: false
-        type: string
+      # device-repo: # only required when testing from non-device repositories
+      #   description: balenaOS device repository (owner/repo)
+      #   required: true
+      #   type: string
+      #   default: balena-os/balena-generic
+      # device-repo-ref: # only required when testing from non-device repositories
+      #   description: balenaOS device repository tag, branch, or commit to build
+      #   required: false
+      #   type: string
+      #   default: master
+      # meta-balena-ref:
+      #   description: meta-balena ref if not the currently pinned version
+      #   required: false
+      #   type: string
       yocto-scripts-ref:
         description: balena-yocto-scripts ref if not the currently pinned version
         required: false
@@ -65,16 +54,16 @@ on:
         required: false
         type: boolean
         default: false
-      # os-dev:
-      #   description: Enable OS development features
-      #   required: false
-      #   type: boolean
-      #   default: false
-      # deploy-esr:
-      #   description: Enable to deploy ESR
-      #   required: false
-      #   type: boolean
-      #   default: false
+      os-dev:
+        description: Enable OS development features
+        required: false
+        type: boolean
+        default: false
+      deploy-esr:
+        description: Enable to deploy ESR
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   yocto-build-deploy:
@@ -83,15 +72,15 @@ jobs:
     secrets: inherit
     with:
       # runs-on: '[ "ubuntu-latest" ]'
-      environment: ${{ inputs.environment || 'staging' }}
       device-repo: ${{ inputs.device-repo || 'balena-os/balena-generic' }}
       device-repo-ref: ${{ inputs.device-repo-ref || 'master' }}
-      meta-balena-ref: ${{ inputs.meta-balena-ref }}
+      meta-balena-ref: ${{ inputs.meta-balena-ref || '' }}
+      environment: ${{ inputs.environment || 'staging' }}
       yocto-scripts-ref: ${{ inputs.yocto-scripts-ref }}
       machine: ${{ inputs.machine || 'generic-amd64' }}
       deploy-s3: ${{ inputs.deploy-s3 || false }}
       deploy-hostapp: ${{ inputs.deploy-hostapp || false }}
       deploy-ami: ${{ inputs.deploy-ami || false }}
       sign-image: ${{ inputs.sign-image || false }}
-      # os-dev: ${{ inputs.os-dev || false }}
-      # deploy-esr: ${{ inputs.deploy-esr || false }}
+      os-dev: ${{ inputs.os-dev || false }}
+      deploy-esr: ${{ inputs.deploy-esr || false }}

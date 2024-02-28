@@ -99,6 +99,12 @@ concurrency:
   # cancel jobs in progress for updated PRs, but not merge or tag events
   cancel-in-progress: ${{ github.event.action == 'synchronize' }}
 
+env:
+  HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
+  WORKSPACE: ${{ github.workspace }}
+  MACHINE: ${{ inputs.machine }}
+  VERBOSE: verbose
+
 jobs:
   build:
     name: Build
@@ -106,21 +112,17 @@ jobs:
     environment: ${{ inputs.environment }}
 
     env:
-      WORKSPACE: ${{ github.workspace }}
-      VERBOSE: verbose
-      MACHINE: "${{ inputs.machine }}"
       automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
       BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
       # Yocto NFS sstate cache host
       YOCTO_CACHE_HOST: ${{ vars.YOCTO_CACHE_HOST || 'nfs.product-os.io' }}
-      # YOCTO_CACHE_HOST: ""
       YOCTO_CACHE_DIR: ${{ github.workspace }}/shared/yocto-cache
       BARYS_ARGUMENTS_VAR: ""
       # URL for secure boot signing server API
       SIGN_API_URL: ${{ vars.SIGN_API_URL || 'https://sign.balena-cloud.com' }}
 
     outputs:
-      hostapp_path: ${{ steps.build.outputs.hostapp_path }}
+      hostapp_path: ${{ steps.artifacts.outputs.hostapp_path }}
       os_version: ${{ steps.build-lib.outputs.os_version }}
       device_slug: ${{ steps.build-lib.outputs.device_slug }}
       deploy_artifact: ${{ steps.build-lib.outputs.deploy_artifact }}
@@ -278,20 +280,25 @@ jobs:
       - name: Build
         id: build
         run: |
-          update-alternatives --set iptables /usr/sbin/iptables-legacy
-          mkdir -p "${YOCTO_CACHE_DIR}/$(whoami)" 2>/dev/null || true
-          
           ./balena-yocto-scripts/build/balena-build.sh \
             -d "${MACHINE}" \
             -t "${{ secrets.BALENA_API_KEY }}" \
             -s "${YOCTO_CACHE_DIR}/$(whoami)" \
-            -g "${BARYS_ARGUMENTS_VAR}" | tee build.log
+            -g "${BARYS_ARGUMENTS_VAR}"
 
           if grep -R "ERROR: " build/tmp/log/*; then
             exit 1
           fi
 
-          hostapp_path="$(find ./build/tmp/deploy/ -name "balena-image-${MACHINE}.docker" -type l)"
+      - name: Prepare artifacts
+        id: artifacts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip
+          source "${automation_dir}/include/balena-deploy.inc"
+          balena_deploy_artifacts "${{ inputs.machine }}" "${WORKSPACE}/gh-deploy" false
+
+          hostapp_path="$(find "${WORKSPACE}/gh-deploy" -name "balena-image-${MACHINE}.docker" -type l)"
           if [ -n "${hostapp_path}" ]; then
             hostapp_path="$(readlink --canonicalize "${hostapp_path}")"
             echo "hostapp_path=${hostapp_path}" >> $GITHUB_OUTPUT
@@ -300,19 +307,12 @@ jobs:
             exit 1
           fi
 
-      - name: Prepare artifacts
-        id: prepare
-        run: |
-          source "${automation_dir}/include/balena-deploy.inc"
-          balena_deploy_artifacts "${{ inputs.machine }}" "${WORKSPACE}/gh-deploy" false
-          tar --auto-compress -cvf "${{ runner.temp }}/build-artifacts.tar.zst" "${WORKSPACE}/gh-deploy"
-
       # https://github.com/actions/upload-artifact
       - name: Upload artifacts
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         with:
           name: build-artifacts
-          path: ${{ runner.temp }}/build-artifacts.tar.zst
+          path: gh-deploy/*
           retention-days: 3
 
   s3-deploy:
@@ -323,10 +323,7 @@ jobs:
     if: inputs.deploy-s3 == true
 
     env:
-      MACHINE: "${{ inputs.machine }}"
       BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
-      WORKSPACE: ${{ github.workspace }}
-      VERBOSE: verbose
       S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
       S3_BUCKET: ${{ vars.S3_BUCKET || 'resin-production-img-cloudformation' }}
 
@@ -359,13 +356,8 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
         with:
-          path: ${{ runner.temp }}
+          path: ${{ runner.temp }}/build-artifacts
           name: build-artifacts
-
-      - name: Extract build artifacts
-        run: |
-          tar -xvf ${{ runner.temp }}/build-artifacts.tar.zst
-          find .
 
       - name: Set s3 outputs
         id: s3-lib
@@ -396,7 +388,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # TODO: use a prebuilt image for this if possible
       # https://github.com/docker/build-push-action
       - name: Build helper image
         id: helper-image
@@ -418,8 +409,7 @@ jobs:
           SLUG: "${{ needs.build.outputs.device_slug }}"
           DEPLOY_ARTIFACT: "${{ needs.build.outputs.deploy_artifact }}"
           HOSTOS_VERSION: "${{ needs.build.outputs.os_version }}"
-          # TODO: images path must be found in artifacts
-          IMAGES_PATH: ${{ github.workspace }}/build-artifacts
+          IMAGES_PATH: ${{ runner.temp }}/build-artifacts/image
         run: |
           docker run --rm -t --user deployer \
             -e BASE_DIR \
@@ -455,10 +445,7 @@ jobs:
     if: inputs.deploy-ami == true
 
     env:
-      MACHINE: "${{ inputs.machine }}"
       BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
-      WORKSPACE: ${{ github.workspace }}
-      VERBOSE: verbose
       S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
       S3_BUCKET: ${{ vars.S3_BUCKET || 'resin-production-img-cloudformation' }}
       AWS_SUBNET_ID: ${{ vars.AWS_SUBNET || 'subnet-02d18a08ea4058574' }}
@@ -493,13 +480,8 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
         with:
-          path: ${{ runner.temp }}
+          path: ${{ runner.temp }}/build-artifacts
           name: build-artifacts
-
-      - name: Extract build artifacts
-        run: |
-          tar -xvf ${{ runner.temp }}/build-artifacts.tar.zst
-          find .
 
       - name: Set AMI outputs
         id: ami-lib
@@ -517,21 +499,6 @@ jobs:
             echo "ami_name=balenaOS-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
           fi
 
-      # https://github.com/docker/setup-buildx-action
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # TODO: use a prebuilt image for this
-      # https://github.com/docker/build-push-action
-      - name: Build helper image
-        id: helper-image
-        uses: docker/build-push-action@v5.1.0
-        with:
-          context: "${{ github.workspace }}/balena-yocto-scripts/automation"
-          file: Dockerfile_yocto-build-env
-          target: yocto-generate-ami-env
-          push: false
-
       - name: Deploy AMI
         env:
           AWS_ACCESS_KEY_ID: "${{ secrets.S3_ACCESS_KEY}}"
@@ -545,9 +512,11 @@ jobs:
           AMI_SECUREBOOT: "${{ inputs.sign-image }}"
           BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ steps.ami-lib.outputs.ami_arch }}"
           BALENA_PRELOAD_COMMIT: current
-          # TODO: image path must be found in artifacts
-          IMAGE: balena-image-${MACHINE}.balenaos-img
+          IMAGE: ${{ runner.temp }}/build-artifacts/image/balena.img
         run: |
+          if ! balena_lib_docker_pull_helper_image "${HELPER_IMAGE_REPO}" "" "yocto-generate-ami-env" helper_image_id; then
+            exit 1
+          fi
           docker run --rm -t \
             --privileged \
             --network host \
@@ -572,7 +541,7 @@ jobs:
             -e AWS_SUBNET_ID \
             -e AWS_SECURITY_GROUP_ID \
             -w "${WORKSPACE}" \
-            "${{ steps.helper-image.outputs.imageid }}" /balena-generate-ami.sh
+            "${helper_image_id}" /balena-generate-ami.sh
 
   balena-deploy:
     name: HostApp Deploy
@@ -582,12 +551,8 @@ jobs:
     if: inputs.deploy-hostapp == true
 
     env:
-      MACHINE: "${{ inputs.machine }}"
-      BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
-      WORKSPACE: ${{ github.workspace }}
-      VERBOSE: verbose
       SLUG: "${{ needs.build.outputs.device_slug }}"
-      SECURE_BOOT: "${{ inputs.sign-image }}"
+      BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
       SIGN_API_URL: ${{ vars.SIGN_API_URL || 'https://sign.balena-cloud.com' }}
       API_ENV: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
       BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
@@ -612,13 +577,8 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
         with:
-          path: ${{ runner.temp }}
+          path: ${{ runner.temp }}/build-artifacts
           name: build-artifacts
-
-      - name: Extract build artifacts
-        run: |
-          tar -xvf ${{ runner.temp }}/build-artifacts.tar.zst
-          find .
 
       - name: Set deploy outputs
         run: |
@@ -627,21 +587,6 @@ jobs:
           else
             echo "SECURE_BOOT_FEATURE_FLAG=no" >> $GITHUB_ENV
           fi
-
-      # https://github.com/docker/setup-buildx-action
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
-      # https://github.com/docker/build-push-action
-      - name: Build helper image
-        id: helper-image
-        uses: docker/build-push-action@v5.1.0
-        with:
-          context: "${{ github.workspace }}/balena-yocto-scripts/automation"
-          file: Dockerfile_yocto-build-env
-          target: yocto-build-env
-          push: false
 
       # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
       # https://github.com/balena-io/deploy-to-balena-action/issues/286
@@ -657,9 +602,11 @@ jobs:
           ESR: "${{ inputs.deploy-esr }}"
           balenaCloudEmail:
           balenaCloudPassword:
-          # TODO: hostapp path must be found in artifacts
-          HOSTAPP_PATH: "${{ needs.build.outputs.hostapp_path }}"
+          HOSTAPP_PATH: ${{ runner.temp }}/build-artifacts/balena-image.docker
         run: |
+          if ! balena_lib_docker_pull_helper_image "${HELPER_IMAGE_REPO}" "" "yocto-build-env" helper_image_id; then
+            exit 1
+          fi
           docker run --rm -t \
             --privileged \
             -e APPNAME \
@@ -680,4 +627,4 @@ jobs:
             -v "$(readlink --canonicalize "${HOSTAPP_PATH}")":/host/appimage.docker \
             -v "${WORKSPACE}":/work \
             -v "${WORKSPACE}":/deploy \
-            "${{ steps.helper-image.outputs.imageid }}" /balena-deploy-block.sh
+            "${helper_image_id}" /balena-deploy-block.sh
