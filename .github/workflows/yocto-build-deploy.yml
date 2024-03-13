@@ -268,14 +268,23 @@ jobs:
       # the directory is required even if we don't mount the NFS share
       - name: Create shared cache mount point
         run: |
-          sudo mkdir -p "${YOCTO_CACHE_DIR}"
-          sudo chown $(id -u):$(id -g) "${YOCTO_CACHE_DIR}"
+          sudo mkdir -p "${YOCTO_CACHE_DIR}/$(whoami)"
+          sudo chown -R $(id -u):$(id -g) "${YOCTO_CACHE_DIR}"
 
-      - name: Mount shared NFS cache
-        if: env.YOCTO_CACHE_HOST != '' && contains(fromJSON(inputs.runs-on), 'self-hosted')
-        run: |
-          sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${YOCTO_CACHE_DIR}" -o fsc,nolock
-          ls -al "${YOCTO_CACHE_DIR}"/$(whoami)
+      # - name: Mount shared NFS cache
+      #   if: env.YOCTO_CACHE_HOST != '' && contains(fromJSON(inputs.runs-on), 'self-hosted')
+      #   run: |
+      #     sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${YOCTO_CACHE_DIR}" -o fsc,nolock
+      #     ls -al "${YOCTO_CACHE_DIR}"/$(whoami)
+      
+      # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+      # https://github.com/actions/cache
+      - name: Cache yocto sstate
+        id: cache-yocto-sstate
+        uses: actions/cache@v4.0.1
+        with:
+          path: shared/yocto-cache
+          key: sstate
 
       - name: Build
         id: build
