@@ -1,4 +1,22 @@
 - commits:
+    - subject: "balena-build: avoid using device-type as a prefix in yocto sstate"
+      hash: f4a9566941083770151ebe3edd78e9866b4856fb
+      body: >
+        Yocto already splits the build sstate by target arch, native arch,
+        toolchains, and machine where applicable.
+
+
+        Keeping the caches separated by device type prevents sharing of common
+        cache steps between identical toolchains and architectures.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Kyle Harding
+      nested: []
+  version: 1.21.4
+  title: ""
+  date: 2024-03-13T18:16:12.920Z
+- commits:
     - subject: Enable S3 Server Side Encryption flags
       hash: 93a2a37249c8262662934e4220c1009a8f22c51c
       body: ""
@@ -384,7 +402,8 @@
         version request.
 
 
-        Make the oldest public image back to private before publishing a new image.
+        Make the oldest public image back to private before publishing a new
+        image.
       footer:
         Change-type: patch
         change-type: patch
@@ -1200,7 +1219,8 @@
         * the CLI prompts for input during preload
 
 
-        Alternatively, the --pin-device-to-release flag may be used to pin only the
+        Alternatively, the --pin-device-to-release flag may be used to pin only
+        the
 
         preloaded device to the selected release.
 
@@ -1208,7 +1228,8 @@
         Would you like to disable automatic updates for this fleet now? No
 
 
-        * we do not want to set the suggested flag and we do not want to touch the fleet release policy for this use case
+        * we do not want to set the suggested flag and we do not want to touch
+        the fleet release policy for this use case
       footer:
         Change-type: patch
         change-type: patch
@@ -1473,7 +1494,8 @@
 
         For example, when we branch an ESR release, the meta-balena branch is
 
-        tagged with the ESR name, like 2.83.x, while the last meta-balena version
+        tagged with the ESR name, like 2.83.x, while the last meta-balena
+        version
 
         will be a proper semver.
       footer:
@@ -1716,7 +1738,8 @@
         block release.
 
 
-        Also, pass a flag to specify whether the block should be deployed as final
+        Also, pass a flag to specify whether the block should be deployed as
+        final
 
         release.
       footer:
@@ -1808,7 +1831,8 @@
         When fetching images for blocks, use a given release revision.
 
 
-        Also, add token autentication to the API calls that miss it so that they work
+        Also, add token autentication to the API calls that miss it so that they
+        work
 
         with private device types.
 
@@ -1966,9 +1990,11 @@
         made it unreachable from the balena-generate-ami-env container.
 
 
-        This patch makes mktemp create the file back within yocto cache to ensure
+        This patch makes mktemp create the file back within yocto cache to
+        ensure
 
-        this is shared yet still each concurrent process can safely have its own copy.
+        this is shared yet still each concurrent process can safely have its own
+        copy.
       footer:
         Change-type: patch
         change-type: patch
@@ -2001,11 +2027,14 @@
       body: >
         Since the file name is hardcoded at this moment, this fails when two
 
-        builds are running in parallel (e.g. dev and prod variants during deploy)
+        builds are running in parallel (e.g. dev and prod variants during
+        deploy)
 
-        because they try to preload the same file at pretty much the same moment.
+        because they try to preload the same file at pretty much the same
+        moment.
 
-        Having a separate copy for each outside of yocto cache should fix the issue.
+        Having a separate copy for each outside of yocto cache should fix the
+        issue.
       footer:
         Change-type: patch
         change-type: patch
@@ -2379,7 +2408,8 @@
         stop the build when a package name fails to match a recipe.
 
 
-        The contracts have now been modified to specify either a `sw.recipe.yocto`
+        The contracts have now been modified to specify either a
+        `sw.recipe.yocto`
 
         or a `sw.package.yocto` so we can distinguish between them and use
 
@@ -2467,7 +2497,8 @@
         From https://github.com/Ariel-Rodriguez/sh-semversion-2
 
 
-        MIT licensed: https://github.com/Ariel-Rodriguez/sh-semversion-2/blob/main/LICENSE
+        MIT licensed:
+        https://github.com/Ariel-Rodriguez/sh-semversion-2/blob/main/LICENSE
       footer:
         Change-type: patch
         change-type: patch
@@ -2501,7 +2532,8 @@
         provide nested-changelogs.
 
 
-        Generated with product-os/versionist/blob/master/scripts/generate-changelog.sh
+        Generated with
+        product-os/versionist/blob/master/scripts/generate-changelog.sh
       footer:
         Change-type: patch
         change-type: patch
@@ -2528,7 +2560,8 @@
         This container is based on the `balena-push-env` helper container and
         includes
 
-        an opkg application built from source. It is used to build Yocto IPK packaged
+        an opkg application built from source. It is used to build Yocto IPK
+        packaged
 
         based hostOS blocks.
     - hash: dcb1ee52f56d4785cc4a6b93d33c2b63f2bcda12
@@ -2629,7 +2662,8 @@
 
         By default we enable both which is the current dockerd default.
 
-        When running a single docker daemon without the iptables and ipmasq flags,
+        When running a single docker daemon without the iptables and ipmasq
+        flags,
 
         containers on the default bridge network cannot communite with the
 
@@ -3133,7 +3167,8 @@
 
         API call.
 
-        Production versions have the OS release name and development versions get
+        Production versions have the OS release name and development versions
+        get
 
         appended a .dev suffix. Once both image variants are merged only the OS
 
@@ -3227,7 +3262,8 @@
 
         making the code more legible.
 
-        Also, remove balena login from `balena_lib_docker_pull_helper_image` function
+        Also, remove balena login from `balena_lib_docker_pull_helper_image`
+        function
 
         as the login is performed by the container deployment script.
     - hash: 111843536ad9c951f0850256b8a56d9f4c612816
@@ -3805,11 +3841,14 @@
 
         tag sets the `SUPERVISOR_TAG` value. That is the correct variable
 
-        to set according to meta-balena (see at https://github.com/balena-os/meta-balena/blob/8d5057b45e1965e6c27c03a95d2211ae47842331/meta-balena-common/recipes-containers/resin-supervisor/resin-supervisor.inc#L20 )
+        to set according to meta-balena (see at
+        https://github.com/balena-os/meta-balena/blob/8d5057b45e1965e6c27c03a95d2211ae47842331/meta-balena-common/recipes-containers/resin-supervisor/resin-supervisor.inc#L20
+        )
 
         but in the device types' `local.conf.sample` the `TARGET_TAG` variable
 
-        was set, see for example https://github.com/balena-os/balena-raspberrypi/blob/078b0add0345e94f27c15d98256f8c7b61b66761/layers/meta-balena-raspberrypi/conf/samples/local.conf.sample#L45-L46
+        was set, see for example
+        https://github.com/balena-os/balena-raspberrypi/blob/078b0add0345e94f27c15d98256f8c7b61b66761/layers/meta-balena-raspberrypi/conf/samples/local.conf.sample#L45-L46
 
         and thus barys' setting was not applied.
 
@@ -3821,11 +3860,14 @@
 
         With this change this can be implemented in two steps:
 
-        * the current PR updates `SUPERVISOR_TAG` if exists or appends if it doesn't (or the
+        * the current PR updates `SUPERVISOR_TAG` if exists or appends if it
+        doesn't (or the
 
-        update has failed) in local.conf and allows using the relevant barys flag again
+        update has failed) in local.conf and allows using the relevant barys
+        flag again
 
-        * in other per-device repo PRs then the `local.conf.example` can separately updated,
+        * in other per-device repo PRs then the `local.conf.example` can
+        separately updated,
 
         to be less misleading, on its own schedule
 - version: 1.3.7
@@ -3968,7 +4010,8 @@
         We have customers that do not want to have the kernel modules headers
         generated.
 
-        So let's make sure the deploy won't fail when these headers are not present.
+        So let's make sure the deploy won't fail when these headers are not
+        present.
 - version: 1.2.0
   date: 2019-05-30T15:47:27.000Z
   commits:
@@ -4259,7 +4302,8 @@
         Yocto Morty can build a libsdl-native so there is no need for it in the
         docker image.
 
-        Also we install python 2.7 as it is explicitly needed by some packages. E.g. xcb-proto-native
+        Also we install python 2.7 as it is explicitly needed by some packages.
+        E.g. xcb-proto-native
     - hash: 162d603654b26dadba4d6e5228ef485b594d9fa5
       author: Florin Sarbu
       footers:
@@ -4270,9 +4314,11 @@
         Also update nodejs to v8 and remove npm from being installed as the
         nodejs package
 
-        now contains the npm binary and it will conflict when "apt get install"-ing npm.
+        now contains the npm binary and it will conflict when "apt get
+        install"-ing npm.
 
-        We also need to install the "locales" package as it has been removed from the ubuntu 16.04
+        We also need to install the "locales" package as it has been removed
+        from the ubuntu 16.04
 
         base image in order to reduce the base image size.
     - hash: f32783271d86a7d9fc54c1c851de3c456c40ee37
@@ -4292,9 +4338,11 @@
         We specify "--no-cache" when building the yocto-build-env docker image
         to get rid of errors during "docker run" such as this one:
 
-        Error response from daemon: could not find image: no such id: e34890d8e9bcb92938c0891f792b32bd83eec3ad1d50dad90eea779980e09664
+        Error response from daemon: could not find image: no such id:
+        e34890d8e9bcb92938c0891f792b32bd83eec3ad1d50dad90eea779980e09664
 
-        where e34890d8e9bcb92938c0891f792b32bd83eec3ad1d50dad90eea779980e09664 does not exist on the machine doing the "docker run".
+        where e34890d8e9bcb92938c0891f792b32bd83eec3ad1d50dad90eea779980e09664
+        does not exist on the machine doing the "docker run".
     - hash: 4cd73f4b6ecb6dad5c0c4a12ced1c7077f272a32
       author: Florin Sarbu
       footers:
@@ -4313,17 +4361,23 @@
         Currently we call this script from Jenkins 4 times in a row: for managed
         production build,
 
-        for managed development build, for unmanaged production build and for unmanaged development
+        for managed development build, for unmanaged production build and for
+        unmanaged development
 
-        build. For various reasons related to the Jenkins environment and not only, one of these builds
+        build. For various reasons related to the Jenkins environment and not
+        only, one of these builds
 
-        can fail. If the second, third or fourth of these builds fail, when retriggering the upstream
+        can fail. If the second, third or fourth of these builds fail, when
+        retriggering the upstream
 
-        Jenkins job to redo the deployment it will error out on the code highlighted here complaining that
+        Jenkins job to redo the deployment it will error out on the code
+        highlighted here complaining that
 
-        deployment is done. That should not be an error and it should only throw a warning and continue with
+        deployment is done. That should not be an error and it should only throw
+        a warning and continue with
 
-        the rest of the downstream build jobs to finish deploying successfully all the resin build flavours.
+        the rest of the downstream build jobs to finish deploying successfully
+        all the resin build flavours.
     - hash: 3189445fe8a3d3eb59532a2f3bca2a36a3af0856
       author: Florin Sarbu
       footers:
@@ -4334,7 +4388,8 @@
 
         "cannot enable tty mode on non tty input"
 
-        We also add the "--rm" flag to automatically remove the container when it exits
+        We also add the "--rm" flag to automatically remove the container when
+        it exits
 
         as it makes no sense for it to be running after exiting.
     - hash: 4dc4b2d917077cdd00dc5db26d531ea968020e04
@@ -4414,7 +4469,8 @@
         When we checkout a meta-resin revision for building we must also take
         into
 
-        consideration that such a revision might be from an external contributor's
+        consideration that such a revision might be from an external
+        contributor's
 
         fork sent as a pull request.
     - hash: a919b62e1b718cc123338b3a287d97ae1754ad00
@@ -4450,7 +4506,8 @@
         We need the user "builder" in the docker build container to be able to
         use
 
-        the host SSH keys (we need to be able to clone private git repositories using
+        the host SSH keys (we need to be able to clone private git repositories
+        using
 
         the SSH protocol for example).
     - hash: c4e2cc81c5f62525830f11de967cb29d62383890
@@ -4623,7 +4680,8 @@
 
         Please use a locale setting which supports utf-8.
 
-        Python can't change the filesystem locale after loading so we need a utf-8 when python starts or things won't work.
+        Python can't change the filesystem locale after loading so we need a
+        utf-8 when python starts or things won't work.
     - hash: 0ff791aa8555dca97add210ed4ae993f5c0ea56d
       author: Florin Sarbu
       footers:
@@ -4782,15 +4840,19 @@
       body: >-
         We create two groups right now: one for docker and one for the
 
-        user running the script (to avoid any permission issues). The docker group
+        user running the script (to avoid any permission issues). The docker
+        group
 
-        is created without specifying the GID so it will take the first available one
+        is created without specifying the GID so it will take the first
+        available one
 
         (in container that is 1000). The user GID can be anything from 1000 up.
 
-        If the user has GID 1000 and we first create docker group (this will take 1000)
+        If the user has GID 1000 and we first create docker group (this will
+        take 1000)
 
-        and then the user group (1000), we will get an error. Avoid this by creating
+        and then the user group (1000), we will get an error. Avoid this by
+        creating
 
         the current user group first and then the docker one.
     - hash: ab5ed5eaec59d6e585df6e0b15c2f5518c308003
