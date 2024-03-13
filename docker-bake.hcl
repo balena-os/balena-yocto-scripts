@@ -8,16 +8,6 @@ target "yocto-build-env" {
   ]
 }
 
-target "yocto-generate-ami-env" {
-  context = "automation"
-  dockerfile = "Dockerfile_yocto-build-env"
-  target = "yocto-generate-ami-env"
-  platforms = [
-    "linux/amd64",
-    // "linux/arm64"
-  ]
-}
-
 target "balena-push-env" {
   context = "automation"
   dockerfile = "Dockerfile_balena-push-env"
