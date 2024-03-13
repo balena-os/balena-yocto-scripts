@@ -119,6 +119,9 @@ jobs:
       BARYS_ARGUMENTS_VAR: ""
       # URL for secure boot signing server API
       SIGN_API_URL: ${{ vars.SIGN_API_URL || 'https://sign.balena-cloud.com' }}
+      # used for deploying images to S3 and deploying AMIs to AWS
+      S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
+      S3_BUCKET: ${{ vars.S3_BUCKET || 'resin-production-img-cloudformation' }}
 
     outputs:
       os_version: ${{ steps.balena-lib.outputs.os_version }}
@@ -263,8 +266,8 @@ jobs:
         env:
           BB_NUMBER_THREADS: 4
           BB_NUMBER_PARSE_THREADS: 4
-          PARALLEL_MAKE: 4
-          PARALLEL_MAKEINST: 4
+          PARALLEL_MAKE: -j4
+          PARALLEL_MAKEINST: -j4
           BB_PRESSURE_MAX_CPU: 500
           BB_PRESSURE_MAX_IO: 500
           BB_PRESSURE_MAX_MEMORY: 500
@@ -300,20 +303,20 @@ jobs:
           sudo mkdir -p "${YOCTO_CACHE_DIR}/$(whoami)"
           sudo chown -R $(id -u):$(id -g) "${YOCTO_CACHE_DIR}"
 
-      # - name: Mount shared NFS cache
-      #   if: env.YOCTO_CACHE_HOST != '' && contains(fromJSON(inputs.runs-on), 'self-hosted')
-      #   run: |
-      #     sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${YOCTO_CACHE_DIR}" -o fsc,nolock
-      #     ls -al "${YOCTO_CACHE_DIR}"/$(whoami)
+      - name: Mount shared NFS cache
+        if: env.YOCTO_CACHE_HOST != '' && contains(fromJSON(inputs.runs-on), 'self-hosted')
+        run: |
+          sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${YOCTO_CACHE_DIR}" -o fsc,nolock
+          ls -al "${YOCTO_CACHE_DIR}"/$(whoami)
       
-      # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
-      # https://github.com/actions/cache
-      - name: Cache yocto sstate
-        id: cache-yocto-sstate
-        uses: actions/cache@v4.0.1
-        with:
-          path: shared/yocto-cache
-          key: sstate
+      # # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+      # # https://github.com/actions/cache
+      # - name: Cache yocto sstate
+      #   id: cache-yocto-sstate
+      #   uses: actions/cache@v4.0.1
+      #   with:
+      #     path: shared/yocto-cache
+      #     key: sstate
 
       - name: Build
         id: build
@@ -329,6 +332,13 @@ jobs:
           if grep -R "ERROR: " build/tmp/log/*; then
             exit 1
           fi
+
+          if ! grep -R "Build for ${MACHINE} succeeded" build/tmp/log/*; then
+            exit 1
+          fi
+
+          du -cksh shared/yocto-cache/$(whoami)/*
+          du -cksh shared/yocto-cache/$(whoami)/*/*
 
       # TODO: prepare artifacts manually to replace balena_deploy_artifacts
       - name: Prepare artifacts
@@ -517,7 +527,7 @@ jobs:
           HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
           YOCTO_SCRIPTS_VERSION: ${{ needs.build.outputs.yocto_scripts_version }}
           YOCTO_SCRIPTS_REF: ${{ needs.build.outputs.yocto_scripts_ref }}
-          HELPER_IMAGE_VARIANT: yocto-generate-ami-env
+          HELPER_IMAGE_VARIANT: yocto-build-env
         run: |
           image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_VERSION}-${HELPER_IMAGE_VARIANT}"
           if ! docker pull "${image_tag}"; then
