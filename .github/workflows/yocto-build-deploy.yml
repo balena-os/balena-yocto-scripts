@@ -100,7 +100,6 @@ concurrency:
   cancel-in-progress: ${{ github.event.action == 'synchronize' }}
 
 env:
-  HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
   WORKSPACE: ${{ github.workspace }}
   MACHINE: ${{ inputs.machine }}
   VERBOSE: verbose
@@ -122,14 +121,14 @@ jobs:
       SIGN_API_URL: ${{ vars.SIGN_API_URL || 'https://sign.balena-cloud.com' }}
 
     outputs:
-      hostapp_path: ${{ steps.artifacts.outputs.hostapp_path }}
-      os_version: ${{ steps.build-lib.outputs.os_version }}
-      device_slug: ${{ steps.build-lib.outputs.device_slug }}
-      deploy_artifact: ${{ steps.build-lib.outputs.deploy_artifact }}
-      is_private: ${{ steps.build-lib.outputs.is_private }}
-      dt_arch: ${{ steps.build-lib.outputs.dt_arch }}
-      meta_balena_version: ${{ steps.build-lib.outputs.meta_balena_version }}
-      yocto_scripts_ref: ${{ steps.build-lib.outputs.yocto_scripts_ref }}
+      os_version: ${{ steps.balena-lib.outputs.os_version }}
+      device_slug: ${{ steps.balena-lib.outputs.device_slug }}
+      deploy_artifact: ${{ steps.balena-lib.outputs.deploy_artifact }}
+      is_private: ${{ steps.balena-lib.outputs.is_private }}
+      dt_arch: ${{ steps.balena-lib.outputs.dt_arch }}
+      meta_balena_version: ${{ steps.balena-lib.outputs.meta_balena_version }}
+      yocto_scripts_ref: ${{ steps.balena-lib.outputs.yocto_scripts_ref }}
+      yocto_scripts_version: ${{ steps.balena-lib.outputs.yocto_scripts_version }}
 
     defaults:
       run:
@@ -216,7 +215,7 @@ jobs:
           git submodule update --init --recursive
 
       - name: Set build outputs
-        id: build-lib
+        id: balena-lib
         run: |
           source "${automation_dir}/include/balena-api.inc"
           source "${automation_dir}/include/balena-lib.inc"
@@ -234,6 +233,9 @@ jobs:
 
           yocto_scripts_ref="$(git submodule status balena-yocto-scripts | awk '{print $1}')"
           echo "yocto_scripts_ref=${yocto_scripts_ref}" >> $GITHUB_OUTPUT
+
+          yocto_scripts_version="$(cd balena-yocto-scripts && head -n1 VERSION)"
+          echo "yocto_scripts_version=${yocto_scripts_version}" >> $GITHUB_OUTPUT
 
           deploy_artifact="$(balena_lib_get_deploy_artifact "${MACHINE}")"
           echo "deploy_artifact=${deploy_artifact}" >> $GITHUB_OUTPUT
@@ -288,6 +290,8 @@ jobs:
 
       - name: Build
         id: build
+        env:
+          HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
         run: |
           ./balena-yocto-scripts/build/balena-build.sh \
             -d "${MACHINE}" \
@@ -299,6 +303,7 @@ jobs:
             exit 1
           fi
 
+      # TODO: prepare artifacts manually to replace balena_deploy_artifacts
       - name: Prepare artifacts
         id: artifacts
         run: |
@@ -307,22 +312,24 @@ jobs:
           source "${automation_dir}/include/balena-deploy.inc"
           balena_deploy_artifacts "${{ inputs.machine }}" "${WORKSPACE}/gh-deploy" false
 
-          hostapp_path="$(find "${WORKSPACE}/gh-deploy" -name "balena-image-${MACHINE}.docker" -type l)"
-          if [ -n "${hostapp_path}" ]; then
-            hostapp_path="$(readlink --canonicalize "${hostapp_path}")"
-            echo "hostapp_path=${hostapp_path}" >> $GITHUB_OUTPUT
-          else
-            echo "::error::No hostapp found in build artifacts"
-            exit 1
-          fi
+          find "${WORKSPACE}/gh-deploy"
 
       # https://github.com/actions/upload-artifact
       - name: Upload artifacts
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         with:
           name: build-artifacts
-          path: gh-deploy/*
+          if-no-files-found: error
           retention-days: 3
+          compression-level: 1
+          path: | 
+            gh-deploy/**/*.md
+            gh-deploy/**/*.manifest
+            gh-deploy/**/*.docker
+            gh-deploy/**/*.tar.gz
+            gh-deploy/**/*.json
+            gh-deploy/**/*.img
+            gh-deploy/**/VERSION*
 
   s3-deploy:
     name: S3 Deploy
@@ -342,25 +349,6 @@ jobs:
         shell: bash --noprofile --norc -eo pipefail -x {0}
 
     steps:
-      # TODO: clone balena-yocto-scripts @ yocto_scripts_ref instead
-      # https://github.com/actions/checkout
-      - name: Clone device repository
-        uses: actions/checkout@v4.1.1
-        with:
-          repository: ${{ inputs.device-repo || github.repository }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ inputs.device-repo-ref || github.ref }}
-          submodules: true
-
-      - name: Update balena-yocto-scripts submodule to ${{ inputs.yocto-scripts-ref }}
-        if: inputs.yocto-scripts-ref != ''
-        working-directory: ./balena-yocto-scripts
-        run: |
-          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
-          git fetch --all
-          git checkout --force "${{ inputs.yocto-scripts-ref }}"
-          git submodule update --init --recursive
-
       # https://github.com/actions/download-artifact
       - name: Download build artifacts
         uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
@@ -368,25 +356,21 @@ jobs:
           path: ${{ runner.temp }}/build-artifacts
           name: build-artifacts
 
-      - name: Set s3 outputs
-        id: s3-lib
+      - name: Set s3 policy
+        id: s3-policy
         run: |
-          echo "s3_policy=private" >> $GITHUB_OUTPUT
+          echo "policy=private" >> $GITHUB_OUTPUT
           if [ "${{ needs.build.outputs.is_private }}" = "false" ]; then
-            echo "s3_policy=public-read" >> $GITHUB_OUTPUT
+            echo "policy=public-read" >> $GITHUB_OUTPUT
           fi
 
-          echo "deployer_uid=$(id -u)" >> $GITHUB_OUTPUT
-          echo "deployer_gid=$(id -g)" >> $GITHUB_OUTPUT
-
-          s3_bucket_path="${S3_BUCKET}/images"
+      - name: Set s3 url
+        id: s3-url
+        run: |
+          echo "url=s3://${S3_BUCKET}/images" >> $GITHUB_OUTPUT
           if [ "${{ inputs.deploy-esr }}" = "true" ]; then
-            s3_bucket_path="${S3_BUCKET}/esr-images"
+            echo "url=s3://${S3_BUCKET}/esr-images" >> $GITHUB_OUTPUT
           fi
-
-      # https://github.com/docker/setup-buildx-action
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
 
       # login required to pull private balena/balena-img image
       # https://github.com/docker/login-action
@@ -397,50 +381,57 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # https://github.com/docker/build-push-action
       - name: Build helper image
         id: helper-image
-        uses: docker/build-push-action@v5.1.0
-        with:
-          context: "${{ github.workspace }}/balena-yocto-scripts/automation"
-          file: Dockerfile_s3-deploy-env
-          push: false
-          build-args: |
-            DEPLOYER_UID=${{ steps.s3-lib.outputs.deployer_uid }}
-            DEPLOYER_GID=${{ steps.s3-lib.outputs.deployer_gid }}
+        env:
+          BASE_IMAGE: balena/balena-img:6.20.26
+        run: |
+          docker run -t --name s3-deploy-env \
+            -e DEPLOYER_UID=$(id -u) \
+            -e DEPLOYER_GID=$(id -g) \
+            ${BASE_IMAGE} /bin/sh -e -c '\
+              apt-get -y update
+              apt-get install -y s4cmd
+              groupadd -g ${DEPLOYER_GID} deployer
+              useradd -m -u ${DEPLOYER_UID} -g deployer deployer
+              '
+          docker commit s3-deploy-env localhost/s3-deploy-env:latest
+          image_id="$(docker images --format "{{.ID}}" localhost/s3-deploy-env:latest)"
+          echo "id=${image_id}" >> $GITHUB_OUTPUT
 
       - name: Deploy to S3
         id: s3-deploy
         env:
           BASE_DIR: /host/images
           S3_CMD: "s4cmd --access-key=${{ secrets.S3_ACCESS_KEY }} --secret-key=${{ secrets.S3_SECRET_KEY }} --API-ServerSideEncryption=AES256"
-          S3_SYNC_OPTS: "--recursive --API-ACL=${{ steps.s3-lib.outputs.s3_policy }}"
+          S3_SYNC_OPTS: "--recursive --API-ACL=${{ steps.s3-policy.outputs.policy }}"
           SLUG: "${{ needs.build.outputs.device_slug }}"
           DEPLOY_ARTIFACT: "${{ needs.build.outputs.deploy_artifact }}"
           HOSTOS_VERSION: "${{ needs.build.outputs.os_version }}"
           IMAGES_PATH: ${{ runner.temp }}/build-artifacts/image
+          S3_URL: "${{ steps.s3-url.outputs.url }}"
         run: |
           docker run --rm -t --user deployer \
             -e BASE_DIR \
             -e S3_CMD \
             -e S3_SYNC_OPTS \
-            -e S3_BUCKET \
+            -e S3_URL \
             -e SLUG \
             -e DEPLOY_ARTIFACT \
             -e HOSTOS_VERSION \
             -v "${IMAGES_PATH}:/host/images" \
-            "${{ steps.helper-image.outputs.imageid }}" /bin/sh -e -c '\
+            "${{ steps.helper-image.outputs.id }}" /bin/sh -e -c '\
               echo "${HOSTOS_VERSION}" > "/host/images/${SLUG}/latest"
               if [ "$DEPLOY_ARTIFACT" != "docker-image" ]; then
                 /usr/src/app/node_modules/.bin/ts-node /usr/src/app/scripts/prepare.ts
               fi
-              if [ -z "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${HOSTOS_VERSION}/)" ] || [ -n "$($S3_CMD ls s3://${S3_BUCKET}/${SLUG}/${HOSTOS_VERSION}/IGNORE)" ]; then
+              if [ -z "$($S3_CMD ls ${S3_URL}/${SLUG}/${HOSTOS_VERSION}/)" ] || [ -n "$($S3_CMD ls ${S3_URL}/${SLUG}/${HOSTOS_VERSION}/IGNORE)" ]; then
                 touch /host/images/${SLUG}/${HOSTOS_VERSION}/IGNORE
-                $S3_CMD del -rf s3://${S3_BUCKET}/${SLUG}/${HOSTOS_VERSION}
-                $S3_CMD put /host/images/${SLUG}/${HOSTOS_VERSION}/IGNORE s3://${S3_BUCKET}/${SLUG}/${HOSTOS_VERSION}/
-                $S3_CMD $S3_SYNC_OPTS dsync /host/images/${SLUG}/${HOSTOS_VERSION}/ s3://${S3_BUCKET}/${SLUG}/${HOSTOS_VERSION}/
-                $S3_CMD put /host/images/${SLUG}/latest s3://${S3_BUCKET}/${SLUG}/ --API-ACL=public-read -f
-                $S3_CMD del s3://${S3_BUCKET}/${SLUG}/${HOSTOS_VERSION}/IGNORE
+                $S3_CMD del -rf ${S3_URL}/${SLUG}/${HOSTOS_VERSION}
+                $S3_CMD put /host/images/${SLUG}/${HOSTOS_VERSION}/IGNORE ${S3_URL}/${SLUG}/${HOSTOS_VERSION}/
+                $S3_CMD $S3_SYNC_OPTS dsync /host/images/${SLUG}/${HOSTOS_VERSION}/ ${S3_URL}/${SLUG}/${HOSTOS_VERSION}/
+                $S3_CMD put /host/images/${SLUG}/latest ${S3_URL}/${SLUG}/ --API-ACL=public-read -f
+                $S3_CMD del ${S3_URL}/${SLUG}/${HOSTOS_VERSION}/IGNORE
               else
                 echo "WARNING: Deployment already done for ${SLUG} at version ${HOSTOS_VERSION}"
               fi
@@ -466,25 +457,6 @@ jobs:
         shell: bash --noprofile --norc -eo pipefail -x {0}
 
     steps:
-      # TODO: clone balena-yocto-scripts @ yocto_scripts_ref instead
-      # https://github.com/actions/checkout
-      - name: Clone device repository
-        uses: actions/checkout@v4.1.1
-        with:
-          repository: ${{ inputs.device-repo || github.repository }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ inputs.device-repo-ref || github.ref }}
-          submodules: true
-
-      - name: Update balena-yocto-scripts submodule to ${{ inputs.yocto-scripts-ref }}
-        if: inputs.yocto-scripts-ref != ''
-        working-directory: ./balena-yocto-scripts
-        run: |
-          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
-          git fetch --all
-          git checkout --force "${{ inputs.yocto-scripts-ref }}"
-          git submodule update --init --recursive
-
       # https://github.com/actions/download-artifact
       - name: Download build artifacts
         uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
@@ -492,21 +464,41 @@ jobs:
           path: ${{ runner.temp }}/build-artifacts
           name: build-artifacts
 
-      - name: Set AMI outputs
-        id: ami-lib
+      - name: Set AMI arch
+        id: ami-arch
         run: |
           if [ "${dt_arch}" = "amd64" ]; then
-            echo "ami_arch=x86_64" >> $GITHUB_OUTPUT
+            echo "string=x86_64" >> $GITHUB_OUTPUT
           elif [ "${dt_arch}" = "aarch64" ]; then
-            echo "ami_arch=arm64" >> $GITHUB_OUTPUT
+            echo "string=arm64" >> $GITHUB_OUTPUT
           fi
 
-          # AMI name format: balenaOS(-installer?)(-secureboot?)-VERSION-DEVICE_TYPE
+      # AMI name format: balenaOS(-installer?)(-secureboot?)-VERSION-DEVICE_TYPE
+      - name: Set AMI name
+        id: ami-name
+        run: |
           if [ "${{ inputs.sign-image }}" = "true" ]; then
-            echo "ami_name=balenaOS-secureboot-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
+            echo "string=balenaOS-secureboot-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
           else
-            echo "ami_name=balenaOS-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
+            echo "string=balenaOS-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
           fi
+
+      - name: Pull helper image
+        id: helper-image
+        env:
+          HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
+          YOCTO_SCRIPTS_VERSION: ${{ needs.build.outputs.yocto_scripts_version }}
+          YOCTO_SCRIPTS_REF: ${{ needs.build.outputs.yocto_scripts_ref }}
+          HELPER_IMAGE_VARIANT: yocto-generate-ami-env
+        run: |
+          image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_VERSION}-${HELPER_IMAGE_VARIANT}"
+          if ! docker pull "${image_tag}"; then
+            image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_REF}-${HELPER_IMAGE_VARIANT}"
+            docker pull "${image_tag}"
+          fi
+
+          image_id="$(docker images --format "{{.ID}}" "${image_tag}")"
+          echo "id=${image_id}" >> $GITHUB_OUTPUT
 
       - name: Deploy AMI
         env:
@@ -516,16 +508,13 @@ jobs:
           AWS_SESSION_TOKEN: "" # only required if MFA is enabled
           BALENACLI_TOKEN: ${{ secrets.BALENA_API_KEY }}
           HOSTOS_VERSION: "${{ needs.build.outputs.os_version }}"
-          AMI_NAME: "${{ steps.ami-lib.outputs.ami_name }}"
-          AMI_ARCHITECTURE: "${{ steps.ami-lib.outputs.ami_arch }}"
+          AMI_NAME: "${{ steps.ami-name.outputs.string }}"
+          AMI_ARCHITECTURE: "${{ steps.ami-arch.outputs.string }}"
           AMI_SECUREBOOT: "${{ inputs.sign-image }}"
-          BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ steps.ami-lib.outputs.ami_arch }}"
+          BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ steps.ami-arch.outputs.string }}"
           BALENA_PRELOAD_COMMIT: current
           IMAGE: ${{ runner.temp }}/build-artifacts/image/balena.img
         run: |
-          if ! balena_lib_docker_pull_helper_image "${HELPER_IMAGE_REPO}" "" "yocto-generate-ami-env" helper_image_id; then
-            exit 1
-          fi
           docker run --rm -t \
             --privileged \
             --network host \
@@ -550,7 +539,7 @@ jobs:
             -e AWS_SUBNET_ID \
             -e AWS_SECURITY_GROUP_ID \
             -w "${WORKSPACE}" \
-            "${helper_image_id}" /balena-generate-ami.sh
+            "${{ steps.helper-image.outputs.id }}" /balena-generate-ami.sh
 
   balena-deploy:
     name: HostApp Deploy
@@ -572,16 +561,6 @@ jobs:
         shell: bash --noprofile --norc -eo pipefail -x {0}
 
     steps:
-      # TODO: clone balena-yocto-scripts @ yocto_scripts_ref instead
-      # https://github.com/actions/checkout
-      - name: Clone device repository
-        uses: actions/checkout@v4.1.1
-        with:
-          repository: ${{ inputs.device-repo || github.repository }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ inputs.device-repo-ref || github.ref }}
-          submodules: true
-
       # https://github.com/actions/download-artifact
       - name: Download build artifacts
         uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
@@ -589,13 +568,30 @@ jobs:
           path: ${{ runner.temp }}/build-artifacts
           name: build-artifacts
 
-      - name: Set deploy outputs
+      - name: Set SECURE_BOOT_FEATURE_FLAG
         run: |
           if [ -n "${{ inputs.sign-image }}" = "true" ]; then
             echo "SECURE_BOOT_FEATURE_FLAG=yes" >> $GITHUB_ENV
           else
             echo "SECURE_BOOT_FEATURE_FLAG=no" >> $GITHUB_ENV
           fi
+
+      - name: Pull helper image
+        id: helper-image
+        env:
+          HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
+          YOCTO_SCRIPTS_VERSION: ${{ needs.build.outputs.yocto_scripts_version }}
+          YOCTO_SCRIPTS_REF: ${{ needs.build.outputs.yocto_scripts_ref }}
+          HELPER_IMAGE_VARIANT: balena-push-env
+        run: |
+          image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_VERSION}-${HELPER_IMAGE_VARIANT}"
+          if ! docker pull "${image_tag}"; then
+            image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_REF}-${HELPER_IMAGE_VARIANT}"
+            docker pull "${image_tag}"
+          fi
+
+          image_id="$(docker images --format "{{.ID}}" "${image_tag}")"
+          echo "id=${image_id}" >> $GITHUB_OUTPUT
 
       # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
       # https://github.com/balena-io/deploy-to-balena-action/issues/286
@@ -613,9 +609,6 @@ jobs:
           balenaCloudPassword:
           HOSTAPP_PATH: ${{ runner.temp }}/build-artifacts/balena-image.docker
         run: |
-          if ! balena_lib_docker_pull_helper_image "${HELPER_IMAGE_REPO}" "" "yocto-build-env" helper_image_id; then
-            exit 1
-          fi
           docker run --rm -t \
             --privileged \
             -e APPNAME \
@@ -636,4 +629,4 @@ jobs:
             -v "$(readlink --canonicalize "${HOSTAPP_PATH}")":/host/appimage.docker \
             -v "${WORKSPACE}":/work \
             -v "${WORKSPACE}":/deploy \
-            "${helper_image_id}" /balena-deploy-block.sh
+            "${{ steps.helper-image.outputs.id }}" /balena-deploy-block.sh
