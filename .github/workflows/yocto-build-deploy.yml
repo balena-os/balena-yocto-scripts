@@ -113,12 +113,16 @@ jobs:
     env:
       automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
       BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
+      API_ENV: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
+
       # Yocto NFS sstate cache host
       YOCTO_CACHE_HOST: ${{ vars.YOCTO_CACHE_HOST || 'nfs.product-os.io' }}
       YOCTO_CACHE_DIR: ${{ github.workspace }}/shared/yocto-cache
       BARYS_ARGUMENTS_VAR: ""
+
       # URL for secure boot signing server API
       SIGN_API_URL: ${{ vars.SIGN_API_URL || 'https://sign.balena-cloud.com' }}
+
       # used for deploying images to S3 and deploying AMIs to AWS
       S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
       S3_BUCKET: ${{ vars.S3_BUCKET || 'resin-production-img-cloudformation' }}
@@ -308,7 +312,7 @@ jobs:
         run: |
           sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${YOCTO_CACHE_DIR}" -o fsc,nolock
           ls -al "${YOCTO_CACHE_DIR}"/$(whoami)
-      
+
       # # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
       # # https://github.com/actions/cache
       # - name: Cache yocto sstate
@@ -347,9 +351,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zip
           source "${automation_dir}/include/balena-deploy.inc"
-          balena_deploy_artifacts "${{ inputs.machine }}" "${WORKSPACE}/gh-deploy" false
+          balena_deploy_artifacts "${{ inputs.machine }}" "${{ runner.temp }}/deploy" false
 
-          find "${WORKSPACE}/gh-deploy"
+          find "${{ runner.temp }}/deploy"
 
       # TODO: bundle artifacts separately for convience
       # https://github.com/actions/upload-artifact
@@ -359,51 +363,28 @@ jobs:
           name: build-artifacts
           if-no-files-found: error
           retention-days: 3
-          compression-level: 1
-          path: | 
-            gh-deploy/**/*.md
-            gh-deploy/**/*.manifest
-            gh-deploy/**/*.docker
-            gh-deploy/**/*.tar.gz
-            gh-deploy/**/*.json
-            gh-deploy/**/*.img
-            gh-deploy/**/VERSION*
+          # compression-level: 1
+          path: |
+            ${{ runner.temp }}/deploy/*.*
+            ${{ runner.temp }}/deploy/VERSION*
+            ${{ runner.temp }}/deploy/image/balena{,-flasher}.img
 
-  s3-deploy:
-    name: S3 Deploy
-    runs-on: ${{ fromJSON(inputs.runs-on) }}
-    environment: ${{ inputs.environment }}
-    needs: build
-    if: inputs.deploy-s3 == true
-
-    env:
-      BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
-      S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
-      S3_BUCKET: ${{ vars.S3_BUCKET || 'resin-production-img-cloudformation' }}
-
-    defaults:
-      run:
-        working-directory: .
-        shell: bash --noprofile --norc -eo pipefail -x {0}
-
-    steps:
-      # https://github.com/actions/download-artifact
-      - name: Download build artifacts
-        uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
-        with:
-          path: ${{ runner.temp }}/build-artifacts
-          name: build-artifacts
+      ##############################
+      # S3 Deploy
+      ##############################
 
       - name: Set s3 policy
         id: s3-policy
+        if: inputs.deploy-s3 == true
         run: |
           echo "policy=private" >> $GITHUB_OUTPUT
-          if [ "${{ needs.build.outputs.is_private }}" = "false" ]; then
+          if [ "${{ steps.balena-lib.outputs.is_private }}" = "false" ]; then
             echo "policy=public-read" >> $GITHUB_OUTPUT
           fi
 
       - name: Set s3 url
         id: s3-url
+        if: inputs.deploy-s3 == true
         run: |
           echo "url=s3://${S3_BUCKET}/images" >> $GITHUB_OUTPUT
           if [ "${{ inputs.deploy-esr }}" = "true" ]; then
@@ -414,13 +395,15 @@ jobs:
       # https://github.com/docker/login-action
       - name: Login to Docker Hub
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        if: inputs.deploy-s3 == true
         with:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build helper image
-        id: helper-image
+        id: s3-helper-image
+        if: inputs.deploy-s3 == true
         env:
           BASE_IMAGE: balena/balena-img:6.20.26
         run: |
@@ -438,15 +421,15 @@ jobs:
           echo "id=${image_id}" >> $GITHUB_OUTPUT
 
       - name: Deploy to S3
-        id: s3-deploy
+        if: inputs.deploy-s3 == true
         env:
           BASE_DIR: /host/images
           S3_CMD: "s4cmd --access-key=${{ secrets.S3_ACCESS_KEY }} --secret-key=${{ secrets.S3_SECRET_KEY }} --API-ServerSideEncryption=AES256"
           S3_SYNC_OPTS: "--recursive --API-ACL=${{ steps.s3-policy.outputs.policy }}"
-          SLUG: "${{ needs.build.outputs.device_slug }}"
-          DEPLOY_ARTIFACT: "${{ needs.build.outputs.deploy_artifact }}"
-          HOSTOS_VERSION: "${{ needs.build.outputs.os_version }}"
-          IMAGES_PATH: ${{ runner.temp }}/build-artifacts/image
+          SLUG: "${{ steps.balena-lib.outputs.device_slug }}"
+          DEPLOY_ARTIFACT: "${{ steps.balena-lib.outputs.deploy_artifact }}"
+          HOSTOS_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
+          IMAGES_PATH: ${{ runner.temp }}/deploy/image
           S3_URL: "${{ steps.s3-url.outputs.url }}"
         run: |
           docker run --rm -t --user deployer \
@@ -458,7 +441,7 @@ jobs:
             -e DEPLOY_ARTIFACT \
             -e HOSTOS_VERSION \
             -v "${IMAGES_PATH}:/host/images" \
-            "${{ steps.helper-image.outputs.id }}" /bin/sh -e -c '\
+            "${{ steps.s3-helper-image.outputs.id }}" /bin/sh -e -c '\
               echo "${HOSTOS_VERSION}" > "/host/images/${SLUG}/latest"
               if [ "$DEPLOY_ARTIFACT" != "docker-image" ]; then
                 /usr/src/app/node_modules/.bin/ts-node /usr/src/app/scripts/prepare.ts
@@ -475,35 +458,13 @@ jobs:
               fi
               '
 
-  ami-deploy:
-    name: AMI Deploy
-    runs-on: ${{ fromJSON(inputs.runs-on) }}
-    environment: ${{ inputs.environment }}
-    needs: build
-    if: inputs.deploy-ami == true
-
-    env:
-      BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
-      S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
-      S3_BUCKET: ${{ vars.S3_BUCKET || 'resin-production-img-cloudformation' }}
-      AWS_SUBNET_ID: ${{ vars.AWS_SUBNET || 'subnet-02d18a08ea4058574' }}
-      AWS_SECURITY_GROUP_ID: ${{ vars.AWS_SECURITY_GROUP || 'sg-057937f4d89d9d51c' }}
-
-    defaults:
-      run:
-        working-directory: .
-        shell: bash --noprofile --norc -eo pipefail -x {0}
-
-    steps:
-      # https://github.com/actions/download-artifact
-      - name: Download build artifacts
-        uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
-        with:
-          path: ${{ runner.temp }}/build-artifacts
-          name: build-artifacts
+      ##############################
+      # AMI Deploy
+      ##############################
 
       - name: Set AMI arch
         id: ami-arch
+        if: inputs.deploy-ami == true
         run: |
           if [ "${dt_arch}" = "amd64" ]; then
             echo "string=x86_64" >> $GITHUB_OUTPUT
@@ -514,6 +475,7 @@ jobs:
       # AMI name format: balenaOS(-installer?)(-secureboot?)-VERSION-DEVICE_TYPE
       - name: Set AMI name
         id: ami-name
+        if: inputs.deploy-ami == true
         run: |
           if [ "${{ inputs.sign-image }}" = "true" ]; then
             echo "string=balenaOS-secureboot-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
@@ -522,11 +484,12 @@ jobs:
           fi
 
       - name: Pull helper image
-        id: helper-image
+        id: ami-helper-image
+        if: inputs.deploy-ami == true
         env:
           HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
-          YOCTO_SCRIPTS_VERSION: ${{ needs.build.outputs.yocto_scripts_version }}
-          YOCTO_SCRIPTS_REF: ${{ needs.build.outputs.yocto_scripts_ref }}
+          YOCTO_SCRIPTS_VERSION: ${{ steps.balena-lib.outputs.yocto_scripts_version }}
+          YOCTO_SCRIPTS_REF: ${{ steps.balena-lib.outputs.yocto_scripts_ref }}
           HELPER_IMAGE_VARIANT: yocto-build-env
         run: |
           image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_VERSION}-${HELPER_IMAGE_VARIANT}"
@@ -539,19 +502,22 @@ jobs:
           echo "id=${image_id}" >> $GITHUB_OUTPUT
 
       - name: Deploy AMI
+        if: inputs.deploy-ami == true
         env:
           AWS_ACCESS_KEY_ID: "${{ secrets.S3_ACCESS_KEY}}"
           AWS_SECRET_ACCESS_KEY: "${{ secrets.S3_SECRET_KEY }}"
           AWS_DEFAULT_REGION: "${{ env.S3_REGION }}"
           AWS_SESSION_TOKEN: "" # only required if MFA is enabled
+          AWS_SUBNET_ID: ${{ vars.AWS_SUBNET || 'subnet-02d18a08ea4058574' }}
+          AWS_SECURITY_GROUP_ID: ${{ vars.AWS_SECURITY_GROUP || 'sg-057937f4d89d9d51c' }}
           BALENACLI_TOKEN: ${{ secrets.BALENA_API_KEY }}
-          HOSTOS_VERSION: "${{ needs.build.outputs.os_version }}"
+          HOSTOS_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
           AMI_NAME: "${{ steps.ami-name.outputs.string }}"
           AMI_ARCHITECTURE: "${{ steps.ami-arch.outputs.string }}"
           AMI_SECUREBOOT: "${{ inputs.sign-image }}"
           BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ steps.ami-arch.outputs.string }}"
           BALENA_PRELOAD_COMMIT: current
-          IMAGE: ${{ runner.temp }}/build-artifacts/image/balena.img
+          IMAGE: ${{ runner.temp }}/deploy/image/balena.img
         run: |
           docker run --rm -t \
             --privileged \
@@ -577,36 +543,14 @@ jobs:
             -e AWS_SUBNET_ID \
             -e AWS_SECURITY_GROUP_ID \
             -w "${WORKSPACE}" \
-            "${{ steps.helper-image.outputs.id }}" /balena-generate-ami.sh
+            "${{ steps.ami-helper-image.outputs.id }}" /balena-generate-ami.sh
 
-  balena-deploy:
-    name: HostApp Deploy
-    runs-on: ${{ fromJSON(inputs.runs-on) }}
-    environment: ${{ inputs.environment }}
-    needs: build
-    if: inputs.deploy-hostapp == true
-
-    env:
-      SLUG: "${{ needs.build.outputs.device_slug }}"
-      BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
-      SIGN_API_URL: ${{ vars.SIGN_API_URL || 'https://sign.balena-cloud.com' }}
-      API_ENV: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
-      BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
-
-    defaults:
-      run:
-        working-directory: .
-        shell: bash --noprofile --norc -eo pipefail -x {0}
-
-    steps:
-      # https://github.com/actions/download-artifact
-      - name: Download build artifacts
-        uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
-        with:
-          path: ${{ runner.temp }}/build-artifacts
-          name: build-artifacts
+      ##############################
+      # hostapp Deploy
+      ##############################
 
       - name: Set SECURE_BOOT_FEATURE_FLAG
+        if: inputs.deploy-hostapp == true
         run: |
           if [ -n "${{ inputs.sign-image }}" = "true" ]; then
             echo "SECURE_BOOT_FEATURE_FLAG=yes" >> $GITHUB_ENV
@@ -615,11 +559,12 @@ jobs:
           fi
 
       - name: Pull helper image
-        id: helper-image
+        id: hostapp-helper-image
+        if: inputs.deploy-hostapp == true
         env:
           HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
-          YOCTO_SCRIPTS_VERSION: ${{ needs.build.outputs.yocto_scripts_version }}
-          YOCTO_SCRIPTS_REF: ${{ needs.build.outputs.yocto_scripts_ref }}
+          YOCTO_SCRIPTS_VERSION: ${{ steps.balena-lib.outputs.yocto_scripts_version }}
+          YOCTO_SCRIPTS_REF: ${{ steps.balena-lib.outputs.yocto_scripts_ref }}
           HELPER_IMAGE_VARIANT: balena-push-env
         run: |
           image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_VERSION}-${HELPER_IMAGE_VARIANT}"
@@ -634,18 +579,21 @@ jobs:
       # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
       # https://github.com/balena-io/deploy-to-balena-action/issues/286
       - name: Deploy to balena
+        if: inputs.deploy-hostapp == true
         env:
-          APPNAME: "${{ needs.build.outputs.device_slug }}"
+          BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
+          SLUG: "${{ steps.balena-lib.outputs.device_slug }}"
+          APPNAME: "${{ steps.balena-lib.outputs.device_slug }}"
           BALENAOS_TOKEN: "${{ secrets.BALENA_API_KEY }}"
-          META_BALENA_VERSION: "${{ needs.build.outputs.meta_balena_version }}"
-          RELEASE_VERSION: "${{ needs.build.outputs.os_version }}"
+          META_BALENA_VERSION: "${{ steps.balena-lib.outputs.meta_balena_version }}"
+          RELEASE_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
           BOOTABLE: 1
           DEPLOY: yes
           FINAL: yes
           ESR: "${{ inputs.deploy-esr }}"
           balenaCloudEmail:
           balenaCloudPassword:
-          HOSTAPP_PATH: ${{ runner.temp }}/build-artifacts/balena-image.docker
+          HOSTAPP_PATH: ${{ runner.temp }}/deploy/balena-image.docker
         run: |
           docker run --rm -t \
             --privileged \
@@ -667,4 +615,4 @@ jobs:
             -v "$(readlink --canonicalize "${HOSTAPP_PATH}")":/host/appimage.docker \
             -v "${WORKSPACE}":/work \
             -v "${WORKSPACE}":/deploy \
-            "${{ steps.helper-image.outputs.id }}" /balena-deploy-block.sh
+            "${{ steps.hostapp-helper-image.outputs.id }}" /balena-deploy-block.sh
