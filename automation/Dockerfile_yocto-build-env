@@ -45,14 +45,11 @@ RUN curl -sSL https://github.com/balena-io/balena-cli/releases/download/v$BALENA
 COPY include/balena-docker.inc /
 COPY entry_scripts/prepare-and-start.sh /
 
-WORKDIR /work
-
-####################
-
-FROM yocto-build-env AS yocto-generate-ami-env
-
-RUN apt-get update && apt-get install -y python3-pip udev && rm -rf /var/lib/apt/lists/*
-RUN pip3 install awscli
-
+# scripts and packages required for AMI publishing
 COPY include/balena-api.inc include/balena-lib.inc entry_scripts/balena-generate-ami.sh /
-WORKDIR /
+# hadolint ignore=DL3008,DL3015
+RUN apt-get update && apt-get install -y python3-pip udev && rm -rf /var/lib/apt/lists/*
+# hadolint ignore=DL3013
+RUN pip3 install --no-cache-dir awscli
+
+WORKDIR /work

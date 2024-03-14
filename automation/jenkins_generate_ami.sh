@@ -30,7 +30,7 @@ HELPER_IMAGE_REPO="${HELPER_IMAGE_REPO:-"ghcr.io/balena-os/balena-yocto-scripts"
 # shellcheck disable=SC1091,SC2154
 source "${automation_dir}/include/balena-lib.inc"
 
-if ! balena_lib_docker_pull_helper_image "${HELPER_IMAGE_REPO}" "" "yocto-generate-ami-env" helper_image_id; then
+if ! balena_lib_docker_pull_helper_image "${HELPER_IMAGE_REPO}" "" "yocto-build-env" helper_image_id; then
     exit 1
 fi
 
