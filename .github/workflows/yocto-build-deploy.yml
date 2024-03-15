@@ -118,6 +118,7 @@ jobs:
       # Yocto NFS sstate cache host
       YOCTO_CACHE_HOST: ${{ vars.YOCTO_CACHE_HOST || 'nfs.product-os.io' }}
       YOCTO_CACHE_DIR: ${{ github.workspace }}/shared/yocto-cache
+      # S3_CACHE_URL: s3://balena-yocto-cache/${{ inputs.machine }}
       BARYS_ARGUMENTS_VAR: ""
 
       # URL for secure boot signing server API
@@ -125,7 +126,7 @@ jobs:
 
       # used for deploying images to S3 and deploying AMIs to AWS
       S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
-      S3_BUCKET: ${{ vars.S3_BUCKET || 'resin-production-img-cloudformation' }}
+      S3_BUCKET: ${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}
 
     outputs:
       os_version: ${{ steps.balena-lib.outputs.os_version }}
@@ -195,6 +196,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ inputs.device-repo-ref }}
           submodules: true
+          # fetch-depth: 1 
+          fetch-tags: true
 
       - name: Device repository check
         run: |
@@ -232,8 +235,11 @@ jobs:
           device_slug="$(balena_lib_get_slug "${MACHINE}")"
           echo "device_slug=${device_slug}" >> $GITHUB_OUTPUT
 
-          os_version="$(balena_lib_get_os_version)"
-          echo "os_version=${os_version}" >> $GITHUB_OUTPUT
+          os_version=$(git describe --abbrev=0)
+          echo "os_version=${os_version#v*}" >> $GITHUB_OUTPUT
+
+          # os_version="$(balena_lib_get_os_version)"
+          # echo "os_version=${os_version}" >> $GITHUB_OUTPUT
 
           meta_balena_version="$(balena_lib_get_meta_balena_base_version)"
           echo "meta_balena_version=${meta_balena_version}" >> $GITHUB_OUTPUT
@@ -313,14 +319,12 @@ jobs:
           sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${YOCTO_CACHE_DIR}" -o fsc,nolock
           ls -al "${YOCTO_CACHE_DIR}"/$(whoami)
 
-      # # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
-      # # https://github.com/actions/cache
-      # - name: Cache yocto sstate
-      #   id: cache-yocto-sstate
-      #   uses: actions/cache@v4.0.1
-      #   with:
-      #     path: shared/yocto-cache
-      #     key: sstate
+      # TODO: pre-install on self-hosted-runners
+      # https://github.com/bloomreach/s4cmd
+      - name: Install s4cmd
+        run: |
+          pip install s4cmd
+          s4cmd --help
 
       - name: Build
         id: build
@@ -337,23 +341,31 @@ jobs:
             exit 1
           fi
 
-          if ! grep -R "Build for ${MACHINE} succeeded" build/tmp/log/*; then
-            exit 1
-          fi
+          # if ! grep -R "Build for ${MACHINE} succeeded" build/tmp/log/*; then
+          #   exit 1
+          # fi
 
           du -cksh shared/yocto-cache/$(whoami)/*
-          du -cksh shared/yocto-cache/$(whoami)/*/*
 
-      # TODO: prepare artifacts manually to replace balena_deploy_artifacts
-      - name: Prepare artifacts
-        id: artifacts
+      # TODO: pre-install on self-hosted-runners
+      - name: Install zip package
         run: |
           sudo apt-get update
           sudo apt-get install -y zip
-          source "${automation_dir}/include/balena-deploy.inc"
-          balena_deploy_artifacts "${{ inputs.machine }}" "${{ runner.temp }}/deploy" false
 
-          find "${{ runner.temp }}/deploy"
+      # TODO: prepare artifacts manually to replace balena_deploy_artifacts
+      - name: Prepare artifacts
+        env:
+          DEPLOY_PATH: ${{ runner.temp }}/deploy
+        run: |
+          source "${automation_dir}/include/balena-deploy.inc"
+          balena_deploy_artifacts "${{ inputs.machine }}" "${DEPLOY_PATH}" false
+
+          # create links required for s3 prepare.ts
+          mkdir -p "${DEPLOY_PATH}/${{ steps.balena-lib.outputs.device_slug }}"
+          ln -sf ../.. "${DEPLOY_PATH}/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}"
+
+          find "${DEPLOY_PATH}" -exec ls -lh {} \;
 
       # TODO: bundle artifacts separately for convience
       # https://github.com/actions/upload-artifact
@@ -373,24 +385,6 @@ jobs:
       # S3 Deploy
       ##############################
 
-      - name: Set s3 policy
-        id: s3-policy
-        if: inputs.deploy-s3 == true
-        run: |
-          echo "policy=private" >> $GITHUB_OUTPUT
-          if [ "${{ steps.balena-lib.outputs.is_private }}" = "false" ]; then
-            echo "policy=public-read" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Set s3 url
-        id: s3-url
-        if: inputs.deploy-s3 == true
-        run: |
-          echo "url=s3://${S3_BUCKET}/images" >> $GITHUB_OUTPUT
-          if [ "${{ inputs.deploy-esr }}" = "true" ]; then
-            echo "url=s3://${S3_BUCKET}/esr-images" >> $GITHUB_OUTPUT
-          fi
-
       # login required to pull private balena/balena-img image
       # https://github.com/docker/login-action
       - name: Login to Docker Hub
@@ -401,62 +395,99 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build helper image
-        id: s3-helper-image
-        if: inputs.deploy-s3 == true
+      - name: Prepare files for S3
+        if: inputs.deploy-s3 == true && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
         env:
-          BASE_IMAGE: balena/balena-img:6.20.26
+          HELPER_IMAGE: balena/balena-img:6.20.26
+          DEPLOY_PATH: ${{ runner.temp }}/deploy
         run: |
-          docker run -t --name s3-deploy-env \
-            -e DEPLOYER_UID=$(id -u) \
-            -e DEPLOYER_GID=$(id -g) \
-            ${BASE_IMAGE} /bin/sh -e -c '\
-              apt-get -y update
-              apt-get install -y s4cmd
-              groupadd -g ${DEPLOYER_GID} deployer
-              useradd -m -u ${DEPLOYER_UID} -g deployer deployer
-              '
-          docker commit s3-deploy-env localhost/s3-deploy-env:latest
-          image_id="$(docker images --format "{{.ID}}" localhost/s3-deploy-env:latest)"
-          echo "id=${image_id}" >> $GITHUB_OUTPUT
+          docker run --rm \
+            -e BASE_DIR=/host/images \
+            -v "${DEPLOY_PATH}:/host/images" \
+            ${HELPER_IMAGE} /usr/src/app/node_modules/.bin/ts-node /usr/src/app/scripts/prepare.ts
+
+          find "${DEPLOY_PATH}" -exec ls -lh {} \;
+
+      - name: Set S3 ACL (private)
+        id: s3-acl-private
+        if: inputs.deploy-s3 == true && steps.balena-lib.outputs.is_private != 'false'
+        run: echo "string=private" >> $GITHUB_OUTPUT
+
+      - name: Set S3 ACL (public-read)
+        id: s3-acl-public
+        if: inputs.deploy-s3 == true && steps.balena-lib.outputs.is_private == 'false'
+        run: echo "string=public-read" >> $GITHUB_OUTPUT
+
+      - name: Set S3 destination directory
+        id: s3-images-dir
+        if: inputs.deploy-s3 == true && inputs.deploy-esr != true
+        run: echo "string=images/${{ steps.balena-lib.outputs.device_slug }}" >> $GITHUB_OUTPUT
+
+      - name: Set S3 destination directory (ESR)
+        id: s3-esr-images-dir
+        if: inputs.deploy-s3 == true && inputs.deploy-esr == true
+        run: echo "string=esr-images/${{ steps.balena-lib.outputs.device_slug }}" >> $GITHUB_OUTPUT
+
+      # # TODO: pre-install on self-hosted-runners
+      # # https://github.com/s3-actions/s3cmd
+      # - name: Set up s3cmd cli tool
+      #   if: inputs.deploy-s3 == true && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
+      #   uses: s3-actions/s3cmd@v1.5.0
+      #   with:
+      #     provider: aws # default is linode
+      #     region: ${{ vars.AWS_REGION || vars.S3_REGION }}
+      #     access_key: ${{ secrets.AWS_ACCESS_KEY_ID || secrets.S3_SECRET_KEY }}
+      #     secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY || secrets.S3_ACCESS_KEY }}
 
       - name: Deploy to S3
-        if: inputs.deploy-s3 == true
+        if: inputs.deploy-s3 == true && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
         env:
-          BASE_DIR: /host/images
-          S3_CMD: "s4cmd --access-key=${{ secrets.S3_ACCESS_KEY }} --secret-key=${{ secrets.S3_SECRET_KEY }} --API-ServerSideEncryption=AES256"
-          S3_SYNC_OPTS: "--recursive --API-ACL=${{ steps.s3-policy.outputs.policy }}"
-          SLUG: "${{ steps.balena-lib.outputs.device_slug }}"
-          DEPLOY_ARTIFACT: "${{ steps.balena-lib.outputs.deploy_artifact }}"
-          HOSTOS_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
-          IMAGES_PATH: ${{ runner.temp }}/deploy/image
-          S3_URL: "${{ steps.s3-url.outputs.url }}"
+          S3_CMD: "s4cmd --API-ServerSideEncryption=AES256"
+          S3_SYNC_OPTS: "--dry-run --recursive --API-ACL=${{ steps.s3-acl-private.outputs.string || steps.s3-acl-public.outputs.string }}"
+          S3_URL: "s3://${{ env.S3_BUCKET }}/${{ steps.s3-images-dir.outputs.string || steps.s3-esr-images-dir.outputs.string }}"
+          SLUG: ${{ steps.balena-lib.outputs.device_slug }}
+          VERSION: ${{ steps.balena-lib.outputs.os_version }}
+          SOURCE_DIR: ${{ runner.temp }}/deploy
+          S3_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID || secrets.S3_SECRET_KEY}}
+          S3_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY || secrets.S3_ACCESS_KEY }}
         run: |
-          docker run --rm -t --user deployer \
-            -e BASE_DIR \
-            -e S3_CMD \
-            -e S3_SYNC_OPTS \
-            -e S3_URL \
-            -e SLUG \
-            -e DEPLOY_ARTIFACT \
-            -e HOSTOS_VERSION \
-            -v "${IMAGES_PATH}:/host/images" \
-            "${{ steps.s3-helper-image.outputs.id }}" /bin/sh -e -c '\
-              echo "${HOSTOS_VERSION}" > "/host/images/${SLUG}/latest"
-              if [ "$DEPLOY_ARTIFACT" != "docker-image" ]; then
-                /usr/src/app/node_modules/.bin/ts-node /usr/src/app/scripts/prepare.ts
-              fi
-              if [ -z "$($S3_CMD ls ${S3_URL}/${SLUG}/${HOSTOS_VERSION}/)" ] || [ -n "$($S3_CMD ls ${S3_URL}/${SLUG}/${HOSTOS_VERSION}/IGNORE)" ]; then
-                touch /host/images/${SLUG}/${HOSTOS_VERSION}/IGNORE
-                $S3_CMD del -rf ${S3_URL}/${SLUG}/${HOSTOS_VERSION}
-                $S3_CMD put /host/images/${SLUG}/${HOSTOS_VERSION}/IGNORE ${S3_URL}/${SLUG}/${HOSTOS_VERSION}/
-                $S3_CMD $S3_SYNC_OPTS dsync /host/images/${SLUG}/${HOSTOS_VERSION}/ ${S3_URL}/${SLUG}/${HOSTOS_VERSION}/
-                $S3_CMD put /host/images/${SLUG}/latest ${S3_URL}/${SLUG}/ --API-ACL=public-read -f
-                $S3_CMD del ${S3_URL}/${SLUG}/${HOSTOS_VERSION}/IGNORE
-              else
-                echo "WARNING: Deployment already done for ${SLUG} at version ${HOSTOS_VERSION}"
-              fi
-              '
+          if [ -n "$($S3_CMD ls ${S3_URL}/${SLUG}/${VERSION}/)" ] && [ -z "$($S3_CMD ls ${S3_URL}/${SLUG}/${VERSION}/IGNORE)" ]; then
+            echo "::warning::Deployment already exists at ${S3_URL}/${VERSION}"
+            exit 0
+          fi
+
+          echo "${VERSION}" > "${SOURCE_DIR}/${SLUG}/latest"
+          touch "${SOURCE_DIR}/${SLUG}/${VERSION}/IGNORE"
+
+          $S3_CMD del -rf "${S3_URL}/${SLUG}/${VERSION}"
+          $S3_CMD put "${SOURCE_DIR}/${SLUG}/${VERSION}/IGNORE" "${S3_URL}/${SLUG}/${VERSION}/"
+          $S3_CMD ${S3_SYNC_OPTS} dsync "${SOURCE_DIR}/${SLUG}/${VERSION}/" "${S3_URL}/${SLUG}/${VERSION}/"
+          $S3_CMD put "${SOURCE_DIR}/${SLUG}/latest" "${S3_URL}/${SLUG}/" --API-ACL=public-read -f
+          $S3_CMD del "${S3_URL}/${SLUG}/${VERSION}/IGNORE"
+
+      # # https://github.com/jakejarvis/s3-sync-action
+      # - uses: jakejarvis/s3-sync-action@v0.5.1
+      #   if: inputs.deploy-s3 == true && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
+      #   with:
+      #     args: --follow-symlinks --sse=AES256 --acl=${{ steps.s3-acl-private.outputs.string || steps.s3-acl-public.outputs.string }}
+      #   env:
+      #     AWS_REGION: ${{ vars.AWS_REGION || vars.S3_REGION }}
+      #     AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}
+      #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID || secrets.S3_SECRET_KEY}}
+      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY || secrets.S3_ACCESS_KEY }}
+      #     SOURCE_DIR: ${{ runner.temp }}/deploy/image
+      #     DEST_DIR: ${{ steps.s3-images-dir.outputs.string || steps.s3-esr-images-dir.outputs.string }}
+
+      # # https://github.com/keithweaver/aws-s3-github-action
+      # - uses: keithweaver/aws-s3-github-action@v1.0.0
+      #   if: inputs.deploy-s3 == true && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
+      #   with:
+      #     command: put
+      #     source: ${{ runner.temp }}/deploy/image/${{ steps.balena-lib.outputs.device_slug }}/latest
+      #     destination: s3://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}/${{ steps.s3-images-dir.outputs.string || steps.s3-esr-images-dir.outputs.string }}/
+      #     aws_access_key_id: ${{ secrets.AWS_SECRET_ACCESS_KEY || secrets.S3_SECRET_KEY}}
+      #     aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY || secrets.S3_ACCESS_KEY }}
+      #     aws_region: ${{ vars.AWS_REGION || vars.S3_REGION }}
 
       ##############################
       # AMI Deploy
