@@ -66,7 +66,7 @@ balena_build_run_barys() {
 	[ -z "${_bitbake_args}" ] && _bitbake_args=""
 	[ -z "${_bitbake_targets}" ] && _bitbake_targets=""
 	_dl_dir="${_shared_dir}/shared-downloads"
-	_sstate_dir="${_shared_dir}/sstate"
+	_sstate_dir="${_shared_dir}/${_device_type}/sstate"
 	mkdir -p "${_dl_dir}"
 	mkdir -p "${_sstate_dir}"
 	[ -n "${_bitbake_args}" ] && _bitbake_args="--bitbake-args ${_bitbake_args}"
