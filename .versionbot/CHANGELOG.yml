@@ -1,4 +1,18 @@
 - commits:
+    - subject: 'Revert "balena-build: avoid using device-type as a prefix in yocto
+        sstate"'
+      hash: 7a85083784a3225debf2276a978558df5a307ec7
+      body: |
+        This reverts commit f4a9566941083770151ebe3edd78e9866b4856fb.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Kyle Harding
+      nested: []
+  version: 1.21.6
+  title: ""
+  date: 2024-03-25T14:58:37.715Z
+- commits:
     - subject: Merge AMI publishing dependencies into yocto-build-env
       hash: c208a885e849b1b49231de31268a482344220d38
       body: |
