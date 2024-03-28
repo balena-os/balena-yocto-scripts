@@ -30,3 +30,23 @@ jobs:
       docker_images: |
         ghcr.io/balena-os/balena-yocto-scripts
       bake_targets: yocto-build-env,balena-push-env
+
+  # depends on Flowzone having already published the helper images
+  yocto-build-deploy:
+    name: Yocto
+    uses: ./.github/workflows/yocto-build-deploy.yml
+    needs: flowzone
+    secrets: inherit
+    with:
+      # runs-on: '[ "ubuntu-latest" ]'
+      environment: staging
+      device-repo: balena-os/balena-generic
+      device-repo-ref: master
+      yocto-scripts-ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      machine: generic-amd64
+      deploy-s3: true
+      deploy-hostapp: true
+      deploy-ami: true
+      sign-image: false
+      os-dev: false
+      deploy-esr: false
