@@ -359,12 +359,14 @@ jobs:
           DEPLOY_PATH: ${{ runner.temp }}/deploy
         run: |
           source "${automation_dir}/include/balena-deploy.inc"
-          balena_deploy_artifacts "${{ inputs.machine }}" "${DEPLOY_PATH}" false
+          balena_deploy_artifacts "${{ inputs.machine }}" "${DEPLOY_PATH}/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}" false
 
           # create links required for s3 prepare.ts
-          mkdir -p "${DEPLOY_PATH}/${{ steps.balena-lib.outputs.device_slug }}"
-          ln -sf ../.. "${DEPLOY_PATH}/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}"
+          # mkdir -p "${DEPLOY_PATH}/${{ steps.balena-lib.outputs.device_slug }}"
 
+          # symlink to self??
+          #ln -sf ../.. "${DEPLOY_PATH}/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}"
+          
           find "${DEPLOY_PATH}" -exec ls -lh {} \;
 
       # TODO: bundle artifacts separately for convience
