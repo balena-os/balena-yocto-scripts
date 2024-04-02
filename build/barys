@@ -33,8 +33,9 @@ LOGFILE=`pwd`/`basename "$0"`.log
 MACHINES=
 BITBAKEARGS=
 EXIT_CODE=0
-USE_OLD_SYNTAX=yes
-NEW_SYNTAX_RELEASES=("honister" "kirkstone")
+USE_OLD_SYNTAX=no
+OLD_SYNTAX_RELEASES=(pyro rocko sumo thud warrior dunfell)
+
 
 function help {
     echo
@@ -474,16 +475,14 @@ for pair in $ADDITIONAL_VARIABLES; do
 done
 
 DEVICE_LAYER_CONF=$(ls ${SCRIPTPATH}/../../layers/meta-balena-*/conf/layer.conf)
-if [[ -d "${SCRIPTPATH}/../../layers/meta-balena/meta-balena-${NEW_SYNTAX_RELEASES[0]}" ]]; then
-    for poky_release in ${NEW_SYNTAX_RELEASES[@]}; do
+if ls "${SCRIPTPATH}/../../layers/meta-balena/meta-*-${OLD_SYNTAX_RELEASES[0]}" >/dev/null 2>&1; then
+    for poky_release in "${OLD_SYNTAX_RELEASES[@]}"; do
         if grep -q -i "LAYERSERIES_COMPAT.*$poky_release" ${DEVICE_LAYER_CONF}; then
-            log "Release $poky_release already supported by device integration layer, will not revert meta-balena-common syntax."
-            USE_OLD_SYNTAX=no
+            log "Release $poky_release not supported by device integration layer, will revert meta-balena-common syntax."
+            USE_OLD_SYNTAX=yes
             break;
         fi
     done
-else
-    USE_OLD_SYNTAX=no
 fi
 
 if [ "$USE_OLD_SYNTAX" == "yes" ]; then
