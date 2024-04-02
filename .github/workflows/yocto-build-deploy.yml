@@ -381,9 +381,9 @@ jobs:
           retention-days: 3
           # compression-level: 1
           path: |
-            ${DEPLOY_PATH}/*.*
-            ${DEPLOY_PATH}/VERSION*
-            ${DEPLOY_PATH}/image/balena{,-flasher}.img
+            ${{ env.DEPLOY_PATH }}/*.*
+            ${{ env.DEPLOY_PATH }}/VERSION*
+            ${{ env.DEPLOY_PATH }}/image/balena{,-flasher}.img
 
       ##############################
       # S3 Deploy
