@@ -356,10 +356,10 @@ jobs:
       # TODO: prepare artifacts manually to replace balena_deploy_artifacts
       - name: Prepare artifacts
         env:
-          DEPLOY_PATH: ${{ runner.temp }}/deploy
+          DEPLOY_PATH: ${{ runner.temp }}/deploy/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}
         run: |
           source "${automation_dir}/include/balena-deploy.inc"
-          balena_deploy_artifacts "${{ inputs.machine }}" "${DEPLOY_PATH}/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}" false
+          balena_deploy_artifacts "${{ inputs.machine }}" "${DEPLOY_PATH}" false
 
           # create links required for s3 prepare.ts
           # mkdir -p "${DEPLOY_PATH}/${{ steps.balena-lib.outputs.device_slug }}"
@@ -372,6 +372,8 @@ jobs:
       # TODO: bundle artifacts separately for convience
       # https://github.com/actions/upload-artifact
       - name: Upload artifacts
+        env:
+            DEPLOY_PATH: ${{ runner.temp }}/deploy/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         with:
           name: build-artifacts
@@ -379,9 +381,9 @@ jobs:
           retention-days: 3
           # compression-level: 1
           path: |
-            ${{ runner.temp }}/deploy/*.*
-            ${{ runner.temp }}/deploy/VERSION*
-            ${{ runner.temp }}/deploy/image/balena{,-flasher}.img
+            ${DEPLOY_PATH}/*.*
+            ${DEPLOY_PATH}/VERSION*
+            ${DEPLOY_PATH}/image/balena{,-flasher}.img
 
       ##############################
       # S3 Deploy
