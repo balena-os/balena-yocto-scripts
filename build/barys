@@ -431,13 +431,23 @@ if [ "x$REMOVEBUILD" == "xyes" ]; then
     rm -rf $SCRIPTPATH/../../$BUILD_DIR
 fi
 
-BALENA_MACHINE_LAYER=$(ls ${SCRIPTPATH}/../../layers/meta-balena*/conf/samples/bblayers.conf.sample | awk -F'/' '{print $(NF-3)}')
+LAYERSCONF_PATH=$(find "${SCRIPTPATH}/../../layers/meta-balena"* -name bblayers.conf.sample)
+if [ "$(dirname LAYERSCONF_PATH)" = "samples" ]; then
+	BALENA_MACHINE_LAYER=$(echo "${LAYERSCONF_PATH}" | awk -F'/' '{print $(NF-3)}')
+else
+	BALENA_MACHINE_LAYER=$(echo "${LAYERSCONF_PATH}" | awk -F'/' '{print $(NF-4)}')
+fi
 
 # Configure build
 
 $SCRIPTPATH/generate-conf-notes.sh $SCRIPTPATH/../../layers/${BALENA_MACHINE_LAYER}/conf/ ${DEVICE_TYPES_JSONS}
 
-export TEMPLATECONF=${SCRIPTPATH}/../../layers/${BALENA_MACHINE_LAYER}/conf/samples
+export TEMPLATECONF="$(dirname ${LAYERSCONF_PATH})"
+# scarthgap expects templates to be contained in a subdirectory inside templates/
+if [ -d "${TEMPLATECONF}/default" ]; then
+	TEMPLATECONF="${TEMPLATECONF}/default"
+fi
+
 source ${SCRIPTPATH}/../../layers/poky/oe-init-build-env ${SCRIPTPATH}/../../${BUILD_DIR}
 if [ "x$DEVELOPMENT_IMAGE" == "xyes" ]; then
     sed -i "s/.*OS_DEVELOPMENT =.*/OS_DEVELOPMENT = \"1\"/g" conf/local.conf
