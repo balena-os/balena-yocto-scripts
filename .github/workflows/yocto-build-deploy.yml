@@ -449,7 +449,14 @@ jobs:
       #     region: ${{ vars.AWS_REGION || vars.S3_REGION }}
       #     access_key: ${{ secrets.AWS_ACCESS_KEY_ID || secrets.S3_SECRET_KEY }}
       #     secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY || secrets.S3_ACCESS_KEY }}
-
+     
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1 # Our role seems to be in us-east-1, this is a required parameter
+          role-to-assume: arn:aws:iam::567579488761:role/balena-os-deploy-s3-access-Role-8r0SXqfzgolr
+                  
+      #"If no keys are provided, but an IAM role is associated with the EC2 instance, it will be used transparently".
       - name: Deploy to S3
         if: inputs.deploy-s3 == true && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
         env:
