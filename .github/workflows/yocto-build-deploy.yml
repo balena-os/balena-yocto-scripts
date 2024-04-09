@@ -493,6 +493,79 @@ jobs:
       #     aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY || secrets.S3_ACCESS_KEY }}
       #     aws_region: ${{ vars.AWS_REGION || vars.S3_REGION }}
 
+     
+      ##############################
+      # hostapp Deploy
+      ##############################
+
+      - name: Set SECURE_BOOT_FEATURE_FLAG
+        if: inputs.deploy-hostapp == true
+        run: |
+          if [ -n "${{ inputs.sign-image }}" = "true" ]; then
+            echo "SECURE_BOOT_FEATURE_FLAG=yes" >> $GITHUB_ENV
+          else
+            echo "SECURE_BOOT_FEATURE_FLAG=no" >> $GITHUB_ENV
+          fi
+
+      - name: Pull helper image
+        id: hostapp-helper-image
+        if: inputs.deploy-hostapp == true
+        env:
+          HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
+          YOCTO_SCRIPTS_VERSION: ${{ steps.balena-lib.outputs.yocto_scripts_version }}
+          YOCTO_SCRIPTS_REF: ${{ steps.balena-lib.outputs.yocto_scripts_ref }}
+          HELPER_IMAGE_VARIANT: balena-push-env
+        run: |
+          image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_VERSION}-${HELPER_IMAGE_VARIANT}"
+          if ! docker pull "${image_tag}"; then
+            image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_REF}-${HELPER_IMAGE_VARIANT}"
+            docker pull "${image_tag}"
+          fi
+
+          image_id="$(docker images --format "{{.ID}}" "${image_tag}")"
+          echo "id=${image_id}" >> $GITHUB_OUTPUT
+
+      # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
+      # https://github.com/balena-io/deploy-to-balena-action/issues/286
+      - name: Deploy to balena
+        if: inputs.deploy-hostapp == true
+        env:
+          BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
+          SLUG: "${{ steps.balena-lib.outputs.device_slug }}"
+          APPNAME: "${{ steps.balena-lib.outputs.device_slug }}"
+          BALENAOS_TOKEN: "${{ secrets.BALENA_API_KEY }}"
+          META_BALENA_VERSION: "${{ steps.balena-lib.outputs.meta_balena_version }}"
+          RELEASE_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
+          BOOTABLE: 1
+          DEPLOY: yes
+          FINAL: yes
+          ESR: "${{ inputs.deploy-esr }}"
+          balenaCloudEmail:
+          balenaCloudPassword:
+          HOSTAPP_PATH: ${{ runner.temp }}/deploy/balena-image.docker
+        run: |
+          docker run --rm -t \
+            --privileged \
+            -e APPNAME \
+            -e API_ENV \
+            -e BALENAOS_TOKEN \
+            -e BALENAOS_ACCOUNT \
+            -e META_BALENA_VERSION \
+            -e RELEASE_VERSION \
+            -e MACHINE \
+            -e VERBOSE \
+            -e BOOTABLE \
+            -e DEPLOY \
+            -e FINAL \
+            -e ESR \
+            -e SECURE_BOOT_FEATURE_FLAG \
+            -e balenaCloudEmail \
+            -e balenaCloudPassword \
+            -v "$(readlink --canonicalize "${HOSTAPP_PATH}")":/host/appimage.docker \
+            -v "${WORKSPACE}":/work \
+            -v "${WORKSPACE}":/deploy \
+            "${{ steps.hostapp-helper-image.outputs.id }}" /balena-deploy-block.sh
+
       ##############################
       # AMI Deploy
       ##############################
@@ -580,74 +653,3 @@ jobs:
             -w "${WORKSPACE}" \
             "${{ steps.ami-helper-image.outputs.id }}" /balena-generate-ami.sh
 
-      ##############################
-      # hostapp Deploy
-      ##############################
-
-      - name: Set SECURE_BOOT_FEATURE_FLAG
-        if: inputs.deploy-hostapp == true
-        run: |
-          if [ -n "${{ inputs.sign-image }}" = "true" ]; then
-            echo "SECURE_BOOT_FEATURE_FLAG=yes" >> $GITHUB_ENV
-          else
-            echo "SECURE_BOOT_FEATURE_FLAG=no" >> $GITHUB_ENV
-          fi
-
-      - name: Pull helper image
-        id: hostapp-helper-image
-        if: inputs.deploy-hostapp == true
-        env:
-          HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
-          YOCTO_SCRIPTS_VERSION: ${{ steps.balena-lib.outputs.yocto_scripts_version }}
-          YOCTO_SCRIPTS_REF: ${{ steps.balena-lib.outputs.yocto_scripts_ref }}
-          HELPER_IMAGE_VARIANT: balena-push-env
-        run: |
-          image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_VERSION}-${HELPER_IMAGE_VARIANT}"
-          if ! docker pull "${image_tag}"; then
-            image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_REF}-${HELPER_IMAGE_VARIANT}"
-            docker pull "${image_tag}"
-          fi
-
-          image_id="$(docker images --format "{{.ID}}" "${image_tag}")"
-          echo "id=${image_id}" >> $GITHUB_OUTPUT
-
-      # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
-      # https://github.com/balena-io/deploy-to-balena-action/issues/286
-      - name: Deploy to balena
-        if: inputs.deploy-hostapp == true
-        env:
-          BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
-          SLUG: "${{ steps.balena-lib.outputs.device_slug }}"
-          APPNAME: "${{ steps.balena-lib.outputs.device_slug }}"
-          BALENAOS_TOKEN: "${{ secrets.BALENA_API_KEY }}"
-          META_BALENA_VERSION: "${{ steps.balena-lib.outputs.meta_balena_version }}"
-          RELEASE_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
-          BOOTABLE: 1
-          DEPLOY: yes
-          FINAL: yes
-          ESR: "${{ inputs.deploy-esr }}"
-          balenaCloudEmail:
-          balenaCloudPassword:
-          HOSTAPP_PATH: ${{ runner.temp }}/deploy/balena-image.docker
-        run: |
-          docker run --rm -t \
-            --privileged \
-            -e APPNAME \
-            -e API_ENV \
-            -e BALENAOS_TOKEN \
-            -e BALENAOS_ACCOUNT \
-            -e META_BALENA_VERSION \
-            -e RELEASE_VERSION \
-            -e MACHINE \
-            -e VERBOSE \
-            -e BOOTABLE \
-            -e DEPLOY \
-            -e FINAL \
-            -e ESR \
-            -e SECURE_BOOT_FEATURE_FLAG \
-            -e balenaCloudEmail \
-            -e balenaCloudPassword \
-            -v "$(readlink --canonicalize "${HOSTAPP_PATH}")":/host/appimage.docker \
-            -v "${WORKSPACE}":/work \
-            -v "${WORKSPACE}":/deploy \
-            "${{ steps.hostapp-helper-image.outputs.id }}" /balena-deploy-block.sh
