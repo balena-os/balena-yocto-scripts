@@ -353,18 +353,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zip
 
+      - name: Export prepare artifacts deploy path to env
+        env: 
+          DEVICE_TYPE_SLUG: ${{ steps.balena-lib.outputs.device_slug }}
+          VERSION: ${{ steps.balena-lib.outputs.os_version }}
+        run: | 
+          echo "DEPLOY_PATH=${{ runner.temp }}/deploy/${DEVICE_TYPE_SLUG}/${VERSION}" >> $GITHUB_ENV
+
       # TODO: prepare artifacts manually to replace balena_deploy_artifacts
       - name: Prepare artifacts
-        env:
-          DEPLOY_PATH: ${{ runner.temp }}/deploy/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}
         run: |
+          # DEBUG: check deploy path
+          echo "DEPLOY_PATH = ${DEPLOY_PATH}"
+
           source "${automation_dir}/include/balena-deploy.inc"
           balena_deploy_artifacts "${{ inputs.machine }}" "${DEPLOY_PATH}" false
 
           # create links required for s3 prepare.ts
           # mkdir -p "${DEPLOY_PATH}/${{ steps.balena-lib.outputs.device_slug }}"
 
-          # symlink to self??
+          # symlinks don't seem to work in the volume we mount to the helper image
           #ln -sf ../.. "${DEPLOY_PATH}/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}"
           
           find "${DEPLOY_PATH}" -exec ls -lh {} \;
@@ -372,8 +380,6 @@ jobs:
       # TODO: bundle artifacts separately for convience
       # https://github.com/actions/upload-artifact
       - name: Upload artifacts
-        env:
-            DEPLOY_PATH: ${{ runner.temp }}/deploy/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         with:
           name: build-artifacts
@@ -403,14 +409,15 @@ jobs:
         if: inputs.deploy-s3 == true && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
         env:
           HELPER_IMAGE: balena/balena-img:6.20.26
-          DEPLOY_PATH: ${{ runner.temp }}/deploy
+          # This path is different from DEPLOY_PATH due to the structure the prepare.ts expects: "/host/image/${device_slug}/${version}/..."
+          PREPARE_DEPLOY_PATH: ${{ runner.temp }}/deploy
         run: |
           docker run --rm \
             -e BASE_DIR=/host/images \
-            -v "${DEPLOY_PATH}:/host/images" \
+            -v "${PREPARE_DEPLOY_PATH}:/host/images" \
             ${HELPER_IMAGE} /usr/src/app/node_modules/.bin/ts-node /usr/src/app/scripts/prepare.ts
 
-          find "${DEPLOY_PATH}" -exec ls -lh {} \;
+          find "${PREPARE_DEPLOY_PATH}" -exec ls -lh {} \;
 
       - name: Set S3 ACL (private)
         id: s3-acl-private
