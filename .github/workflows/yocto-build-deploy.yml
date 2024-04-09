@@ -6,12 +6,6 @@ on:
       BALENA_API_KEY:
         description: balena API key for deploying releases
         required: false
-      S3_ACCESS_KEY:
-        description: S3 access key
-        required: false
-      S3_SECRET_KEY:
-        description: S3 secret key
-        required: false
       DOCKERHUB_USER:
         description: Dockerhub user for pulling private helper images
         required: false
@@ -466,8 +460,6 @@ jobs:
           SLUG: ${{ steps.balena-lib.outputs.device_slug }}
           VERSION: ${{ steps.balena-lib.outputs.os_version }}
           SOURCE_DIR: ${{ runner.temp }}/deploy
-          S3_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID || secrets.S3_SECRET_KEY}}
-          S3_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY || secrets.S3_ACCESS_KEY }}
         run: |
           if [ -n "$($S3_CMD ls ${S3_URL}/${SLUG}/${VERSION}/)" ] && [ -z "$($S3_CMD ls ${S3_URL}/${SLUG}/${VERSION}/IGNORE)" ]; then
             echo "::warning::Deployment already exists at ${S3_URL}/${VERSION}"
@@ -626,8 +618,6 @@ jobs:
       - name: Deploy AMI
         if: inputs.deploy-ami == true
         env:
-          AWS_ACCESS_KEY_ID: "${{ secrets.S3_ACCESS_KEY}}"
-          AWS_SECRET_ACCESS_KEY: "${{ secrets.S3_SECRET_KEY }}"
           AWS_DEFAULT_REGION: "${{ env.S3_REGION }}"
           AWS_SESSION_TOKEN: "" # only required if MFA is enabled
           AWS_SUBNET_ID: ${{ vars.AWS_SUBNET || 'subnet-02d18a08ea4058574' }}
