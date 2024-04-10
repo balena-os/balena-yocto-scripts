@@ -6,6 +6,9 @@ on:
       BALENA_API_KEY:
         description: balena API key for deploying releases # TODO: Different for staging and prod - add another Secret for staging key
         required: false
+      BALENAOS_STAGING_TOKEN:
+        description: balena API key for deploying releases to staging # TODO: Different for staging and prod - add another Secret for staging key
+        required: false
       DOCKERHUB_USER:
         description: Dockerhub user for pulling private helper images
         required: false
@@ -548,6 +551,22 @@ jobs:
           image_id="$(docker images --format "{{.ID}}" "${image_tag}")"
           echo "id=${image_id}" >> $GITHUB_OUTPUT
 
+      - name: Check Balena CLI
+        run: |
+          # Test installation works
+          balena --version
+
+      ## SELECT WHICH API KEY TO USE BASED ON ENV
+      - name: Select Balena API key for Prod
+        if: inputs.environment == 'production'
+        run: echo "BALENAOS_TOKEN=${{ secrets.BALENA_API_KEY }}" >> $GITHUB_ENV
+
+      - name: Select Balena API key for staging
+        if: inputs.environment == 'staging'
+        run: echo "BALENAOS_TOKEN=${{ secrets.BALENAOS_STAGING_TOKEN }}" >> $GITHUB_ENV
+
+
+
       # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
       # https://github.com/balena-io/deploy-to-balena-action/issues/286
       - name: Deploy to balena
@@ -556,38 +575,184 @@ jobs:
           BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
           SLUG: "${{ steps.balena-lib.outputs.device_slug }}"
           APPNAME: "${{ steps.balena-lib.outputs.device_slug }}"
-          BALENAOS_TOKEN: "${{ secrets.BALENA_API_KEY }}"
+          #BALENAOS_TOKEN: "${{ secrets.BALENA_API_KEY }}"
           META_BALENA_VERSION: "${{ steps.balena-lib.outputs.meta_balena_version }}"
           RELEASE_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
           BOOTABLE: 1
+          TRANSLATION: "v6"
           DEPLOY: yes
-          FINAL: yes
+          FINAL: no
           ESR: "${{ inputs.deploy-esr }}"
           balenaCloudEmail:
           balenaCloudPassword:
-          HOSTAPP_PATH: ${{ runner.temp }}/deploy/balena-image.docker
+          #HOSTAPP_PATH: ${{ runner.temp }}/deploy/balena-image.docker
+          VERSION: ${{ steps.balena-lib.outputs.os_version }}
         run: |
-          docker run --rm -t \
-            --privileged \
-            -e APPNAME \
-            -e API_ENV \
-            -e BALENAOS_TOKEN \
-            -e BALENAOS_ACCOUNT \
-            -e META_BALENA_VERSION \
-            -e RELEASE_VERSION \
-            -e MACHINE \
-            -e VERBOSE \
-            -e BOOTABLE \
-            -e DEPLOY \
-            -e FINAL \
-            -e ESR \
-            -e SECURE_BOOT_FEATURE_FLAG \
-            -e balenaCloudEmail \
-            -e balenaCloudPassword \
-            -v "$(readlink --canonicalize "${HOSTAPP_PATH}")":/host/appimage.docker \
-            -v "${WORKSPACE}":/work \
-            -v "${WORKSPACE}":/deploy \
-            "${{ steps.hostapp-helper-image.outputs.id }}" /balena-deploy-block.sh
+          set -e
+
+          ## What is that for??
+          # if [ -f "/host/appimage.docker" ]; then
+          #   _local_image=$(docker load -i /host/appimage.docker | cut -d: -f1 --complement | tr -d " " )
+          # fi
+
+          _local_image=$(docker load -i ${DEPLOY_PATH}/balena-image.docker | cut -d: -f1 --complement | tr -d " " )
+
+          echo "[INFO] Logging into $API_ENV as ${BALENAOS_ACCOUNT}"
+          export BALENARC_BALENA_URL=${API_ENV}
+          balena login --token "${BALENAOS_TOKEN}"
+
+          if [ "$ESR" = "true" ]; then
+            echo "Deploying ESR release"
+            APPNAME="${APPNAME}-esr"
+          fi
+
+
+          ##CHECK PATH IS RIGHT
+          if [ -f "${WORKSPACE}/balena.yml" ]; then
+            echo -e "\nversion: ${VERSION}" >> "${WORKSPACE}/balena.yml"
+            if [ "${SECURE_BOOT_FEATURE_FLAG}" = "yes" ]; then
+              sed -i '/provides:/a \  - type: sw.feature\n    slug: secureboot' "/${WORKSPACE}/balena.yml"
+            fi
+          fi
+
+          ls ${WORKSPACE}
+
+          cat ${WORKSPACE}/balena.yml
+
+          echo "[INFO] Deploying  to ${BALENAOS_ACCOUNT}/${APPNAME}"
+          #balena_api_create_public_app "${APPNAME}" "${BALENARC_BALENA_URL}" "${MACHINE}" "${balenaCloudEmail}" "${balenaCloudPassword}" "${ESR}" "${BOOTABLE}"
+          # Create public app 
+          _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application?\$filter=(slug%20eq%20'${BALENAOS_ACCOUNT}/${APPNAME}')" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
+          _appID=$(echo "${_json}" | jq --raw-output '.d[0].id')
+          echo "${_appID}"
+
+          # Check if app already exists if it doesn't then...
+          # TODO: Fix logic for when app doesn't already exist
+          if [ -z "${_appID}" ] || [ "${_appID}" = "null" ]; then
+            echo "Creating App"
+            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"app_name": "${BALENAOS_ACCOUNT}/${APPNAME}", "device_type": "${APPNAME}"}')
+            appID=$(echo "${_json}" | jq --raw-output '.id' || true)
+            echo "${_appID}"
+
+            echo "creating role access"
+            balena_api_add_role_access "${_appName}" "${_apiEnv}" "${_token}"
+      
+            appID=$(__set_public_app "${_appName}" "${_apiEnv}" "${_token}" "${_url}")
+            if [ -n "${_appID}" ] && [ "${_appID}" != "null" ]; then
+              >&2 echo "[${_appName}] Application ${_appID} has been created as public"
+            fi
+            appID=$(__set_class "${_appName}" "app" "${_apiEnv}" "${_token}")
+            if [ -n "${_appID}" ] && [ "${_appID}" != "null" ]; then
+              >&2 echo "[${_appName}] Application ${_appID} has been set as app"
+            fi
+            if [ "${_bootable}" = "1" ]; then
+              set_bootable_app "${_appName}" "${_apiEnv}" "${_token}"
+            fi
+            if [ "${_esr}" = "true" ]; then
+              set_esr_policy "${_appName}" "${_apiEnv}" "${_token}"
+            fi
+          else
+            >&2 echo "[${_appName}] Application ${_appID} already exists."
+          fi
+          echo "${_appID}"
+
+
+          # Push to hostapp
+          #_releaseID=$(balena_lib_release "${BALENAOS_ACCOUNT}/$APPNAME" "${FINAL}" "/deploy" "${API_ENV}" "$_local_image")
+
+          # REDUNDANT?
+          if [ -f "${WORKSPACE}/balena.yml" ]; then
+            contract_version=$(awk '/version:/ {print $2}' "${WORKSPACE}/balena.yml")
+            if [ "${_contract_version}" != "${VERSION}" ]; then
+              >&2 echo "balena_lib_release: Version mismatch, contract ${_contract_version} os ${VERSION}"
+            fi
+          else
+            >&2 echo "balena_lib_release: balena.yml contract file not present"
+          fi
+
+          if [ "${FINAL}" = "no" ]; then
+            status="--draft"
+          fi
+          #[ "${VERBOSE}" = "verbose" ] && _debug="--debug"
+
+
+          if [ -n "${_local_image}" ]; then
+            releaseID=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" "${_local_image}" --source "${WORKSPACE}" ${_status} ${_debug} | sed -n 's/.*Release: //p')
+          else
+            releaseID=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" --build --source "${WORKSPACE}" ${_status} ${_debug} | sed -n 's/.*Release: //p')
+          fi
+          [ -n "${releaseID}" ] && >&2 echo "Deployed ${_local_image} to ${BALENAOS_ACCOUNT}/${APPNAME} as ${_status##--} at ${_releaseID}"
+          echo "${releaseID}"
+
+
+          if [ -z "${releaseID}" ]; then
+            echo "[INFO] Failed to deploy to ${BALENAOS_ACCOUNT}/${APPNAME}"
+            exit 1
+          fi
+
+
+          # _assets="$(find /deploy/deploy-jenkins -name licenses.tar.gz) /deploy/CHANGELOG.md"
+          # _rid=$(balena_api_releaseID_from_commitID "${_releaseID}" "${API_ENV}" "${BALENAOS_TOKEN}")
+          # for _asset in ${_assets}; do
+          #   if [ -f "${_asset}" ]; then
+          #     _aid=$(balena_api_add_release_asset "${_rid}" "${API_ENV}" "${BALENAOS_TOKEN}" "${_asset}")
+          #     if [ -n "${_aid}" ]; then
+          #       echo "[INFO] Added ${_asset} with ID ${_aid} to release ${_releaseID}"
+          #     else
+          #       echo "[ERROR] Failed to add ${_asset} to release ${_releaseID}"
+          #       exit 1
+          #     fi
+          #   fi
+          # done
+
+          # # Legacy hostapp tagging
+          # if [ "${DEPLOY}" = "yes" ] && [ "${FINAL}" = "yes" ]; then
+          #   balena_lib_release_finalize "${_releaseID}" "${BALENAOS_ACCOUNT}/${APPNAME}" "${API_ENV}" "${BALENAOS_TOKEN}" "${ESR}"
+          # fi
+
+          # balena_docker_stop
+          # exit 0
+
+      # # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
+      # # https://github.com/balena-io/deploy-to-balena-action/issues/286
+      # - name: Deploy to balena
+      #   if: inputs.deploy-hostapp == true
+      #   env:
+      #     BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
+      #     SLUG: "${{ steps.balena-lib.outputs.device_slug }}"
+      #     APPNAME: "${{ steps.balena-lib.outputs.device_slug }}"
+      #     BALENAOS_TOKEN: "${{ secrets.BALENA_API_KEY }}"
+      #     META_BALENA_VERSION: "${{ steps.balena-lib.outputs.meta_balena_version }}"
+      #     RELEASE_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
+      #     BOOTABLE: 1
+      #     DEPLOY: yes
+      #     FINAL: yes
+      #     ESR: "${{ inputs.deploy-esr }}"
+      #     balenaCloudEmail:
+      #     balenaCloudPassword:
+      #     HOSTAPP_PATH: ${{ runner.temp }}/deploy/balena-image.docker
+      #   run: |
+      #     docker run --rm -t \
+      #       --privileged \
+      #       -e APPNAME \
+      #       -e API_ENV \
+      #       -e BALENAOS_TOKEN \
+      #       -e BALENAOS_ACCOUNT \
+      #       -e META_BALENA_VERSION \
+      #       -e RELEASE_VERSION \
+      #       -e MACHINE \
+      #       -e VERBOSE \
+      #       -e BOOTABLE \
+      #       -e DEPLOY \
+      #       -e FINAL \
+      #       -e ESR \
+      #       -e SECURE_BOOT_FEATURE_FLAG \
+      #       -e balenaCloudEmail \
+      #       -e balenaCloudPassword \
+      #       -v "$(readlink --canonicalize "${HOSTAPP_PATH}")":/host/appimage.docker \
+      #       -v "${WORKSPACE}":/work \
+      #       -v "${WORKSPACE}":/deploy \
+      #       "${{ steps.hostapp-helper-image.outputs.id }}" /balena-deploy-block.sh
 
       ##############################
       # AMI Deploy
