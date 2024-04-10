@@ -72,9 +72,9 @@ jobs:
     secrets: inherit
     with:
       # runs-on: '[ "ubuntu-latest" ]'
-      device-repo: ${{ inputs.device-repo || 'balena-os/balena-generic' }}
-      device-repo-ref: ${{ inputs.device-repo-ref || 'master' }}
-      meta-balena-ref: ${{ inputs.meta-balena-ref || '' }}
+      device-repo: 'balena-os/balena-generic'
+      device-repo-ref: 'master'
+      meta-balena-ref: ''
       environment: ${{ inputs.environment || 'staging' }}
       yocto-scripts-ref: ${{ inputs.yocto-scripts-ref }}
       machine: ${{ inputs.machine || 'generic-amd64' }}
