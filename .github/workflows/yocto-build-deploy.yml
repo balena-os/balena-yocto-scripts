@@ -108,6 +108,9 @@ env:
   MACHINE: ${{ inputs.machine }}
   VERBOSE: verbose
 
+permissions:
+  id-token: write   # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
+
 jobs:
   build:
     name: Build
