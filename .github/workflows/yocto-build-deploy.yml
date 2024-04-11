@@ -663,7 +663,7 @@ jobs:
 
           # REDUNDANT?
           if [ -f "${WORKSPACE}/balena.yml" ]; then
-            contract_version=$(awk '/version:/ {print $2}' "${WORKSPACE}/balena.yml")
+            _contract_version=$(awk '/version:/ {print $2}' "${WORKSPACE}/balena.yml")
             if [ "${_contract_version}" != "${VERSION}" ]; then
               >&2 echo "balena_lib_release: Version mismatch, contract ${_contract_version} os ${VERSION}"
             fi
@@ -678,11 +678,11 @@ jobs:
 
 
           if [ -n "${_local_image}" ]; then
-            releaseID=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" "${_local_image}" --source "${WORKSPACE}" ${_status} ${_debug} | sed -n 's/.*Release: //p')
+            releaseID=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" "${_local_image}" --source "${WORKSPACE}" ${status} ${_debug} | sed -n 's/.*Release: //p')
           else
-            releaseID=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" --build --source "${WORKSPACE}" ${_status} ${_debug} | sed -n 's/.*Release: //p')
+            releaseID=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" --build --source "${WORKSPACE}" ${status} ${_debug} | sed -n 's/.*Release: //p')
           fi
-          [ -n "${releaseID}" ] && >&2 echo "Deployed ${_local_image} to ${BALENAOS_ACCOUNT}/${APPNAME} as ${_status##--} at ${_releaseID}"
+          [ -n "${releaseID}" ] && >&2 echo "Deployed ${_local_image} to ${BALENAOS_ACCOUNT}/${APPNAME} as ${status##--} at ${releaseID}"
           echo "${releaseID}"
 
 
@@ -759,84 +759,84 @@ jobs:
       # AMI Deploy
       ##############################
 
-      - name: Set AMI arch
-        id: ami-arch
-        if: inputs.deploy-ami == true
-        run: |
-          if [ "${dt_arch}" = "amd64" ]; then
-            echo "string=x86_64" >> $GITHUB_OUTPUT
-          elif [ "${dt_arch}" = "aarch64" ]; then
-            echo "string=arm64" >> $GITHUB_OUTPUT
-          fi
+      # - name: Set AMI arch
+      #   id: ami-arch
+      #   if: inputs.deploy-ami == true
+      #   run: |
+      #     if [ "${dt_arch}" = "amd64" ]; then
+      #       echo "string=x86_64" >> $GITHUB_OUTPUT
+      #     elif [ "${dt_arch}" = "aarch64" ]; then
+      #       echo "string=arm64" >> $GITHUB_OUTPUT
+      #     fi
 
-      # AMI name format: balenaOS(-installer?)(-secureboot?)-VERSION-DEVICE_TYPE
-      - name: Set AMI name
-        id: ami-name
-        if: inputs.deploy-ami == true
-        run: |
-          if [ "${{ inputs.sign-image }}" = "true" ]; then
-            echo "string=balenaOS-secureboot-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
-          else
-            echo "string=balenaOS-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
-          fi
+      # # AMI name format: balenaOS(-installer?)(-secureboot?)-VERSION-DEVICE_TYPE
+      # - name: Set AMI name
+      #   id: ami-name
+      #   if: inputs.deploy-ami == true
+      #   run: |
+      #     if [ "${{ inputs.sign-image }}" = "true" ]; then
+      #       echo "string=balenaOS-secureboot-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "string=balenaOS-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
+      #     fi
 
-      - name: Pull helper image
-        id: ami-helper-image
-        if: inputs.deploy-ami == true
-        env:
-          HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
-          YOCTO_SCRIPTS_VERSION: ${{ steps.balena-lib.outputs.yocto_scripts_version }}
-          YOCTO_SCRIPTS_REF: ${{ steps.balena-lib.outputs.yocto_scripts_ref }}
-          HELPER_IMAGE_VARIANT: yocto-build-env
-        run: |
-          image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_VERSION}-${HELPER_IMAGE_VARIANT}"
-          if ! docker pull "${image_tag}"; then
-            image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_REF}-${HELPER_IMAGE_VARIANT}"
-            docker pull "${image_tag}"
-          fi
+      # - name: Pull helper image
+      #   id: ami-helper-image
+      #   if: inputs.deploy-ami == true
+      #   env:
+      #     HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
+      #     YOCTO_SCRIPTS_VERSION: ${{ steps.balena-lib.outputs.yocto_scripts_version }}
+      #     YOCTO_SCRIPTS_REF: ${{ steps.balena-lib.outputs.yocto_scripts_ref }}
+      #     HELPER_IMAGE_VARIANT: yocto-build-env
+      #   run: |
+      #     image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_VERSION}-${HELPER_IMAGE_VARIANT}"
+      #     if ! docker pull "${image_tag}"; then
+      #       image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_REF}-${HELPER_IMAGE_VARIANT}"
+      #       docker pull "${image_tag}"
+      #     fi
 
-          image_id="$(docker images --format "{{.ID}}" "${image_tag}")"
-          echo "id=${image_id}" >> $GITHUB_OUTPUT
+      #     image_id="$(docker images --format "{{.ID}}" "${image_tag}")"
+      #     echo "id=${image_id}" >> $GITHUB_OUTPUT
 
-      - name: Deploy AMI
-        if: inputs.deploy-ami == true
-        env:
-          AWS_DEFAULT_REGION: "${{ env.S3_REGION }}"
-          AWS_SESSION_TOKEN: "" # only required if MFA is enabled
-          AWS_SUBNET_ID: ${{ vars.AWS_SUBNET || 'subnet-02d18a08ea4058574' }}
-          AWS_SECURITY_GROUP_ID: ${{ vars.AWS_SECURITY_GROUP || 'sg-057937f4d89d9d51c' }}
-          BALENACLI_TOKEN: ${{ secrets.BALENA_API_KEY }}
-          HOSTOS_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
-          AMI_NAME: "${{ steps.ami-name.outputs.string }}"
-          AMI_ARCHITECTURE: "${{ steps.ami-arch.outputs.string }}"
-          AMI_SECUREBOOT: "${{ inputs.sign-image }}"
-          BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ steps.ami-arch.outputs.string }}"
-          BALENA_PRELOAD_COMMIT: current
-          IMAGE: ${{ runner.temp }}/deploy/image/balena.img
-        run: |
-          docker run --rm -t \
-            --privileged \
-            --network host \
-            -v "${WORKSPACE}:${WORKSPACE}" \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -e VERBOSE \
-            -e AWS_ACCESS_KEY_ID \
-            -e AWS_SECRET_ACCESS_KEY \
-            -e AWS_DEFAULT_REGION \
-            -e AWS_SESSION_TOKEN \
-            -e AMI_NAME \
-            -e AMI_ARCHITECTURE \
-            -e AMI_SECUREBOOT \
-            -e S3_BUCKET \
-            -e BALENA_PRELOAD_APP \
-            -e BALENARC_BALENA_URL \
-            -e BALENACLI_TOKEN \
-            -e BALENA_PRELOAD_COMMIT \
-            -e IMAGE \
-            -e MACHINE \
-            -e HOSTOS_VERSION \
-            -e AWS_SUBNET_ID \
-            -e AWS_SECURITY_GROUP_ID \
-            -w "${WORKSPACE}" \
-            "${{ steps.ami-helper-image.outputs.id }}" /balena-generate-ami.sh
+      # - name: Deploy AMI
+      #   if: inputs.deploy-ami == true
+      #   env:
+      #     AWS_DEFAULT_REGION: "${{ env.S3_REGION }}"
+      #     AWS_SESSION_TOKEN: "" # only required if MFA is enabled
+      #     AWS_SUBNET_ID: ${{ vars.AWS_SUBNET || 'subnet-02d18a08ea4058574' }}
+      #     AWS_SECURITY_GROUP_ID: ${{ vars.AWS_SECURITY_GROUP || 'sg-057937f4d89d9d51c' }}
+      #     BALENACLI_TOKEN: ${{ secrets.BALENA_API_KEY }}
+      #     HOSTOS_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
+      #     AMI_NAME: "${{ steps.ami-name.outputs.string }}"
+      #     AMI_ARCHITECTURE: "${{ steps.ami-arch.outputs.string }}"
+      #     AMI_SECUREBOOT: "${{ inputs.sign-image }}"
+      #     BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ steps.ami-arch.outputs.string }}"
+      #     BALENA_PRELOAD_COMMIT: current
+      #     IMAGE: ${{ runner.temp }}/deploy/image/balena.img
+      #   run: |
+      #     docker run --rm -t \
+      #       --privileged \
+      #       --network host \
+      #       -v "${WORKSPACE}:${WORKSPACE}" \
+      #       -v /var/run/docker.sock:/var/run/docker.sock \
+      #       -e VERBOSE \
+      #       -e AWS_ACCESS_KEY_ID \
+      #       -e AWS_SECRET_ACCESS_KEY \
+      #       -e AWS_DEFAULT_REGION \
+      #       -e AWS_SESSION_TOKEN \
+      #       -e AMI_NAME \
+      #       -e AMI_ARCHITECTURE \
+      #       -e AMI_SECUREBOOT \
+      #       -e S3_BUCKET \
+      #       -e BALENA_PRELOAD_APP \
+      #       -e BALENARC_BALENA_URL \
+      #       -e BALENACLI_TOKEN \
+      #       -e BALENA_PRELOAD_COMMIT \
+      #       -e IMAGE \
+      #       -e MACHINE \
+      #       -e HOSTOS_VERSION \
+      #       -e AWS_SUBNET_ID \
+      #       -e AWS_SECURITY_GROUP_ID \
+      #       -w "${WORKSPACE}" \
+      #       "${{ steps.ami-helper-image.outputs.id }}" /balena-generate-ami.sh
 
