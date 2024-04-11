@@ -355,7 +355,7 @@ jobs:
           #   exit 1
           # fi
 
-          du -cksh shared/yocto-cache/$(whoami)/*
+          #du -cksh shared/yocto-cache/$(whoami)/*
 
       # TODO: pre-install on self-hosted-runners
       - name: Install zip package
