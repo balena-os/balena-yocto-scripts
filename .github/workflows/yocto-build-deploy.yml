@@ -622,7 +622,7 @@ jobs:
           echo "[INFO] Deploying  to ${BALENAOS_ACCOUNT}/${APPNAME}"
           #balena_api_create_public_app "${APPNAME}" "${BALENARC_BALENA_URL}" "${MACHINE}" "${balenaCloudEmail}" "${balenaCloudPassword}" "${ESR}" "${BOOTABLE}"
           # Create public app 
-          _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application?\$filter=(slug%20eq%20'${BALENAOS_ACCOUNT}/${APPNAME}')" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
+          _json=$(${CURL} -X GET "https://api.${API_ENV}/${TRANSLATION}/application?\$filter=(slug%20eq%20'${BALENAOS_ACCOUNT}/${APPNAME}')" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
           _appID=$(echo "${_json}" | jq --raw-output '.d[0].id')
           echo "${_appID}"
 
