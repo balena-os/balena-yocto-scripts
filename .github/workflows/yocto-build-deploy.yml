@@ -442,12 +442,12 @@ jobs:
       - name: Set S3 destination directory
         id: s3-images-dir
         if: inputs.deploy-s3 == true && inputs.deploy-esr != true
-        run: echo "string=images/${{ steps.balena-lib.outputs.device_slug }}" >> $GITHUB_OUTPUT
+        run: echo "string=images" >> $GITHUB_OUTPUT
 
       - name: Set S3 destination directory (ESR)
         id: s3-esr-images-dir
         if: inputs.deploy-s3 == true && inputs.deploy-esr == true
-        run: echo "string=esr-images/${{ steps.balena-lib.outputs.device_slug }}" >> $GITHUB_OUTPUT
+        run: echo "string=esr-images" >> $GITHUB_OUTPUT
 
       # # TODO: pre-install on self-hosted-runners
       # # https://github.com/s3-actions/s3cmd
@@ -533,23 +533,24 @@ jobs:
             echo "SECURE_BOOT_FEATURE_FLAG=no" >> $GITHUB_ENV
           fi
 
-      - name: Pull helper image
-        id: hostapp-helper-image
-        if: inputs.deploy-hostapp == true
-        env:
-          HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
-          YOCTO_SCRIPTS_VERSION: ${{ steps.balena-lib.outputs.yocto_scripts_version }}
-          YOCTO_SCRIPTS_REF: ${{ steps.balena-lib.outputs.yocto_scripts_ref }}
-          HELPER_IMAGE_VARIANT: balena-push-env
-        run: |
-          image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_VERSION}-${HELPER_IMAGE_VARIANT}"
-          if ! docker pull "${image_tag}"; then
-            image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_REF}-${HELPER_IMAGE_VARIANT}"
-            docker pull "${image_tag}"
-          fi
+      # Not needed now as trying to accomplish the same things in the workflow file instead
+      # - name: Pull helper image
+      #   id: hostapp-helper-image
+      #   if: inputs.deploy-hostapp == true
+      #   env:
+      #     HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
+      #     YOCTO_SCRIPTS_VERSION: ${{ steps.balena-lib.outputs.yocto_scripts_version }}
+      #     YOCTO_SCRIPTS_REF: ${{ steps.balena-lib.outputs.yocto_scripts_ref }}
+      #     HELPER_IMAGE_VARIANT: balena-push-env
+      #   run: |
+      #     image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_VERSION}-${HELPER_IMAGE_VARIANT}"
+      #     if ! docker pull "${image_tag}"; then
+      #       image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_REF}-${HELPER_IMAGE_VARIANT}"
+      #       docker pull "${image_tag}"
+      #     fi
 
-          image_id="$(docker images --format "{{.ID}}" "${image_tag}")"
-          echo "id=${image_id}" >> $GITHUB_OUTPUT
+      #     image_id="$(docker images --format "{{.ID}}" "${image_tag}")"
+      #     echo "id=${image_id}" >> $GITHUB_OUTPUT
 
       - name: Check Balena CLI
         run: |
@@ -706,6 +707,7 @@ jobs:
           #   fi
           # done
 
+          #TODO: THIS MUST REMAIN FOR ESRs only
           # # Legacy hostapp tagging
           # if [ "${DEPLOY}" = "yes" ] && [ "${FINAL}" = "yes" ]; then
           #   balena_lib_release_finalize "${_releaseID}" "${BALENAOS_ACCOUNT}/${APPNAME}" "${API_ENV}" "${BALENAOS_TOKEN}" "${ESR}"
