@@ -66,6 +66,6 @@ jobs:
       sign-image: false
       os-dev: false
       deploy-esr: false
-      device_slug: ${{ needs.yocto-build.outputs.device_slug }}
-      os_version: ${{ needs.yocto-build.outputs.os_version }}
-      is_private: ${{ needs.yocto-build.outputs.is_private }}
+      device_slug: "generic-amd64"
+      os_version: "5.2.4"
+      is_private: false

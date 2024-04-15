@@ -101,7 +101,7 @@ on:
       is_private:
         description: Private flag
         required: true
-        type: string
+        type: boolean
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
