@@ -1,0 +1,657 @@
+name: "Yocto"
+
+on:
+  workflow_call:
+    secrets:
+      BALENA_API_KEY:
+        description: balena API key for deploying releases # TODO: Different for staging and prod - add another Secret for staging key
+        required: false
+      BALENAOS_STAGING_TOKEN:
+        description: balena API key for deploying releases to staging # TODO: Different for staging and prod - add another Secret for staging key
+        required: false
+      DOCKERHUB_USER:
+        description: Dockerhub user for pulling private helper images
+        required: false
+      DOCKERHUB_TOKEN:
+        description: Dockerhub token for pulling private helper images
+        required: false
+      SIGN_KMOD_KEY_APPEND:
+        description: Base64-encoded public key of a kernel module signing keypair
+        required: false
+      # TODO: can this be the same as BALENA_API_KEY?
+      SIGN_API_KEY:
+        description: balena API key that provides access to the signing server
+        required: false
+    inputs:
+      runs-on:
+        description: The runner labels to use for the job(s)
+        required: false
+        type: string
+        default: >
+          [
+            "self-hosted",
+            "X64"
+          ]
+      device-repo:
+        description: balenaOS device repository (owner/repo)
+        required: false
+        type: string
+        default: ${{ github.repository }}
+      yocto-scripts-ref:
+        description: balena-yocto-scripts ref if not the currently pinned version
+        required: false
+        type: string
+      machine:
+        description: yocto board name
+        required: true
+        type: string
+      environment:
+        description: The GitHub Environment to use for the job(s) (production, staging, etc.)
+        required: false
+        type: string
+        default: staging
+      deploy-s3:
+        description: Whether to deploy images to S3
+        required: false
+        type: boolean
+        default: true
+      deploy-hostapp:
+        description: Whether to deploy a hostApp container image to a balena environment
+        required: false
+        type: boolean
+        default: true
+      deploy-ami:
+        description: Whether to deploy an AMI to AWS
+        required: false
+        type: boolean
+        default: false
+      sign-image:
+        description: Whether to sign image for secure boot
+        required: false
+        type: boolean
+        default: false
+      os-dev:
+        description: Enable OS development features
+        required: false
+        type: boolean
+        default: false
+      deploy-esr:
+        description: Enable to deploy ESR
+        required: false
+        type: boolean
+        default: false
+      aws_iam_role:
+        description: IAM role to assume for s3 permissions
+        required: false
+        type: string
+        default: "arn:aws:iam::567579488761:role/balena-os-deploy-s3-access-Role-8r0SXqfzgolr" #TODO - Replace using environments
+      aws_region:
+        description: AWS region
+        required: false
+        type: string
+        default: "us-east-1"
+      device_slug:
+        description: Device type slug
+        required: true
+        type: string
+      os_version:
+        description: Version to deploy
+        required: true
+        type: string
+      is_private:
+        description: Private flag
+        required: true
+        type: string
+
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}-${{ inputs.machine }}
+  # cancel jobs in progress for updated PRs, but not merge or tag events
+  cancel-in-progress: ${{ github.event.action == 'synchronize' }}
+
+env:
+  WORKSPACE: ${{ github.workspace }}
+  MACHINE: ${{ inputs.machine }}
+  VERBOSE: verbose
+
+permissions:
+  id-token: write   # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
+
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    environment: ${{ inputs.environment }}
+    
+    env:
+      automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
+      BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
+      API_ENV: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
+
+      # used for deploying images to S3 and deploying AMIs to AWS
+      S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
+      S3_BUCKET: ${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}
+
+    defaults:
+      run:
+        working-directory: .
+        shell: bash --noprofile --norc -eo pipefail -x {0}
+
+    steps:
+      # https://github.com/product-os/flowzone/blob/d92a0f707ca791ea4432306fcb35008848cc9bcb/flowzone.yml#L449-L473
+      - name: Reject unapproved external contributions
+        env:
+          ok_to_test_label: ok-to-test
+          # https://cli.github.com/manual/gh_help_environment
+          GH_DEBUG: "true"
+          GH_PAGER: "cat"
+          GH_PROMPT_DISABLED: "true"
+          GH_REPO: "${{ inputs.device-repo }}"
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        if: |
+          github.event.pull_request.state == 'open' &&
+          github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          pr_labels="$(gh pr view ${{ github.event.pull_request.number }} --json labels -q .labels[].name)"
+
+          for label in "${pr_labels}"
+          do
+            if [[ "$label" =~ "${{ env.ok_to_test_label }}" ]]
+            then
+              gh pr edit ${{ github.event.pull_request.number }} --remove-label "${{ env.ok_to_test_label }}"
+              exit 0
+            fi
+          done
+
+          echo "::error::External contributions must be approved with the label '${{ env.ok_to_test_label }}'. \
+            Please contact a member of the organization for assistance."
+          exit 1
+
+      # this must be done before putting files in the workspace
+      # https://github.com/easimon/maximize-build-space
+      - name: Maximize build space
+        if: contains(fromJSON(inputs.runs-on), 'self-hosted') == false
+        uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c
+        with:
+          root-reserve-mb: "4096"
+          temp-reserve-mb: "1024"
+          swap-size-mb: "4096"
+          remove-dotnet: "true"
+          remove-android: "true"
+          remove-haskell: "true"
+          remove-codeql: "true"
+          remove-docker-images: "true"
+
+      - name: Update balena-yocto-scripts submodule to ${{ inputs.yocto-scripts-ref }}
+        if: inputs.yocto-scripts-ref != ''
+        working-directory: ./balena-yocto-scripts
+        run: |
+          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
+          git fetch --all
+          git checkout --force "${{ inputs.yocto-scripts-ref }}"
+          git submodule update --init --recursive
+
+      # TODO: pre-install on self-hosted-runners
+      # https://github.com/bloomreach/s4cmd
+      - name: Install s4cmd
+        run: |
+          pip install s4cmd
+          s4cmd --help
+
+      # TODO: pre-install on self-hosted-runners
+      - name: Install zip package
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip
+
+      # TODO: fetch artfiacts from merging run
+      - name: Fetch artifacts from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts # TODO: replace with env var shared between the 2 jobs? How will this work when not between jobs? - must fetch the artifact URL from the merging PR first
+          path: ${{ runner.temp }}
+
+      - name: Export prepare artifacts deploy path to env
+        env: 
+          DEVICE_TYPE_SLUG: ${{ inputs.device_slug }}
+          VERSION: ${{ inputs.os_version }}
+        run: | 
+          #DEBUG - check what we've downloaded
+          ls -R ${{ runner.temp }}
+
+          echo "DEPLOY_PATH=${{ runner.temp }}/deploy/${DEVICE_TYPE_SLUG}/${VERSION}" >> $GITHUB_ENV
+
+          # Move files to the path that the "balena_deploy_artifacts" helper image expects them
+          mkdir -p ${{ runner.temp }}/deploy/${DEVICE_TYPE_SLUG}
+          #TODO: make this better and less reliant on the build.yml
+          mv ${{ runner.temp }}/${DEVICE_TYPE_SLUG} ${DEPLOY_PATH} 
+
+          mv ${{ runner.temp }}/balena.yml ${WORKSPACE}
+          
+
+      # TODO: prepare artifacts manually to replace balena_deploy_artifacts
+      - name: Prepare artifacts
+        run: |
+          # DEBUG: check deploy path
+          echo "DEPLOY_PATH = ${DEPLOY_PATH}"
+          ls ${DEPLOY_PATH}
+
+          source "${automation_dir}/include/balena-deploy.inc"
+          balena_deploy_artifacts "${{ inputs.machine }}" "${DEPLOY_PATH}" false
+
+          find "${DEPLOY_PATH}" -exec ls -lh {} \;
+
+
+      ##############################
+      # S3 Deploy
+      ##############################
+
+      # login required to pull private balena/balena-img image
+      # https://github.com/docker/login-action
+      - name: Login to Docker Hub
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        if: inputs.deploy-s3 == true
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Prepare files for S3
+        if: inputs.deploy-s3 == true
+        env:
+          HELPER_IMAGE: balena/balena-img:6.20.26
+          # This path is different from DEPLOY_PATH due to the structure the prepare.ts expects: "/host/image/${device_slug}/${version}/..."
+          PREPARE_DEPLOY_PATH: ${{ runner.temp }}/deploy
+        run: |
+          docker run --rm \
+            -e BASE_DIR=/host/images \
+            -v "${PREPARE_DEPLOY_PATH}:/host/images" \
+            ${HELPER_IMAGE} /usr/src/app/node_modules/.bin/ts-node /usr/src/app/scripts/prepare.ts
+
+          find "${PREPARE_DEPLOY_PATH}" -exec ls -lh {} \;
+
+      - name: Set S3 ACL (private)
+        id: s3-acl-private
+        if: inputs.deploy-s3 == true && inputs.is_private != 'false'
+        run: echo "string=private" >> $GITHUB_OUTPUT
+
+      - name: Set S3 ACL (public-read)
+        id: s3-acl-public
+        if: inputs.deploy-s3 == true && inputs.is_private == 'false'
+        run: echo "string=public-read" >> $GITHUB_OUTPUT
+
+      - name: Set S3 destination directory
+        id: s3-images-dir
+        if: inputs.deploy-s3 == true && inputs.deploy-esr != true
+        run: echo "string=images" >> $GITHUB_OUTPUT
+
+      - name: Set S3 destination directory (ESR)
+        id: s3-esr-images-dir
+        if: inputs.deploy-s3 == true && inputs.deploy-esr == true
+        run: echo "string=esr-images" >> $GITHUB_OUTPUT
+
+      # # TODO: pre-install on self-hosted-runners
+      # # https://github.com/s3-actions/s3cmd
+      # - name: Set up s3cmd cli tool
+      #   if: inputs.deploy-s3 == true && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
+      #   uses: s3-actions/s3cmd@v1.5.0
+      #   with:
+      #     provider: aws # default is linode
+      #     region: ${{ vars.AWS_REGION || vars.S3_REGION }}
+      #     access_key: ${{ secrets.AWS_ACCESS_KEY_ID || secrets.S3_SECRET_KEY }}
+      #     secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY || secrets.S3_ACCESS_KEY }}
+     
+      # https://github.com/aws-actions/configure-aws-credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          role-to-assume: ${{ inputs.aws_iam_role }}
+          role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+          aws-region: ${{ inputs.aws_region }}
+          # https://github.com/orgs/community/discussions/26636#discussioncomment-3252664
+          mask-aws-account-id: false
+
+      #"If no keys are provided, but an IAM role is associated with the EC2 instance, it will be used transparently".
+      - name: Deploy to S3
+        if: inputs.deploy-s3 == true
+        env:
+          S3_CMD: "s4cmd --API-ServerSideEncryption=AES256"
+          S3_SYNC_OPTS: "--dry-run --recursive --API-ACL=${{ steps.s3-acl-private.outputs.string || steps.s3-acl-public.outputs.string }}" # TODO: remember to remove dry-run when merging
+          S3_URL: "s3://${{ env.S3_BUCKET }}/${{ steps.s3-images-dir.outputs.string || steps.s3-esr-images-dir.outputs.string }}"
+          SLUG: ${{ inputs.device_slug }}
+          VERSION: ${{ inputs.os_version }}
+          SOURCE_DIR: ${{ runner.temp }}/deploy
+        run: |
+          if [ -n "$($S3_CMD ls ${S3_URL}/${SLUG}/${VERSION}/)" ] && [ -z "$($S3_CMD ls ${S3_URL}/${SLUG}/${VERSION}/IGNORE)" ]; then
+            echo "::warning::Deployment already exists at ${S3_URL}/${VERSION}"
+            exit 0
+          fi
+
+          echo "${VERSION}" > "${SOURCE_DIR}/${SLUG}/latest"
+          touch "${SOURCE_DIR}/${SLUG}/${VERSION}/IGNORE"
+
+          $S3_CMD del -rf "${S3_URL}/${SLUG}/${VERSION}"
+          $S3_CMD put "${SOURCE_DIR}/${SLUG}/${VERSION}/IGNORE" "${S3_URL}/${SLUG}/${VERSION}/"
+          $S3_CMD ${S3_SYNC_OPTS} dsync "${SOURCE_DIR}/${SLUG}/${VERSION}/" "${S3_URL}/${SLUG}/${VERSION}/"
+          $S3_CMD put "${SOURCE_DIR}/${SLUG}/latest" "${S3_URL}/${SLUG}/" --API-ACL=public-read -f
+          $S3_CMD del "${S3_URL}/${SLUG}/${VERSION}/IGNORE"
+
+      # # https://github.com/jakejarvis/s3-sync-action
+      # - uses: jakejarvis/s3-sync-action@v0.5.1
+      #   if: inputs.deploy-s3 == true && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
+      #   with:
+      #     args: --follow-symlinks --sse=AES256 --acl=${{ steps.s3-acl-private.outputs.string || steps.s3-acl-public.outputs.string }}
+      #   env:
+      #     AWS_REGION: ${{ vars.AWS_REGION || vars.S3_REGION }}
+      #     AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}
+      #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID || secrets.S3_SECRET_KEY}}
+      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY || secrets.S3_ACCESS_KEY }}
+      #     SOURCE_DIR: ${{ runner.temp }}/deploy/image
+      #     DEST_DIR: ${{ steps.s3-images-dir.outputs.string || steps.s3-esr-images-dir.outputs.string }}
+
+      # # https://github.com/keithweaver/aws-s3-github-action
+      # - uses: keithweaver/aws-s3-github-action@v1.0.0
+      #   if: inputs.deploy-s3 == true && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
+      #   with:
+      #     command: put
+      #     source: ${{ runner.temp }}/deploy/image/${{ steps.balena-lib.outputs.device_slug }}/latest
+      #     destination: s3://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}/${{ steps.s3-images-dir.outputs.string || steps.s3-esr-images-dir.outputs.string }}/
+      #     aws_access_key_id: ${{ secrets.AWS_SECRET_ACCESS_KEY || secrets.S3_SECRET_KEY}}
+      #     aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY || secrets.S3_ACCESS_KEY }}
+      #     aws_region: ${{ vars.AWS_REGION || vars.S3_REGION }}
+
+     
+      ##############################
+      # hostapp Deploy
+      ##############################
+
+      - name: Set SECURE_BOOT_FEATURE_FLAG
+        if: inputs.deploy-hostapp == true
+        run: |
+          if [ -n "${{ inputs.sign-image }}" = "true" ]; then
+            echo "SECURE_BOOT_FEATURE_FLAG=yes" >> $GITHUB_ENV
+          else
+            echo "SECURE_BOOT_FEATURE_FLAG=no" >> $GITHUB_ENV
+          fi
+
+      - name: Check Balena CLI
+        run: |
+          # Test installation works
+          balena --version
+
+      ## SELECT WHICH API KEY TO USE BASED ON ENV
+      - name: Select Balena API key for Prod
+        if: inputs.environment == 'production'
+        run: echo "BALENAOS_TOKEN=${{ secrets.BALENA_API_KEY }}" >> $GITHUB_ENV
+
+      - name: Select Balena API key for staging
+        if: inputs.environment == 'staging'
+        run: echo "BALENAOS_TOKEN=${{ secrets.BALENAOS_STAGING_TOKEN }}" >> $GITHUB_ENV
+
+      # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
+      # https://github.com/balena-io/deploy-to-balena-action/issues/286
+      - name: Deploy to balena
+        if: inputs.deploy-hostapp == true
+        env:
+          BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
+          SLUG: "${{ inputs.device_slug }}"
+          APPNAME: "${{ inputs.device_slug }}"
+          BOOTABLE: 1
+          TRANSLATION: "v6"
+          DEPLOY: yes
+          FINAL: no
+          ESR: "${{ inputs.deploy-esr }}"
+          balenaCloudEmail:
+          balenaCloudPassword:
+          CURL: "curl --silent --retry 10 --location --compressed"
+          #HOSTAPP_PATH: ${{ runner.temp }}/deploy/balena-image.docker
+          VERSION: ${{ inputs.os_version }}
+        run: |
+          set -e
+
+          # load hostapp bundle and get local image reference, needed for `balena deploy`   
+          _local_image=$(docker load -i ${DEPLOY_PATH}/balena-image.docker | cut -d: -f1 --complement | tr -d " " )
+
+          echo "[INFO] Logging into $API_ENV as ${BALENAOS_ACCOUNT}"
+          export BALENARC_BALENA_URL=${API_ENV}
+          balena login --token "${BALENAOS_TOKEN}"
+
+          if [ "$ESR" = "true" ]; then
+            echo "Deploying ESR release"
+            APPNAME="${APPNAME}-esr"
+          fi
+
+
+          ## CHECK PATH IS RIGHT
+          if [ -f "${WORKSPACE}/balena.yml" ]; then
+            echo -e "\nversion: ${VERSION}" >> "${WORKSPACE}/balena.yml"
+            if [ "${SECURE_BOOT_FEATURE_FLAG}" = "yes" ]; then
+              sed -i '/provides:/a \  - type: sw.feature\n    slug: secureboot' "/${WORKSPACE}/balena.yml"
+            fi
+          fi
+
+          ls ${runner}
+
+          cat ${WORKSPACE}/balena.yml
+
+          echo "[INFO] Deploying  to ${BALENAOS_ACCOUNT}/${APPNAME}"
+          #balena_api_create_public_app "${APPNAME}" "${BALENARC_BALENA_URL}" "${MACHINE}" "${balenaCloudEmail}" "${balenaCloudPassword}" "${ESR}" "${BOOTABLE}"
+          # Create public app 
+          _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application?\$filter=(slug%20eq%20'${BALENAOS_ACCOUNT}/${APPNAME}')" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
+          _appID=$(echo "${_json}" | jq --raw-output '.d[0].id')
+          echo "${_appID}"
+
+          # Check if app already exists if it doesn't then...
+          # TODO: Fix logic for when app doesn't already exist
+          if [ -z "${_appID}" ] || [ "${_appID}" = "null" ]; then
+            echo "Creating App"
+            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"app_name": "${BALENAOS_ACCOUNT}/${APPNAME}", "device_type": "${APPNAME}"}')
+            appID=$(echo "${_json}" | jq --raw-output '.id' || true)
+            echo "${_appID}"
+
+            echo "creating role access"
+            balena_api_add_role_access "${_appName}" "${_apiEnv}" "${_token}"
+      
+            appID=$(__set_public_app "${_appName}" "${_apiEnv}" "${_token}" "${_url}")
+            if [ -n "${_appID}" ] && [ "${_appID}" != "null" ]; then
+              >&2 echo "[${_appName}] Application ${_appID} has been created as public"
+            fi
+            appID=$(__set_class "${_appName}" "app" "${_apiEnv}" "${_token}")
+            if [ -n "${_appID}" ] && [ "${_appID}" != "null" ]; then
+              >&2 echo "[${_appName}] Application ${_appID} has been set as app"
+            fi
+            if [ "${_bootable}" = "1" ]; then
+              set_bootable_app "${_appName}" "${_apiEnv}" "${_token}"
+            fi
+            if [ "${_esr}" = "true" ]; then
+              set_esr_policy "${_appName}" "${_apiEnv}" "${_token}"
+            fi
+          else
+            >&2 echo "[${_appName}] Application ${_appID} already exists."
+          fi
+          echo "${_appID}"
+
+
+          # Push to hostapp
+          #_releaseID=$(balena_lib_release "${BALENAOS_ACCOUNT}/$APPNAME" "${FINAL}" "/deploy" "${API_ENV}" "$_local_image")
+
+          # REDUNDANT?
+          if [ -f "${WORKSPACE}/balena.yml" ]; then
+            _contract_version=$(awk '/version:/ {print $2}' "${WORKSPACE}/balena.yml")
+            if [ "${_contract_version}" != "${VERSION}" ]; then
+              >&2 echo "balena_lib_release: Version mismatch, contract ${_contract_version} os ${VERSION}"
+            fi
+          else
+            >&2 echo "balena_lib_release: balena.yml contract file not present"
+          fi
+
+          if [ "${FINAL}" = "no" ]; then
+            status="--draft"
+          fi
+          #[ "${VERBOSE}" = "verbose" ] && _debug="--debug"
+
+
+          if [ -n "${_local_image}" ]; then
+            releaseID=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" "${_local_image}" --source "${WORKSPACE}" ${status} ${_debug} | sed -n 's/.*Release: //p')
+          else
+            releaseID=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" --build --source "${WORKSPACE}" ${status} ${_debug} | sed -n 's/.*Release: //p')
+          fi
+          [ -n "${releaseID}" ] && >&2 echo "Deployed ${_local_image} to ${BALENAOS_ACCOUNT}/${APPNAME} as ${status##--} at ${releaseID}"
+          echo "${releaseID}"
+
+
+          if [ -z "${releaseID}" ]; then
+            echo "[INFO] Failed to deploy to ${BALENAOS_ACCOUNT}/${APPNAME}"
+            exit 1
+          fi
+
+
+          # _assets="$(find /deploy/deploy-jenkins -name licenses.tar.gz) /deploy/CHANGELOG.md"
+          # _rid=$(balena_api_releaseID_from_commitID "${_releaseID}" "${API_ENV}" "${BALENAOS_TOKEN}")
+          # for _asset in ${_assets}; do
+          #   if [ -f "${_asset}" ]; then
+          #     _aid=$(balena_api_add_release_asset "${_rid}" "${API_ENV}" "${BALENAOS_TOKEN}" "${_asset}")
+          #     if [ -n "${_aid}" ]; then
+          #       echo "[INFO] Added ${_asset} with ID ${_aid} to release ${_releaseID}"
+          #     else
+          #       echo "[ERROR] Failed to add ${_asset} to release ${_releaseID}"
+          #       exit 1
+          #     fi
+          #   fi
+          # done
+
+          #TODO: THIS MUST REMAIN FOR ESRs only
+          # # Legacy hostapp tagging
+          # if [ "${DEPLOY}" = "yes" ] && [ "${FINAL}" = "yes" ]; then
+          #   balena_lib_release_finalize "${_releaseID}" "${BALENAOS_ACCOUNT}/${APPNAME}" "${API_ENV}" "${BALENAOS_TOKEN}" "${ESR}"
+          # fi
+
+          # balena_docker_stop
+          # exit 0
+
+      # # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
+      # # https://github.com/balena-io/deploy-to-balena-action/issues/286
+      # - name: Deploy to balena
+      #   if: inputs.deploy-hostapp == true
+      #   env:
+      #     BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
+      #     SLUG: "${{ steps.balena-lib.outputs.device_slug }}"
+      #     APPNAME: "${{ steps.balena-lib.outputs.device_slug }}"
+      #     BALENAOS_TOKEN: "${{ secrets.BALENA_API_KEY }}"
+      #     META_BALENA_VERSION: "${{ steps.balena-lib.outputs.meta_balena_version }}"
+      #     RELEASE_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
+      #     BOOTABLE: 1
+      #     DEPLOY: yes
+      #     FINAL: yes
+      #     ESR: "${{ inputs.deploy-esr }}"
+      #     balenaCloudEmail:
+      #     balenaCloudPassword:
+      #     HOSTAPP_PATH: ${{ runner.temp }}/deploy/balena-image.docker
+      #   run: |
+      #     docker run --rm -t \
+      #       --privileged \
+      #       -e APPNAME \
+      #       -e API_ENV \
+      #       -e BALENAOS_TOKEN \
+      #       -e BALENAOS_ACCOUNT \
+      #       -e META_BALENA_VERSION \
+      #       -e RELEASE_VERSION \
+      #       -e MACHINE \
+      #       -e VERBOSE \
+      #       -e BOOTABLE \
+      #       -e DEPLOY \
+      #       -e FINAL \
+      #       -e ESR \
+      #       -e SECURE_BOOT_FEATURE_FLAG \
+      #       -e balenaCloudEmail \
+      #       -e balenaCloudPassword \
+      #       -v "$(readlink --canonicalize "${HOSTAPP_PATH}")":/host/appimage.docker \
+      #       -v "${WORKSPACE}":/work \
+      #       -v "${WORKSPACE}":/deploy \
+      #       "${{ steps.hostapp-helper-image.outputs.id }}" /balena-deploy-block.sh
+
+      ##############################
+      # AMI Deploy
+      ##############################
+
+      # - name: Set AMI arch
+      #   id: ami-arch
+      #   if: inputs.deploy-ami == true
+      #   run: |
+      #     if [ "${dt_arch}" = "amd64" ]; then
+      #       echo "string=x86_64" >> $GITHUB_OUTPUT
+      #     elif [ "${dt_arch}" = "aarch64" ]; then
+      #       echo "string=arm64" >> $GITHUB_OUTPUT
+      #     fi
+
+      # # AMI name format: balenaOS(-installer?)(-secureboot?)-VERSION-DEVICE_TYPE
+      # - name: Set AMI name
+      #   id: ami-name
+      #   if: inputs.deploy-ami == true
+      #   run: |
+      #     if [ "${{ inputs.sign-image }}" = "true" ]; then
+      #       echo "string=balenaOS-secureboot-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "string=balenaOS-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
+      #     fi
+
+      # - name: Pull helper image
+      #   id: ami-helper-image
+      #   if: inputs.deploy-ami == true
+      #   env:
+      #     HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
+      #     YOCTO_SCRIPTS_VERSION: ${{ steps.balena-lib.outputs.yocto_scripts_version }}
+      #     YOCTO_SCRIPTS_REF: ${{ steps.balena-lib.outputs.yocto_scripts_ref }}
+      #     HELPER_IMAGE_VARIANT: yocto-build-env
+      #   run: |
+      #     image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_VERSION}-${HELPER_IMAGE_VARIANT}"
+      #     if ! docker pull "${image_tag}"; then
+      #       image_tag="${HELPER_IMAGE_REPO}:${YOCTO_SCRIPTS_REF}-${HELPER_IMAGE_VARIANT}"
+      #       docker pull "${image_tag}"
+      #     fi
+
+      #     image_id="$(docker images --format "{{.ID}}" "${image_tag}")"
+      #     echo "id=${image_id}" >> $GITHUB_OUTPUT
+
+      # - name: Deploy AMI
+      #   if: inputs.deploy-ami == true
+      #   env:
+      #     AWS_DEFAULT_REGION: "${{ env.S3_REGION }}"
+      #     AWS_SESSION_TOKEN: "" # only required if MFA is enabled
+      #     AWS_SUBNET_ID: ${{ vars.AWS_SUBNET || 'subnet-02d18a08ea4058574' }}
+      #     AWS_SECURITY_GROUP_ID: ${{ vars.AWS_SECURITY_GROUP || 'sg-057937f4d89d9d51c' }}
+      #     BALENACLI_TOKEN: ${{ secrets.BALENA_API_KEY }}
+      #     HOSTOS_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
+      #     AMI_NAME: "${{ steps.ami-name.outputs.string }}"
+      #     AMI_ARCHITECTURE: "${{ steps.ami-arch.outputs.string }}"
+      #     AMI_SECUREBOOT: "${{ inputs.sign-image }}"
+      #     BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ steps.ami-arch.outputs.string }}"
+      #     BALENA_PRELOAD_COMMIT: current
+      #     IMAGE: ${{ runner.temp }}/deploy/image/balena.img
+      #   run: |
+      #     docker run --rm -t \
+      #       --privileged \
+      #       --network host \
+      #       -v "${WORKSPACE}:${WORKSPACE}" \
+      #       -v /var/run/docker.sock:/var/run/docker.sock \
+      #       -e VERBOSE \
+      #       -e AWS_ACCESS_KEY_ID \
+      #       -e AWS_SECRET_ACCESS_KEY \
+      #       -e AWS_DEFAULT_REGION \
+      #       -e AWS_SESSION_TOKEN \
+      #       -e AMI_NAME \
+      #       -e AMI_ARCHITECTURE \
+      #       -e AMI_SECUREBOOT \
+      #       -e S3_BUCKET \
+      #       -e BALENA_PRELOAD_APP \
+      #       -e BALENARC_BALENA_URL \
+      #       -e BALENACLI_TOKEN \
+      #       -e BALENA_PRELOAD_COMMIT \
+      #       -e IMAGE \
+      #       -e MACHINE \
+      #       -e HOSTOS_VERSION \
+      #       -e AWS_SUBNET_ID \
+      #       -e AWS_SECURITY_GROUP_ID \
+      #       -w "${WORKSPACE}" \
+      #       "${{ steps.ami-helper-image.outputs.id }}" /balena-generate-ami.sh
+

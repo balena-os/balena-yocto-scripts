@@ -1,0 +1,346 @@
+name: "Yocto"
+
+on:
+  workflow_call:
+    secrets:
+      BALENA_API_KEY:
+        description: balena API key for deploying releases 
+        required: false
+      BALENAOS_STAGING_TOKEN:
+        description: balena API key for deploying releases to staging 
+        required: false
+      SIGN_KMOD_KEY_APPEND:
+        description: Base64-encoded public key of a kernel module signing keypair
+        required: false
+      # TODO: can this be the same as BALENA_API_KEY?
+      SIGN_API_KEY:
+        description: balena API key that provides access to the signing server
+        required: false
+    inputs:
+      runs-on:
+        description: The runner labels to use for the job(s)
+        required: false
+        type: string
+        default: >
+          [
+            "self-hosted",
+            "X64"
+          ]
+      device-repo:
+        description: balenaOS device repository (owner/repo)
+        required: false
+        type: string
+        default: ${{ github.repository }}
+      device-repo-ref:
+        description: balenaOS device repository tag, branch, or commit to build
+        required: false
+        type: string
+        default: ${{ github.ref }}
+      meta-balena-ref:
+        description: meta-balena ref if not the currently pinned version
+        required: false
+        type: string
+      yocto-scripts-ref:
+        description: balena-yocto-scripts ref if not the currently pinned version
+        required: false
+        type: string
+      machine:
+        description: yocto board name
+        required: true
+        type: string
+      environment:
+        description: The GitHub Environment to use for the job(s) (production, staging, etc.)
+        required: false
+        type: string
+        default: staging
+      sign-image:
+        description: Whether to sign image for secure boot
+        required: false
+        type: boolean
+        default: false
+      os-dev:
+        description: Enable OS development features
+        required: false
+        type: boolean
+        default: false
+    outputs:  
+      device_slug: 
+        description: "Device type slug"
+        value: ${{ jobs.build.outputs.device_slug }}
+      os_version: 
+        description: "Version of generated device type"
+        value: ${{ jobs.build.outputs.os_version }}
+
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}-${{ inputs.machine }}
+  # cancel jobs in progress for updated PRs, but not merge or tag events
+  cancel-in-progress: ${{ github.event.action == 'synchronize' }}
+
+env:
+  WORKSPACE: ${{ github.workspace }}
+  MACHINE: ${{ inputs.machine }}
+  VERBOSE: verbose
+
+permissions:
+  id-token: write   # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
+
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    environment: ${{ inputs.environment }}
+
+    env:
+      automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
+      BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
+      API_ENV: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
+
+      # Yocto NFS sstate cache host
+      YOCTO_CACHE_HOST: ${{ vars.YOCTO_CACHE_HOST || 'nfs.product-os.io' }}
+      YOCTO_CACHE_DIR: ${{ github.workspace }}/shared/yocto-cache
+      # S3_CACHE_URL: s3://balena-yocto-cache/${{ inputs.machine }}
+      BARYS_ARGUMENTS_VAR: ""
+
+      # URL for secure boot signing server API
+      SIGN_API_URL: ${{ vars.SIGN_API_URL || 'https://sign.balena-cloud.com' }}
+
+    outputs:
+      os_version: ${{ steps.balena-lib.outputs.os_version }}
+      device_slug: ${{ steps.balena-lib.outputs.device_slug }}
+      deploy_artifact: ${{ steps.balena-lib.outputs.deploy_artifact }}
+      is_private: ${{ steps.balena-lib.outputs.is_private }}
+      dt_arch: ${{ steps.balena-lib.outputs.dt_arch }}
+      meta_balena_version: ${{ steps.balena-lib.outputs.meta_balena_version }}
+      yocto_scripts_ref: ${{ steps.balena-lib.outputs.yocto_scripts_ref }}
+      yocto_scripts_version: ${{ steps.balena-lib.outputs.yocto_scripts_version }}
+
+    defaults:
+      run:
+        working-directory: .
+        shell: bash --noprofile --norc -eo pipefail -x {0}
+
+    steps:
+      # https://github.com/product-os/flowzone/blob/d92a0f707ca791ea4432306fcb35008848cc9bcb/flowzone.yml#L449-L473
+      - name: Reject unapproved external contributions
+        env:
+          ok_to_test_label: ok-to-test
+          # https://cli.github.com/manual/gh_help_environment
+          GH_DEBUG: "true"
+          GH_PAGER: "cat"
+          GH_PROMPT_DISABLED: "true"
+          GH_REPO: "${{ inputs.device-repo }}"
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        if: |
+          github.event.pull_request.state == 'open' &&
+          github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          pr_labels="$(gh pr view ${{ github.event.pull_request.number }} --json labels -q .labels[].name)"
+
+          for label in "${pr_labels}"
+          do
+            if [[ "$label" =~ "${{ env.ok_to_test_label }}" ]]
+            then
+              gh pr edit ${{ github.event.pull_request.number }} --remove-label "${{ env.ok_to_test_label }}"
+              exit 0
+            fi
+          done
+
+          echo "::error::External contributions must be approved with the label '${{ env.ok_to_test_label }}'. \
+            Please contact a member of the organization for assistance."
+          exit 1
+
+      # this must be done before putting files in the workspace
+      # https://github.com/easimon/maximize-build-space
+      - name: Maximize build space
+        if: contains(fromJSON(inputs.runs-on), 'self-hosted') == false
+        uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c
+        with:
+          root-reserve-mb: "4096"
+          temp-reserve-mb: "1024"
+          swap-size-mb: "4096"
+          remove-dotnet: "true"
+          remove-android: "true"
+          remove-haskell: "true"
+          remove-codeql: "true"
+          remove-docker-images: "true"
+
+      # https://github.com/actions/checkout
+      - name: Clone device repository
+        uses: actions/checkout@v4.1.1
+        with:
+          repository: ${{ inputs.device-repo }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ inputs.device-repo-ref }}
+          submodules: true
+          # fetch-depth: 1 
+          fetch-tags: true
+
+      - name: Device repository check
+        run: |
+          if [ "$(yq '.type' repo.yml)" != "yocto-based OS image" ]; then
+            echo "::error::Repository does not appear to be of type 'yocto-based OS image'"
+            exit 1
+          fi
+
+      - name: Update meta-balena submodule to ${{ inputs.meta-balena-ref }}
+        if: inputs.meta-balena-ref != ''
+        working-directory: ./layers/meta-balena
+        run: |
+          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
+          git fetch --all
+          git checkout --force "${{ inputs.meta-balena-ref }}"
+          git submodule update --init --recursive
+
+      - name: Update balena-yocto-scripts submodule to ${{ inputs.yocto-scripts-ref }}
+        if: inputs.yocto-scripts-ref != ''
+        working-directory: ./balena-yocto-scripts
+        run: |
+          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
+          git fetch --all
+          git checkout --force "${{ inputs.yocto-scripts-ref }}"
+          git submodule update --init --recursive
+
+      - name: Set build outputs
+        id: balena-lib
+        run: |
+          source "${automation_dir}/include/balena-api.inc"
+          source "${automation_dir}/include/balena-lib.inc"
+
+          ./balena-yocto-scripts/build/build-device-type-json.sh
+
+          device_slug="$(balena_lib_get_slug "${MACHINE}")"
+          echo "device_slug=${device_slug}" >> $GITHUB_OUTPUT
+
+          os_version=$(git describe --abbrev=0)
+          echo "os_version=${os_version#v*}" >> $GITHUB_OUTPUT
+
+          # os_version="$(balena_lib_get_os_version)"
+          # echo "os_version=${os_version}" >> $GITHUB_OUTPUT
+
+          meta_balena_version="$(balena_lib_get_meta_balena_base_version)"
+          echo "meta_balena_version=${meta_balena_version}" >> $GITHUB_OUTPUT
+
+          yocto_scripts_ref="$(git submodule status balena-yocto-scripts | awk '{print $1}')"
+          echo "yocto_scripts_ref=${yocto_scripts_ref}" >> $GITHUB_OUTPUT
+
+          yocto_scripts_version="$(cd balena-yocto-scripts && head -n1 VERSION)"
+          echo "yocto_scripts_version=${yocto_scripts_version}" >> $GITHUB_OUTPUT
+
+          deploy_artifact="$(balena_lib_get_deploy_artifact "${MACHINE}")"
+          echo "deploy_artifact=${deploy_artifact}" >> $GITHUB_OUTPUT
+
+          dt_arch="$(balena_lib_get_dt_arch "${MACHINE}")"
+          echo "dt_arch=${dt_arch}" >> $GITHUB_OUTPUT
+
+          is_private="$(balena_api_is_dt_private "${{ inputs.machine }}")"
+          echo "is_private=${is_private}" >> $GITHUB_OUTPUT
+
+          if [ ! -f "${WORKSPACE}/balena.yml" ]; then
+            _contract=$(balena_lib_build_contract "${device_slug}")
+            cp "${_contract}" "${WORKSPACE}/balena.yml"
+          fi
+
+      - name: Enable OS development features
+        if: inputs.os-dev == true
+        run: |
+          if [ "${OS_DEVELOPMENT}" = "true" ]; then
+            echo BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -d" >> $GITHUB_ENV
+          fi
+
+      # https://docs.yoctoproject.org/dev/dev-manual/speeding-up-build.html#speeding-up-a-build
+      - name: Configure bitbake resource limits
+        env:
+          BB_NUMBER_THREADS: 4
+          BB_NUMBER_PARSE_THREADS: 4
+          PARALLEL_MAKE: -j4
+          PARALLEL_MAKEINST: -j4
+          BB_PRESSURE_MAX_CPU: 500
+          BB_PRESSURE_MAX_IO: 500
+          BB_PRESSURE_MAX_MEMORY: 500
+        run: |
+          nproc
+          free -h
+          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_NUMBER_THREADS=${BB_NUMBER_THREADS}"
+          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_NUMBER_PARSE_THREADS=${BB_NUMBER_PARSE_THREADS}"
+          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a PARALLEL_MAKE=${PARALLEL_MAKE}"
+          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a PARALLEL_MAKEINST=${PARALLEL_MAKEINST}"
+          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_PRESSURE_MAX_CPU=${BB_PRESSURE_MAX_CPU}"
+          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_PRESSURE_MAX_IO=${BB_PRESSURE_MAX_IO}"
+          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_PRESSURE_MAX_MEMORY=${BB_PRESSURE_MAX_MEMORY}"
+          echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR}" >> $GITHUB_ENV
+
+      - name: Enable signed images
+        if: inputs.sign-image == true
+        env:
+          SIGN_API_KEY: "${{ secrets.SIGN_API_KEY }}"
+          SIGN_GRUB_KEY_ID: 2EB29B4CE0132F6337897F5FB8A88D1C62FCC729
+          SIGN_KMOD_KEY_APPEND: "${{ secrets.SIGN_KMOD_KEY_APPEND }}"
+        run: |
+          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_API=${SIGN_API_URL}"
+          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_API_KEY=${SIGN_API_KEY}"
+          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_GRUB_KEY_ID=${SIGN_GRUB_KEY_ID}"
+          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_KMOD_KEY_APPEND=${SIGN_KMOD_KEY_APPEND}"
+          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} --bb-args --no-setscene"
+          echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR}" >> $GITHUB_ENV
+
+      # the directory is required even if we don't mount the NFS share
+      - name: Create shared cache mount point
+        run: |
+          sudo mkdir -p "${YOCTO_CACHE_DIR}/$(whoami)"
+          sudo chown -R $(id -u):$(id -g) "${YOCTO_CACHE_DIR}"
+
+      - name: Mount shared NFS cache
+        if: env.YOCTO_CACHE_HOST != '' && contains(fromJSON(inputs.runs-on), 'self-hosted')
+        run: |
+          sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${YOCTO_CACHE_DIR}" -o fsc,nolock
+          ls -al "${YOCTO_CACHE_DIR}"/$(whoami)
+
+      - name: Build
+        id: build
+        env:
+          HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
+        run: |
+          ./balena-yocto-scripts/build/balena-build.sh \
+            -d "${MACHINE}" \
+            -t "${{ secrets.BALENA_API_KEY }}" \
+            -s "${YOCTO_CACHE_DIR}/$(whoami)" \
+            -g "${BARYS_ARGUMENTS_VAR}"
+
+          if grep -R "ERROR: " build/tmp/log/*; then
+            exit 1
+          fi
+
+          # if ! grep -R "Build for ${MACHINE} succeeded" build/tmp/log/*; then
+          #   exit 1
+          # fi
+
+          #du -cksh shared/yocto-cache/$(whoami)/*
+
+      # TODO: pre-install on self-hosted-runners
+      - name: Install zip package
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip
+
+      # TODO: add test step/steps here??
+
+       # TODO: pre-install on self-hosted-runners
+      - name: Debug - list directory content beore uploading
+        run: |
+          ls -R ${{ runner.temp }}/deploy
+
+      # TODO: bundle artifacts separately for convience
+      # https://github.com/actions/upload-artifact
+      - name: Upload artifacts
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        with:
+          name: build-artifacts
+          env: DEPLOY_PATH=${{ runner.temp }}/deploy/${DEVICE_TYPE_SLUG}
+          if-no-files-found: error
+          retention-days: 3
+          # compression-level: 1
+          path: |
+            DEPLOY_PATH
+            ${WORKSPACE}/balena.yml
+     
