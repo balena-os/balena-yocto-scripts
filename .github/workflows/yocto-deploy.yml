@@ -248,30 +248,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zip
 
-      # TODO: fetch artfiacts from merging run
-      - name: Fetch artifacts from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts # TODO: replace with env var shared between the 2 jobs? How will this work when not between jobs? - must fetch the artifact URL from the merging PR first
-          path: ./
-
       - name: Export prepare artifacts deploy path to env
         env: 
           DEVICE_TYPE_SLUG: ${{ inputs.device_slug }}
           VERSION: ${{ inputs.os_version }}
         run: | 
-          #DEBUG - check what we've downloaded
-          ls ./
-
           echo "DEPLOY_PATH=${{ runner.temp }}/deploy/${DEVICE_TYPE_SLUG}/${VERSION}" >> $GITHUB_ENV
+          mkdir -p ${DEPLOY_PATH} || true
 
-          # Move files to the path that the "balena_deploy_artifacts" helper image expects them
-          # mkdir -p ${{ runner.temp }}/deploy/${DEVICE_TYPE_SLUG}
-          # #TODO: make this better and less reliant on the build.yml
-          # mv ${{ runner.temp }}/${DEVICE_TYPE_SLUG} ${DEPLOY_PATH} 
-
-          mv ./balena.yml ${WORKSPACE}
-          
+      # TODO: fetch artfiacts from merging run
+      - name: Fetch artifacts from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts # TODO: replace with env var shared between the 2 jobs? How will this work when not between jobs? - must fetch the artifact URL from the merging PR first
+          path:  ${{ env.DEPLOY_PATH }}
 
       ##############################
       # S3 Deploy
@@ -454,16 +444,16 @@ jobs:
 
 
           ## CHECK PATH IS RIGHT
-          if [ -f "${WORKSPACE}/balena.yml" ]; then
-            echo -e "\nversion: ${VERSION}" >> "${WORKSPACE}/balena.yml"
+          if [ -f "${DEPLOY_PATH}/balena.yml" ]; then
+            echo -e "\nversion: ${VERSION}" >> "${DEPLOY_PATH}/balena.yml"
             if [ "${SECURE_BOOT_FEATURE_FLAG}" = "yes" ]; then
-              sed -i '/provides:/a \  - type: sw.feature\n    slug: secureboot' "/${WORKSPACE}/balena.yml"
+              sed -i '/provides:/a \  - type: sw.feature\n    slug: secureboot' "/${DEPLOY_PATH}/balena.yml"
             fi
           fi
 
           ls ${runner}
 
-          cat ${WORKSPACE}/balena.yml
+          cat ${DEPLOY_PATH}/balena.yml
 
           echo "[INFO] Deploying  to ${BALENAOS_ACCOUNT}/${APPNAME}"
           #balena_api_create_public_app "${APPNAME}" "${BALENARC_BALENA_URL}" "${MACHINE}" "${balenaCloudEmail}" "${balenaCloudPassword}" "${ESR}" "${BOOTABLE}"
@@ -507,8 +497,8 @@ jobs:
           #_releaseID=$(balena_lib_release "${BALENAOS_ACCOUNT}/$APPNAME" "${FINAL}" "/deploy" "${API_ENV}" "$_local_image")
 
           # REDUNDANT?
-          if [ -f "${WORKSPACE}/balena.yml" ]; then
-            _contract_version=$(awk '/version:/ {print $2}' "${WORKSPACE}/balena.yml")
+          if [ -f "${DEPLOY_PATH}/balena.yml" ]; then
+            _contract_version=$(awk '/version:/ {print $2}' "${DEPLOY_PATH}/balena.yml")
             if [ "${_contract_version}" != "${VERSION}" ]; then
               >&2 echo "balena_lib_release: Version mismatch, contract ${_contract_version} os ${VERSION}"
             fi
@@ -523,9 +513,9 @@ jobs:
 
 
           if [ -n "${_local_image}" ]; then
-            releaseID=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" "${_local_image}" --source "${WORKSPACE}" ${status} ${_debug} | sed -n 's/.*Release: //p')
+            releaseID=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" "${_local_image}" --source "${DEPLOY_PATH}" ${status} ${_debug} | sed -n 's/.*Release: //p')
           else
-            releaseID=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" --build --source "${WORKSPACE}" ${status} ${_debug} | sed -n 's/.*Release: //p')
+            releaseID=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" --build --source "${DEPLOY_PATH}" ${status} ${_debug} | sed -n 's/.*Release: //p')
           fi
           [ -n "${releaseID}" ] && >&2 echo "Deployed ${_local_image} to ${BALENAOS_ACCOUNT}/${APPNAME} as ${status##--} at ${releaseID}"
           echo "${releaseID}"

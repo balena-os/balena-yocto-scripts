@@ -351,9 +351,11 @@ jobs:
 
           ls ${DEPLOY_PATH}/image
 
+          # Move the generated balena.yml into the deploy folder for easier access in deploy job
+          mv ${WORKSPACE}/balena.yml ${DEPLOY_PATH}
+
       # TODO: add test step/steps here??
       
-
 
       # TODO: bundle artifacts separately for convience
       # https://github.com/actions/upload-artifact
@@ -368,5 +370,4 @@ jobs:
             ${{ env.DEPLOY_PATH }}/*.*
             ${{ env.DEPLOY_PATH }}/VERSION*
             ${{ env.DEPLOY_PATH }}/image/balena.img
-            ./balena.yml
      
