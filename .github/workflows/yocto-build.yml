@@ -325,22 +325,20 @@ jobs:
 
       # TODO: add test step/steps here??
 
-       # TODO: pre-install on self-hosted-runners
-      - name: Debug - list directory content beore uploading
-        run: |
-          ls -R ${{ runner.temp }}/deploy
-
       # TODO: bundle artifacts separately for convience
       # https://github.com/actions/upload-artifact
       - name: Upload artifacts
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        env: 
+          DEVICE_TYPE: "${{ steps.balena-lib.outputs.device_slug }}"
         with:
           name: build-artifacts
-          env: DEPLOY_PATH=${{ runner.temp }}/deploy/${DEVICE_TYPE_SLUG}
           if-no-files-found: error
           retention-days: 3
           # compression-level: 1
           path: |
-            DEPLOY_PATH
-            ${WORKSPACE}/balena.yml
+            ./build/tmp/deploy/images
+            ./build/tmp/deploy/licenses
+            ./${DEVICE_TYPE}.json
+            ./balena.yml
      

@@ -209,7 +209,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts # TODO: replace with env var shared between the 2 jobs? How will this work when not between jobs? - must fetch the artifact URL from the merging PR first
-          path: ${{ runner.temp }}
+          path: ./
 
       - name: Export prepare artifacts deploy path to env
         env: 
@@ -217,16 +217,16 @@ jobs:
           VERSION: ${{ inputs.os_version }}
         run: | 
           #DEBUG - check what we've downloaded
-          ls -R ${{ runner.temp }}
+          ls ./
 
           echo "DEPLOY_PATH=${{ runner.temp }}/deploy/${DEVICE_TYPE_SLUG}/${VERSION}" >> $GITHUB_ENV
 
           # Move files to the path that the "balena_deploy_artifacts" helper image expects them
-          mkdir -p ${{ runner.temp }}/deploy/${DEVICE_TYPE_SLUG}
-          #TODO: make this better and less reliant on the build.yml
-          mv ${{ runner.temp }}/${DEVICE_TYPE_SLUG} ${DEPLOY_PATH} 
+          # mkdir -p ${{ runner.temp }}/deploy/${DEVICE_TYPE_SLUG}
+          # #TODO: make this better and less reliant on the build.yml
+          # mv ${{ runner.temp }}/${DEVICE_TYPE_SLUG} ${DEPLOY_PATH} 
 
-          mv ${{ runner.temp }}/balena.yml ${WORKSPACE}
+          mv ./balena.yml ${WORKSPACE}
           
 
       # TODO: prepare artifacts manually to replace balena_deploy_artifacts
