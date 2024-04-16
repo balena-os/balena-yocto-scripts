@@ -323,22 +323,50 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zip
 
+      - name: Export prepare artifacts deploy path to env
+        env: 
+          DEVICE_TYPE_SLUG: ${{ steps.balena-lib.outputs.device_slug }}
+          VERSION: ${{ steps.balena-lib.outputs.os_version }}
+        run: | 
+          echo "DEPLOY_PATH=${{ runner.temp }}/deploy/${DEVICE_TYPE_SLUG}/${VERSION}" >> $GITHUB_ENV
+
+      # TODO: prepare artifacts manually to replace balena_deploy_artifacts
+      - name: Prepare artifacts
+        run: |
+          # DEBUG: check deploy path
+          echo "DEPLOY_PATH = ${DEPLOY_PATH}"
+
+          source "${automation_dir}/include/balena-deploy.inc"
+          balena_deploy_artifacts "${{ inputs.machine }}" "${DEPLOY_PATH}" false
+
+          # create links required for s3 prepare.ts
+          # mkdir -p "${DEPLOY_PATH}/${{ steps.balena-lib.outputs.device_slug }}"
+
+          # symlinks don't seem to work in the volume we mount to the helper image
+          #ln -sf ../.. "${DEPLOY_PATH}/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}"
+          
+          find "${DEPLOY_PATH}" -exec ls -lh {} \;
+
+          ls ${DEPLOY_PATH}
+
+          ls ${DEPLOY_PATH}/image
+
       # TODO: add test step/steps here??
+      
+
 
       # TODO: bundle artifacts separately for convience
       # https://github.com/actions/upload-artifact
       - name: Upload artifacts
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
-        env: 
-          DEVICE_TYPE: "${{ steps.balena-lib.outputs.device_slug }}"
         with:
           name: build-artifacts
           if-no-files-found: error
           retention-days: 3
           # compression-level: 1
           path: |
-            ./build/tmp/deploy/images
-            ./build/tmp/deploy/licenses
-            ./${DEVICE_TYPE}.json
+            ${{ env.DEPLOY_PATH }}/*.*
+            ${{ env.DEPLOY_PATH }}/VERSION*
+            ${{ env.DEPLOY_PATH }}/image/balena.img
             ./balena.yml
      

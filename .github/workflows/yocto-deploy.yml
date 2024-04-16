@@ -229,19 +229,6 @@ jobs:
           mv ./balena.yml ${WORKSPACE}
           
 
-      # TODO: prepare artifacts manually to replace balena_deploy_artifacts
-      - name: Prepare artifacts
-        run: |
-          # DEBUG: check deploy path
-          echo "DEPLOY_PATH = ${DEPLOY_PATH}"
-          ls ${DEPLOY_PATH}
-
-          source "${automation_dir}/include/balena-deploy.inc"
-          balena_deploy_artifacts "${{ inputs.machine }}" "${DEPLOY_PATH}" false
-
-          find "${DEPLOY_PATH}" -exec ls -lh {} \;
-
-
       ##############################
       # S3 Deploy
       ##############################
