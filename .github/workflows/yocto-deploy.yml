@@ -41,6 +41,15 @@ on:
         description: balena-yocto-scripts ref if not the currently pinned version
         required: false
         type: string
+      device-repo-ref:
+        description: balenaOS device repository tag, branch, or commit to build
+        required: false
+        type: string
+        default: ${{ github.ref }}
+      meta-balena-ref:
+        description: meta-balena ref if not the currently pinned version
+        required: false
+        type: string
       machine:
         description: yocto board name
         required: true
@@ -181,6 +190,41 @@ jobs:
           remove-haskell: "true"
           remove-codeql: "true"
           remove-docker-images: "true"
+       # https://github.com/actions/checkout
+      - name: Clone device repository
+        uses: actions/checkout@v4.1.1
+        with:
+          repository: ${{ inputs.device-repo }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ inputs.device-repo-ref }}
+          submodules: true
+          # fetch-depth: 1 
+          fetch-tags: true
+
+      - name: Device repository check
+        run: |
+          if [ "$(yq '.type' repo.yml)" != "yocto-based OS image" ]; then
+            echo "::error::Repository does not appear to be of type 'yocto-based OS image'"
+            exit 1
+          fi
+
+      - name: Update meta-balena submodule to ${{ inputs.meta-balena-ref }}
+        if: inputs.meta-balena-ref != ''
+        working-directory: ./layers/meta-balena
+        run: |
+          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
+          git fetch --all
+          git checkout --force "${{ inputs.meta-balena-ref }}"
+          git submodule update --init --recursive
+
+      - name: Update balena-yocto-scripts submodule to ${{ inputs.yocto-scripts-ref }}
+        if: inputs.yocto-scripts-ref != ''
+        working-directory: ./balena-yocto-scripts
+        run: |
+          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
+          git fetch --all
+          git checkout --force "${{ inputs.yocto-scripts-ref }}"
+          git submodule update --init --recursive
 
       - name: Update balena-yocto-scripts submodule to ${{ inputs.yocto-scripts-ref }}
         if: inputs.yocto-scripts-ref != ''

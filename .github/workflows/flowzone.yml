@@ -58,6 +58,7 @@ jobs:
       # runs-on: '[ "ubuntu-latest" ]'
       environment: staging
       device-repo: balena-os/balena-generic
+      device-repo-ref: master
       yocto-scripts-ref: ${{ github.event.pull_request.head.sha || github.sha }}
       machine: generic-amd64
       deploy-s3: true
