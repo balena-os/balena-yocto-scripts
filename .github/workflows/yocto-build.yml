@@ -355,7 +355,10 @@ jobs:
           mv ${WORKSPACE}/balena.yml ${DEPLOY_PATH}
 
       # TODO: add test step/steps here??
-      
+      # img location = ${DEPLOY_PATH}/image/balena.img
+      # suites location = ${WORKSPACE/layers/meta-balena/tests}
+      # config.json location = doesn't exist 
+      # leviathan workspace folder = doesn't exist 
 
       # TODO: bundle artifacts separately for convience
       # https://github.com/actions/upload-artifact
