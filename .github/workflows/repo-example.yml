@@ -1,0 +1,30 @@
+name: Yocto build
+# device repo example psuedo code for visualisation purposes
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  yocto-generic-amd64:
+    uses: balena-os/balena-yocto-scripts/.github/workflows/yocto-build.yml@<tag>
+    secrets: inherit
+    with:
+        machine: generic-amd64
+        sign-image: true
+        development-mode: false
+        environment: 'production' # used to select prod api key , # prod api url # SSH url = blank
+        ... etc
+
+  generic-aarch64:
+    uses: balena-os/balena-yocto-scripts/.github/workflows/yocto-build.yml@<tag>
+    secrets: inherit
+    with:
+        machine: generic-aarch64
+        sign-image: false
+        development-mode: true
+        environment: 'balena-machine' # have a github env with SSH port , ssh URL
+        ... etc
+

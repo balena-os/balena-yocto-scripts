@@ -318,10 +318,10 @@ jobs:
           #du -cksh shared/yocto-cache/$(whoami)/*
 
       # TODO: pre-install on self-hosted-runners
-      - name: Install zip package
+      - name: Install zip packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y zip
+          sudo apt-get install -y zip gzip
 
       - name: Export prepare artifacts deploy path to env
         env: 
@@ -354,14 +354,49 @@ jobs:
           # Move the generated balena.yml into the deploy folder for easier access in deploy job
           mv ${WORKSPACE}/balena.yml ${DEPLOY_PATH}
 
+      
+      #TODO:  select correct api key (balena machine or prod)
+
+      - name : Prepare Leviathan inputs
+        run: | 
+          # create "workspace" directory
+          echo LEVIATHAN_WORKSPACE="${WORKSPACE}/leviathan-workspace" >> $GITHUB_ENV
+          mkdir -p ${LEVIATHAN_WORKSPACE}
+
+          # Set suites location
+          echo LEVIATHAN_SUITES="${WORKSPACE}/layers/meta-balena/tests/suites" >> $GITHUB_ENV
+
+          # Copy config.js and image to leviathan workspace, and gzip (leviathan expects gzipped image)
+          cp ${LEVIATHAN_SUITES}/config.js ${LEVIATHAN_WORKSPACE}/config.js
+          cp ${DEPLOY_PATH}/image/balena.img ${LEVIATHAN_WORKSPACE}/balena.img
+          gzip ${LEVIATHAN_WORKSPACE}/balena.img
+
+          # Create reports folder
+          echo LEVIATHAN_REPORTS="${WORKSPACE/leviathan-reports" >> $GITHUB_ENV
+          mkdir -p ${LEVIATHAN_REPORTS}
+
       # TODO: add test step/steps here??
-      # img location = ${DEPLOY_PATH}/image/balena.img
-      # suites location = ${WORKSPACE/layers/meta-balena/tests}
-      # config.json location = doesn't exist 
-      # leviathan workspace folder = doesn't exist 
+      # Set the envs for the step 
+      # SUITES: ${{ env.LEVIATHAN_SUITES }} 
+      # WORKSPACE: ${{ env.LEVIATHAN_WORKSPACE }} 
+      # REPORTS: ${{ env.LEVIATHAN_REPORTS }} 
+      # - name: leviathan...
+      #   uses: leviathan-action.....
+      #   env:
+      #     SUITES: ${{ env.LEVIATHAN_SUITES }} 
+      #   matrix: |  - pointless to split at the moment, as if they're not in a seperate job, you won't be able to retry anyway
+      #     os
+      #     hup
+      #     cloud
+      #     sb-os
+      #     sb-hup
+
+      ## IF inputs.sign-image === true
+      ## Do another leviathan with QEMU_SECUREBOOT = 1??
 
       # TODO: bundle artifacts separately for convience
       # https://github.com/actions/upload-artifact
+      # ALSO need the flasher and raw artifacts as image maker expects them 
       - name: Upload artifacts
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         with:
