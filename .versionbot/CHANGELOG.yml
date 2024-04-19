@@ -1,4 +1,16 @@
 - commits:
+    - subject: Add missing $select for release_asset.asset_key
+      hash: 4f4f65c0b2cace726eccbea5d5ed8ed0f8302e54
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Thodoris Greasidis
+      nested: []
+  version: 1.21.7
+  title: ""
+  date: 2024-04-19T14:22:55.708Z
+- commits:
     - subject: 'Revert "balena-build: avoid using device-type as a prefix in yocto
         sstate"'
       hash: 7a85083784a3225debf2276a978558df5a307ec7
