@@ -1264,7 +1264,7 @@ balena_api_get_release_assets() {
 	_token=${_token:-$(balena_lib_token)}
 
 	[ -z "${_token}" ] && >&2 echo "[balena_api_get_release_assets]: Authentication token is required" && return 1
-	_json=$(do_get "https://api.${_apiEnv}/${TRANSLATION}/release(${_release_id})?\$select=id&\$expand=release_asset" -H "Authorization: Bearer ${_token}")
+	_json=$(do_get "https://api.${_apiEnv}/${TRANSLATION}/release(${_release_id})?\$select=id,release_asset&\$expand=release_asset" -H "Authorization: Bearer ${_token}")
 	__pp_json "${_json}"
 	echo "${_json}"
 }
