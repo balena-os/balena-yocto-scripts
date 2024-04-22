@@ -356,6 +356,14 @@ jobs:
 
       
       #TODO:  select correct api key (balena machine or prod)
+      ## SELECT WHICH API KEY TO USE BASED ON ENV
+      - name: Select Balena API key for Prod
+        if: inputs.environment == 'production'
+        run: echo "BALENACLOUD_API_KEY=${{ secrets.BALENA_API_KEY }}" >> $GITHUB_ENV
+
+      - name: Select Balena API key for staging
+        if: inputs.environment == 'staging'
+        run: echo "BALENACLOUD_API_KEY=${{ secrets.BALENAMACHINE_API_KEY }}" >> $GITHUB_ENV
 
       - name : Prepare Leviathan inputs
         run: | 
@@ -377,19 +385,22 @@ jobs:
 
       # TODO: add test step/steps here??
       # Set the envs for the step 
-      # SUITES: ${{ env.LEVIATHAN_SUITES }} 
-      # WORKSPACE: ${{ env.LEVIATHAN_WORKSPACE }} 
-      # REPORTS: ${{ env.LEVIATHAN_REPORTS }} 
-      # - name: leviathan...
-      #   uses: leviathan-action.....
-      #   env:
-      #     SUITES: ${{ env.LEVIATHAN_SUITES }} 
-      #   matrix: |  - pointless to split at the moment, as if they're not in a seperate job, you won't be able to retry anyway
-      #     os
-      #     hup
-      #     cloud
-      #     sb-os
-      #     sb-hup
+      - name: BalenaOS Leviathan Tests 
+        uses: balena-os/leviathan@master
+        matrix:
+          include:
+          - DEVICE_TYPE: genericx86-64-ext
+            WORKER_TYPE: qemu
+            ENVIRONMENT: balena-cloud
+          #   TEST_SUITE_NAME: e2e 
+        env:
+          SUITES: ${{ env.LEVIATHAN_SUITES }} 
+          WORKSPACE: ${{ env.LEVIATHAN_WORKSPACE }} 
+          REPORTS: ${{ env.LEVIATHAN_REPORTS }} 
+          BALENACLOUD_ORG: ${{ env.BALENACLOUD_ORG }}
+          BALENACLOUD_API_KEY: ${{ env.BALENACLOUD_API_KEY }}
+        inputs:
+
 
       ## IF inputs.sign-image === true
       ## Do another leviathan with QEMU_SECUREBOOT = 1??
