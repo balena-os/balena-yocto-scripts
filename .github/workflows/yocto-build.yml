@@ -3,11 +3,19 @@ name: "Yocto"
 on:
   workflow_call:
     secrets:
+      # API key names should be descriptive telling us what company, what for, where from, what's the key.
+      # Let's say, XCompany wants to have test, then keys could be: XCOMPANY_AUTOKIT_BM_ACCESS_TOKEN
+      AUTOKIT_BALENACLOUD_API_KEY:
+        description: balena API key for Leviathan testing from BalenaCloud
+        required: false
+      AUTOKIT_BALENAMACHINE_API_KEY:
+        description: balena API key for Leviathan testing from balena-os BM instance
+        required: false
       BALENA_API_KEY:
-        description: balena API key for deploying releases 
+        description: balena API key for deploying releases
         required: false
       BALENAOS_STAGING_TOKEN:
-        description: balena API key for deploying releases to staging 
+        description: balena API key for deploying releases to staging
         required: false
       SIGN_KMOD_KEY_APPEND:
         description: Base64-encoded public key of a kernel module signing keypair
@@ -49,7 +57,7 @@ on:
         required: true
         type: string
       environment:
-        description: The GitHub Environment to use for the job(s) (production, staging, etc.)
+        description: The GitHub Environment to use for the job(s) (production, staging, balenaos-balenamachine etc.)
         required: false
         type: string
         default: staging
@@ -63,13 +71,27 @@ on:
         required: false
         type: boolean
         default: false
-    outputs:  
-      device_slug: 
+      QEMU_CPUS:
+        required: false
+        type: number
+        default: 4
+      QEMU_MEMORY:
+        type: string
+        required: false
+        default: "1G"
+      BALENACLOUD_APP_NAME:
+        description: "Testbot fleet for finding available Leviathan workers. Not used for QEMU workers. Can accept a list of apps separated by commas."
+        type: string
+        required: false
+        default: "balena/testbot-rig, balena/testbot-rig-partners"
+    outputs:
+      device_slug:
         description: "Device type slug"
         value: ${{ jobs.build.outputs.device_slug }}
-      os_version: 
+      os_version:
         description: "Version of generated device type"
         value: ${{ jobs.build.outputs.os_version }}
+    
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
@@ -173,7 +195,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ inputs.device-repo-ref }}
           submodules: true
-          # fetch-depth: 1 
+          # fetch-depth: 1
           fetch-tags: true
 
       - name: Device repository check
@@ -240,6 +262,14 @@ jobs:
             _contract=$(balena_lib_build_contract "${device_slug}")
             cp "${_contract}" "${WORKSPACE}/balena.yml"
           fi
+
+          # Leviathan specific
+          if [[ "${device_slug}" == generic-* ]]; then
+            echo "worker_type=qemu" >> $GITHUB_OUTPUT
+          else
+            echo "worker_type=testbot" >> $GITHUB_OUTPUT
+          fi
+
 
       - name: Enable OS development features
         if: inputs.os-dev == true
@@ -324,10 +354,10 @@ jobs:
           sudo apt-get install -y zip gzip
 
       - name: Export prepare artifacts deploy path to env
-        env: 
+        env:
           DEVICE_TYPE_SLUG: ${{ steps.balena-lib.outputs.device_slug }}
           VERSION: ${{ steps.balena-lib.outputs.os_version }}
-        run: | 
+        run: |
           echo "DEPLOY_PATH=${{ runner.temp }}/deploy/${DEVICE_TYPE_SLUG}/${VERSION}" >> $GITHUB_ENV
 
       # TODO: prepare artifacts manually to replace balena_deploy_artifacts
@@ -344,7 +374,7 @@ jobs:
 
           # symlinks don't seem to work in the volume we mount to the helper image
           #ln -sf ../.. "${DEPLOY_PATH}/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}"
-          
+
           find "${DEPLOY_PATH}" -exec ls -lh {} \;
 
           ls ${DEPLOY_PATH}
@@ -354,60 +384,12 @@ jobs:
           # Move the generated balena.yml into the deploy folder for easier access in deploy job
           mv ${WORKSPACE}/balena.yml ${DEPLOY_PATH}
 
-      
-      #TODO:  select correct api key (balena machine or prod)
-      ## SELECT WHICH API KEY TO USE BASED ON ENV
-      - name: Select Balena API key for Prod
-        if: inputs.environment == 'production'
-        run: echo "BALENACLOUD_API_KEY=${{ secrets.BALENA_API_KEY }}" >> $GITHUB_ENV
-
-      - name: Select Balena API key for staging
-        if: inputs.environment == 'staging'
-        run: echo "BALENACLOUD_API_KEY=${{ secrets.BALENAMACHINE_API_KEY }}" >> $GITHUB_ENV
-
-      - name : Prepare Leviathan inputs
-        run: | 
-          # create "workspace" directory
-          echo LEVIATHAN_WORKSPACE="${WORKSPACE}/leviathan-workspace" >> $GITHUB_ENV
-          mkdir -p ${LEVIATHAN_WORKSPACE}
-
-          # Set suites location
-          echo LEVIATHAN_SUITES="${WORKSPACE}/layers/meta-balena/tests/suites" >> $GITHUB_ENV
-
-          # Copy config.js and image to leviathan workspace, and gzip (leviathan expects gzipped image)
-          cp ${LEVIATHAN_SUITES}/config.js ${LEVIATHAN_WORKSPACE}/config.js
-          cp ${DEPLOY_PATH}/image/balena.img ${LEVIATHAN_WORKSPACE}/balena.img
-          gzip ${LEVIATHAN_WORKSPACE}/balena.img
-
-          # Create reports folder
-          echo LEVIATHAN_REPORTS="${WORKSPACE/leviathan-reports" >> $GITHUB_ENV
-          mkdir -p ${LEVIATHAN_REPORTS}
-
-      # TODO: add test step/steps here??
-      # Set the envs for the step 
-      - name: BalenaOS Leviathan Tests 
-        uses: balena-os/leviathan@master
-        matrix:
-          include:
-          - DEVICE_TYPE: genericx86-64-ext
-            WORKER_TYPE: qemu
-            ENVIRONMENT: balena-cloud
-          #   TEST_SUITE_NAME: e2e 
-        env:
-          SUITES: ${{ env.LEVIATHAN_SUITES }} 
-          WORKSPACE: ${{ env.LEVIATHAN_WORKSPACE }} 
-          REPORTS: ${{ env.LEVIATHAN_REPORTS }} 
-          BALENACLOUD_ORG: ${{ env.BALENACLOUD_ORG }}
-          BALENACLOUD_API_KEY: ${{ env.BALENACLOUD_API_KEY }}
-        inputs:
-
-
       ## IF inputs.sign-image === true
-      ## Do another leviathan with QEMU_SECUREBOOT = 1??
+
 
       # TODO: bundle artifacts separately for convience
       # https://github.com/actions/upload-artifact
-      # ALSO need the flasher and raw artifacts as image maker expects them 
+      # ALSO need the flasher and raw artifacts as image maker expects them
       - name: Upload artifacts
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         with:
@@ -419,4 +401,179 @@ jobs:
             ${{ env.DEPLOY_PATH }}/*.*
             ${{ env.DEPLOY_PATH }}/VERSION*
             ${{ env.DEPLOY_PATH }}/image/balena.img
-     
+
+
+  ##############################
+  # Leviathan Test
+  ##############################
+  test:
+    runs-on: actuated-8cpu-8gb
+    needs: build
+    # runs-on: ${{ fromJSON(inputs.runs-on) }}
+    environment: ${{ inputs.environment }}
+
+    defaults:
+      run:
+        working-directory: .
+        shell: bash --noprofile --norc -eo pipefail -x {0}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - DEVICE_TYPE: ${{ needs.build.outputs.device_slug }}
+          WORKER_TYPE: ${{ needs.build.outputs.worker_type }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          TEST_SUITE: os
+        - DEVICE_TYPE: ${{ needs.build.outputs.device_slug }}
+          WORKER_TYPE: qemu
+          ENVIRONMENT: ${{ inputs.environment }}
+          TEST_SUITE: hup
+        - DEVICE_TYPE: ${{ needs.build.outputs.device_slug }}
+          WORKER_TYPE: qemu
+          ENVIRONMENT: ${{ inputs.environment }}
+          TEST_SUITE: cloud
+    steps:
+      - name: Reject unapproved external contributions
+        env:
+          ok_to_test_label: ok-to-test
+          # https://cli.github.com/manual/gh_help_environment
+          GH_DEBUG: "true"
+          GH_PAGER: "cat"
+          GH_PROMPT_DISABLED: "true"
+          GH_REPO: "${{ inputs.device-repo }}"
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        if: |
+          github.event.pull_request.state == 'open' &&
+          github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          pr_labels="$(gh pr view ${{ github.event.pull_request.number }} --json labels -q .labels[].name)"
+
+          for label in "${pr_labels}"
+          do
+            if [[ "$label" =~ "${{ env.ok_to_test_label }}" ]]
+            then
+              gh pr edit ${{ github.event.pull_request.number }} --remove-label "${{ env.ok_to_test_label }}"
+              exit 0
+            fi
+          done
+
+          echo "::error::External contributions must be approved with the label '${{ env.ok_to_test_label }}'. \
+            Please contact a member of the organization for assistance."
+          exit 1
+
+      # this must be done before putting files in the workspace
+      # https://github.com/easimon/maximize-build-space
+      - name: Maximize build space
+        if: contains(fromJSON(inputs.runs-on), 'self-hosted') == false
+        uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c
+        with:
+          root-reserve-mb: "4096"
+          temp-reserve-mb: "1024"
+          swap-size-mb: "4096"
+          remove-dotnet: "true"
+          remove-android: "true"
+          remove-haskell: "true"
+          remove-codeql: "true"
+          remove-docker-images: "true"
+
+      # https://github.com/actions/checkout
+      - name: Clone device repository
+        uses: actions/checkout@v4.1.1
+        with:
+          repository: ${{ inputs.device-repo }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ inputs.device-repo-ref }}
+          submodules: true
+          # fetch-depth: 1
+          fetch-tags: true
+
+      - name: Device repository check
+        run: |
+          if [ "$(yq '.type' repo.yml)" != "yocto-based OS image" ]; then
+            echo "::error::Repository does not appear to be of type 'yocto-based OS image'"
+            exit 1
+          fi
+
+      - name: Update meta-balena submodule to ${{ inputs.meta-balena-ref }}
+        if: inputs.meta-balena-ref != ''
+        working-directory: ./layers/meta-balena
+        run: |
+          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
+          git fetch --all
+          git checkout --force "${{ inputs.meta-balena-ref }}"
+          git submodule update --init --recursive
+
+      - name: Setup env variables for Prod
+        if: inputs.environment == 'production'
+        run: |
+          echo "BALENACLOUD_API_KEY=${{ secrets.AUTOKIT_BALENACLOUD_API_KEY  }}" >> $GITHUB_ENV
+          echo "BALENACLOUD_API_URL='balena-cloud.com'" >> $GITHUB_ENV
+          echo "BALENACLOUD_ORG='testbot'" >> $GITHUB_ENV
+          echo "BALENACLOUD_APP_NAME='balena/testbot-rig'" >> $GITHUB_ENV
+          echo "BALENACLOUD_SSH_PORT=???" >> $GITHUB_ENV 
+          echo "BALENACLOUD_SSH_URL='???'" >> $GITHUB_ENV 
+          # Ryan, each env would need defaults 
+
+      - name: Setup env variables for balena-os balenamachine
+        if: inputs.environment == 'balenaos-balenamachine'
+        run: |
+          echo "BALENACLOUD_API_KEY=${{ secrets.AUTOKIT_BALENAMACHINE_API_KEY }}" >> $GITHUB_ENV
+          echo "BALENACLOUD_API_URL='bm.balena-dev.com'" >> $GITHUB_ENV
+          echo "BALENACLOUD_APP_NAME=${{ inputs.BALENACLOUD_APP_NAME }}" >> $GITHUB_ENV
+          echo "BALENACLOUD_ORG='testbot'" >> $GITHUB_ENV
+          echo "BALENACLOUD_SSH_PORT=222" >> $GITHUB_ENV
+          echo "BALENACLOUD_SSH_URL='ssh.devices.bm.balena-dev.com'" >> $GITHUB_ENV
+
+          # Should I setup a staging environment as well, why not right? Ryan
+
+      - name : Setup Leviathan Environement
+        run: |
+          # create "workspace" directory
+          echo LEVIATHAN_WORKSPACE="${WORKSPACE}/leviathan-workspace" >> $GITHUB_ENV
+          mkdir -p ${LEVIATHAN_WORKSPACE}
+
+          # Set Leviathan root location
+          echo LEVIATHAN_ROOT="${WORKSPACE}/layers/meta-balena/tests/leviathan" >> $GITHUB_ENV
+
+          # Set suites location
+          echo LEVIATHAN_SUITES="${WORKSPACE}/layers/meta-balena/tests/suites/${{ matrix.TEST_SUITE }}" >> $GITHUB_ENV
+
+          # Copy config.js to leviathan workspace, and gzip (leviathan expects gzipped image)
+          cp ${LEVIATHAN_SUITES}/config.js ${LEVIATHAN_WORKSPACE}/config.js
+
+          # Create reports folder
+          echo LEVIATHAN_REPORTS="${WORKSPACE/leviathan-reports" >> $GITHUB_ENV
+          mkdir -p ${LEVIATHAN_REPORTS}
+
+      # Images need to end up in workspace folder and need to have correct names as well
+      # If are not able to tweak, HUP suite to use hostapp instead then 
+      # We need to do a per matrix addition to make sure we, 
+      # Pull balena.img.gz for os, cloud
+      # Pull balena-image.docs for HUP with exactly these names
+      ## Ryan
+      - name: Fetch artifacts from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts # Ryan will tell what the name of the artifact would become
+          path: ${{ env.LEVIATHAN_WORKSPACE }}
+
+      - name: BalenaOS Leviathan Tests
+        uses: ./
+        env:
+          LEVIATHAN_ROOT: ${{ env.LEVIATHAN_ROOT }}
+          SUITES: ${{ env.LEVIATHAN_SUITES }}
+          WORKSPACE: ${{ env.LEVIATHAN_WORKSPACE }}
+          REPORTS: ${{ env.LEVIATHAN_REPORTS }}
+          BALENACLOUD_ORG: ${{ env.BALENACLOUD_ORG }}
+          BALENACLOUD_API_KEY: ${{ env.BALENACLOUD_API_KEY }}
+          BALENACLOUD_API_URL: ${{ env.BALENACLOUD_API_URL }}
+          BALENACLOUD_APP_NAME: ${{ env.BALENACLOUD_APP_NAME }}
+          BALENACLOUD_SSH_PORT: ${{ env.BALENACLOUD_SSH_PORT }}
+          BALENACLOUD_SSH_URL: ${{ env.BALENACLOUD_SSH_URL }}
+          DEVICE_TYPE: ${{ matrix.DEVICE_TYPE }}
+          WORKER_TYPE: ${{ matrix.WORKER_TYPE }}
+          QEMU_CPUS: ${{ inputs.QEMU_CPUS }}
+          QEMU_MEMORY: ${{ inputs.QEMU_MEMORY }}
+
+         ## Do another leviathan with QEMU_SECUREBOOT = 1??

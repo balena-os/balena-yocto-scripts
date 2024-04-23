@@ -1,0 +1,70 @@
+name: 'Knock knock, its Leviathan Time'
+description: 'Test your software directly on hardware using the Levaithan Testing framework'
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Test
+      working-directory: ${{ env.LEVIATHAN_ROOT }} 
+      shell: bash
+      run: |
+        make config
+        make build
+        make test || exit 1
+
+    - uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4
+      env:
+        WORKER_TYPE: ${{ env.WORKER_TYPE }}
+        DEVICE_TYPE: ${{ env.DEVICE_TYPE }}
+      with:
+        name: reports-${{ env.WORKER_TYPE }}-${{ env.DEVICE_TYPE }}
+        path: ${{ env.REPORTS }}
+
+    - name: Teardown
+      shell: bash
+      working-directory: ${{ env.LEVIATHAN_ROOT }} 
+      run: |
+        make down
+
+
+# Stick leviathan action into the yocto-build.yml
+# Create new environements for it 
+# See if you can use whoami for BALENACLOUD_ORG value in config,js
+# See if you need two API keys for prod one for yocto and other for leviathan test
+# Resolve all the issues below:
+
+## SPACE FOR THOUGHTS
+
+# AFTER MVP Add a way to swap leviathan debug for one of runs
+
+# if [ ! -z "$LEVIATHAN_DEBUG" ]
+# then
+#   perl -i~ -0777 -pe "s/debug: ({|\[)[^}\]]+(}|\])/debug: {$LEVIATHAN_DEBUG/g" .leviathan-inputs/config.js
+# fi
+
+#  Why even this exists? Find out
+
+# if [ ! -z "$LEVIATHAN_NETWORK_WIRED" = true ]
+# then
+#   perl -i~ -0777 -pe "s/networkWired: [^,]+,/networkWired: true,/g" .leviathan-inputs/config.js
+#   perl -i~ -0777 -pe "s/networkWireless: [^,]+,/networkWireless: false,/g" .leviathan-inputs/config.js
+# fi
+
+
+## Feature: Override configs on workflow dispatch, better than Jenkins
+
+# if [ ! -z "$USE_ME_TO_OVERRIDE_CONFIG" ]
+# then
+#   # Overrite the config entirely
+#   echo "$USE_ME_TO_OVERRIDE_CONFIG" > .leviathan-inputs/config.js
+#     echo "******** OVERRIDING THE CONFIG - config.js as follows *************"
+#     cat .leviathan-inputs/config.js
+# fi
+
+## Test for multiple fleets, envs, and devices
+
+## Can we visually divide the Leviathan Build step from Test Step. It's a lot to scroll down from. Potenial UX Improvments
+
+## missing feature: Secureboot QEMU env variables when doing make local test. Give a way for folks to specify their own starting test command maybe???
