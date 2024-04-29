@@ -1,4 +1,26 @@
 - commits:
+    - subject: Support commit tags when extracting version tag from git
+      hash: 98fec51fae4721224e64cfec52480a5f17b8e271
+      body: >
+        Git describe does not include commit tags by default, and only annotated
+        tags are shown.
+
+
+        This behaviour was fine until a recent CI issue changed the types of
+        tags used to version the repositories.
+
+
+        This commit allows supporting of both types while the CI issue is
+        investigated.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Kyle Harding
+      nested: []
+  version: 1.21.8
+  title: ""
+  date: 2024-04-29T17:17:30.203Z
+- commits:
     - subject: Add missing $select for release_asset.asset_key
       hash: 4f4f65c0b2cace726eccbea5d5ed8ed0f8302e54
       body: ""
