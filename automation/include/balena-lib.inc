@@ -17,7 +17,7 @@ balena_lib_get_os_version() {
 	git config --global --add safe.directory "${device_dir}"
 
 	pushd "${device_dir}" > /dev/null 2>&1 || return
-	_version=$(git describe --abbrev=0)
+	_version=$(git describe --tags --abbrev=0)
 	popd > /dev/null 2>&1 || return
 	echo "${_version#v*}"
 }
