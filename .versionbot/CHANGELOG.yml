@@ -1,4 +1,27 @@
 - commits:
+    - subject: "balena-lib: improve base tag detection"
+      hash: 872bb3b1df920b026b524e041bf4f4f7c422cb2f
+      body: |
+        When a ESR release is deployed a tag with the base meta-balena version
+        is created. This is used by the API to check for a valid OS version
+        for updates.
+
+        The current mechanism to find the base version only provides an ESR
+        version for the first commit after the branch has been created.
+
+        Using merge-base to find the common ancestor and `tag --points-at` to
+        find the actual tag works for all commits after the branch is created.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.21.9
+  title: ""
+  date: 2024-04-30T14:17:29.958Z
+- commits:
     - subject: Support commit tags when extracting version tag from git
       hash: 98fec51fae4721224e64cfec52480a5f17b8e271
       body: >
