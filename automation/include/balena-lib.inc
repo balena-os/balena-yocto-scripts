@@ -41,7 +41,7 @@ balena_lib_get_meta_balena_base_version() {
 	git config --global --add safe.directory "${device_dir}/layers/meta-balena"
 
 	pushd "${device_dir}/layers/meta-balena" > /dev/null 2>&1 || return
-	_version=$(git describe "$(git rev-list --first-parent -1 HEAD)"^1)
+	_version=$(git tag --points-at $(git merge-base HEAD master))
 	popd > /dev/null 2>&1 || return
 	echo "${_version%+*}"
 }
