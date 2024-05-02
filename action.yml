@@ -12,7 +12,7 @@ runs:
       run: |
         make config
         make build
-        make test || exit 1
+        make local-test QEMU_SECUREBOOT=${QEMU_SECUREBOOT} FLASHER_SECUREBOOT=${FLASHER_SECUREBOOT} || exit 1
 
     - uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4
       env:
@@ -30,10 +30,7 @@ runs:
 
 
 # Stick leviathan action into the yocto-build.yml
-# Create new environements for it 
 # See if you can use whoami for BALENACLOUD_ORG value in config,js
-# See if you need two API keys for prod one for yocto and other for leviathan test
-# Resolve all the issues below:
 
 ## SPACE FOR THOUGHTS
 
@@ -52,19 +49,4 @@ runs:
 #   perl -i~ -0777 -pe "s/networkWireless: [^,]+,/networkWireless: false,/g" .leviathan-inputs/config.js
 # fi
 
-
-## Feature: Override configs on workflow dispatch, better than Jenkins
-
-# if [ ! -z "$USE_ME_TO_OVERRIDE_CONFIG" ]
-# then
-#   # Overrite the config entirely
-#   echo "$USE_ME_TO_OVERRIDE_CONFIG" > .leviathan-inputs/config.js
-#     echo "******** OVERRIDING THE CONFIG - config.js as follows *************"
-#     cat .leviathan-inputs/config.js
-# fi
-
 ## Test for multiple fleets, envs, and devices
-
-## Can we visually divide the Leviathan Build step from Test Step. It's a lot to scroll down from. Potenial UX Improvments
-
-## missing feature: Secureboot QEMU env variables when doing make local test. Give a way for folks to specify their own starting test command maybe???

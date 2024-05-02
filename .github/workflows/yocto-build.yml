@@ -57,10 +57,15 @@ on:
         required: true
         type: string
       environment:
-        description: The GitHub Environment to use for the job(s) (production, staging, balenaos-balenamachine etc.)
+        description: The GitHub Environment to use for the job(s) (production, staging etc.)
         required: false
         type: string
         default: staging
+      test-environment:
+        description: The BalenaCloud environment you want tests to target. Available options - production, staging, balenaos-balenamachine
+        required: false
+        type: string
+        default: production
       sign-image:
         description: Whether to sign image for secure boot
         required: false
@@ -71,19 +76,26 @@ on:
         required: false
         type: boolean
         default: false
-      QEMU_CPUS:
+      test_suites:
+        description: comma-separated list of test suites to run
         required: false
-        type: number
-        default: 4
-      QEMU_MEMORY:
         type: string
+        default: "os","hup","cloud"
+      test_workers:
+        description: comma-separated list of worker types to use for testing. Example - qemu, testbot
         required: false
-        default: "1G"
+        type: string
+        default: 'qemu','testbot'
       BALENACLOUD_APP_NAME:
         description: "Testbot fleet for finding available Leviathan workers. Not used for QEMU workers. Can accept a list of apps separated by commas."
         type: string
         required: false
         default: "balena/testbot-rig, balena/testbot-rig-partners"
+      BALENACLOUD_ORG:
+        description: "It's weird"
+        type: string
+        required: false
+        default: testbot
     outputs:
       device_slug:
         description: "Device type slug"
@@ -263,14 +275,6 @@ jobs:
             cp "${_contract}" "${WORKSPACE}/balena.yml"
           fi
 
-          # Leviathan specific
-          if [[ "${device_slug}" == generic-* ]]; then
-            echo "worker_type=qemu" >> $GITHUB_OUTPUT
-          else
-            echo "worker_type=testbot" >> $GITHUB_OUTPUT
-          fi
-
-
       - name: Enable OS development features
         if: inputs.os-dev == true
         run: |
@@ -403,6 +407,24 @@ jobs:
             ${{ env.DEPLOY_PATH }}/image/balena.img
 
 
+       # FIXME: remove this handling of deprecated comma-separated values
+      - name: Create matrix from custom values
+        id: custom_test_matrix
+        # if: steps.custom_test_values.outputs.json != ''
+        env:
+          MATRIX: >
+            {
+              "DEVICE_TYPE": ${{ steps.custom_test_values.outputs.json }},
+              "ENVIRONEMENT": ${{ inputs.custom_runs_on || format('[{0}]', inputs.runs_on) }},
+              "WORKER_TYPE": ${{ steps.custom_environments_matrix.outputs.json }},
+              "TEST_SUITE": ${{ inputs.test_suites }}
+
+            }
+        run: |
+          json=$(jq -e -c . <<<"${MATRIX}") || exit $?
+          echo "json=${json}" >> "${GITHUB_OUTPUT}"
+
+
   ##############################
   # Leviathan Test
   ##############################
@@ -420,63 +442,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-        - DEVICE_TYPE: ${{ needs.build.outputs.device_slug }}
-          WORKER_TYPE: ${{ needs.build.outputs.worker_type }}
-          ENVIRONMENT: ${{ inputs.environment }}
-          TEST_SUITE: os
-        - DEVICE_TYPE: ${{ needs.build.outputs.device_slug }}
-          WORKER_TYPE: qemu
-          ENVIRONMENT: ${{ inputs.environment }}
-          TEST_SUITE: hup
-        - DEVICE_TYPE: ${{ needs.build.outputs.device_slug }}
-          WORKER_TYPE: qemu
-          ENVIRONMENT: ${{ inputs.environment }}
-          TEST_SUITE: cloud
+        DEVICE_TYPE: ${{ needs.build.outputs.device_slug }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        WORKER_TYPE: ${{ fromJson(format('[{0}]', inputs.test_workers)) }}
+        TEST_SUITE: ${{ fromJson(format('[{0}]', inputs.test_suites)) }}
     steps:
-      - name: Reject unapproved external contributions
-        env:
-          ok_to_test_label: ok-to-test
-          # https://cli.github.com/manual/gh_help_environment
-          GH_DEBUG: "true"
-          GH_PAGER: "cat"
-          GH_PROMPT_DISABLED: "true"
-          GH_REPO: "${{ inputs.device-repo }}"
-          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-        if: |
-          github.event.pull_request.state == 'open' &&
-          github.event.pull_request.head.repo.full_name != github.repository
-        run: |
-          pr_labels="$(gh pr view ${{ github.event.pull_request.number }} --json labels -q .labels[].name)"
-
-          for label in "${pr_labels}"
-          do
-            if [[ "$label" =~ "${{ env.ok_to_test_label }}" ]]
-            then
-              gh pr edit ${{ github.event.pull_request.number }} --remove-label "${{ env.ok_to_test_label }}"
-              exit 0
-            fi
-          done
-
-          echo "::error::External contributions must be approved with the label '${{ env.ok_to_test_label }}'. \
-            Please contact a member of the organization for assistance."
-          exit 1
-
-      # this must be done before putting files in the workspace
-      # https://github.com/easimon/maximize-build-space
-      - name: Maximize build space
-        if: contains(fromJSON(inputs.runs-on), 'self-hosted') == false
-        uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c
-        with:
-          root-reserve-mb: "4096"
-          temp-reserve-mb: "1024"
-          swap-size-mb: "4096"
-          remove-dotnet: "true"
-          remove-android: "true"
-          remove-haskell: "true"
-          remove-codeql: "true"
-          remove-docker-images: "true"
-
       # https://github.com/actions/checkout
       - name: Clone device repository
         uses: actions/checkout@v4.1.1
@@ -507,25 +477,12 @@ jobs:
       - name: Setup env variables for Prod
         if: inputs.environment == 'production'
         run: |
-          echo "BALENACLOUD_API_KEY=${{ secrets.AUTOKIT_BALENACLOUD_API_KEY  }}" >> $GITHUB_ENV
-          echo "BALENACLOUD_API_URL='balena-cloud.com'" >> $GITHUB_ENV
-          echo "BALENACLOUD_ORG='testbot'" >> $GITHUB_ENV
-          echo "BALENACLOUD_APP_NAME='balena/testbot-rig'" >> $GITHUB_ENV
-          echo "BALENACLOUD_SSH_PORT=???" >> $GITHUB_ENV 
-          echo "BALENACLOUD_SSH_URL='???'" >> $GITHUB_ENV 
-          # Ryan, each env would need defaults 
-
+          echo "BALENACLOUD_API_KEY=${{ secrets.AUTOKIT_BALENACLOUD_API_KEY }}" >> $GITHUB_ENV
+      
       - name: Setup env variables for balena-os balenamachine
         if: inputs.environment == 'balenaos-balenamachine'
         run: |
           echo "BALENACLOUD_API_KEY=${{ secrets.AUTOKIT_BALENAMACHINE_API_KEY }}" >> $GITHUB_ENV
-          echo "BALENACLOUD_API_URL='bm.balena-dev.com'" >> $GITHUB_ENV
-          echo "BALENACLOUD_APP_NAME=${{ inputs.BALENACLOUD_APP_NAME }}" >> $GITHUB_ENV
-          echo "BALENACLOUD_ORG='testbot'" >> $GITHUB_ENV
-          echo "BALENACLOUD_SSH_PORT=222" >> $GITHUB_ENV
-          echo "BALENACLOUD_SSH_URL='ssh.devices.bm.balena-dev.com'" >> $GITHUB_ENV
-
-          # Should I setup a staging environment as well, why not right? Ryan
 
       - name : Setup Leviathan Environement
         run: |
@@ -555,25 +512,46 @@ jobs:
       - name: Fetch artifacts from build job
         uses: actions/download-artifact@v4
         with:
-          name: build-artifacts # Ryan will tell what the name of the artifact would become
+          name: build-artifacts
           path: ${{ env.LEVIATHAN_WORKSPACE }}
 
       - name: BalenaOS Leviathan Tests
-        uses: ./
+        # Path to action
+        uses: ./ 
         env:
-          LEVIATHAN_ROOT: ${{ env.LEVIATHAN_ROOT }}
-          SUITES: ${{ env.LEVIATHAN_SUITES }}
-          WORKSPACE: ${{ env.LEVIATHAN_WORKSPACE }}
-          REPORTS: ${{ env.LEVIATHAN_REPORTS }}
-          BALENACLOUD_ORG: ${{ env.BALENACLOUD_ORG }}
           BALENACLOUD_API_KEY: ${{ env.BALENACLOUD_API_KEY }}
-          BALENACLOUD_API_URL: ${{ env.BALENACLOUD_API_URL }}
-          BALENACLOUD_APP_NAME: ${{ env.BALENACLOUD_APP_NAME }}
-          BALENACLOUD_SSH_PORT: ${{ env.BALENACLOUD_SSH_PORT }}
-          BALENACLOUD_SSH_URL: ${{ env.BALENACLOUD_SSH_URL }}
+          BALENACLOUD_API_URL: ${{ vars.BALENA_URL }}
+          BALENACLOUD_APP_NAME: ${{ inputs.BALENACLOUD_APP_NAME }}
+          BALENACLOUD_ORG: ${{ inputs.BALENACLOUD_ORG }}
+          BALENACLOUD_SSH_PORT: ${{ vars.BALENACLOUD_SSH_PORT }}
+          BALENACLOUD_SSH_URL: ${{ vars.BALENACLOUD_SSH_URL }}
           DEVICE_TYPE: ${{ matrix.DEVICE_TYPE }}
+          LEVIATHAN_ROOT: ${{ env.LEVIATHAN_ROOT }}
+          QEMU_CPUS: 4
+          QEMU_MEMORY: "4G"
+          REPORTS: ${{ env.LEVIATHAN_REPORTS }}
+          SUITES: ${{ env.LEVIATHAN_SUITES }}
           WORKER_TYPE: ${{ matrix.WORKER_TYPE }}
-          QEMU_CPUS: ${{ inputs.QEMU_CPUS }}
-          QEMU_MEMORY: ${{ inputs.QEMU_MEMORY }}
+          WORKSPACE: ${{ env.LEVIATHAN_WORKSPACE }}
 
-         ## Do another leviathan with QEMU_SECUREBOOT = 1??
+      - name: "[Secureboot] BalenaOS Leviathan Tests"
+        if: inputs.sign-image == true
+        uses: ./ 
+        env:
+          BALENACLOUD_API_KEY: ${{ env.BALENACLOUD_API_KEY }}
+          BALENACLOUD_API_URL: ${{ vars.BALENA_URL }}
+          BALENACLOUD_APP_NAME: ${{ inputs.BALENACLOUD_APP_NAME }}
+          BALENACLOUD_ORG: ${{ inputs.BALENACLOUD_ORG }}
+          BALENACLOUD_SSH_PORT: ${{ vars.BALENACLOUD_SSH_PORT }}
+          BALENACLOUD_SSH_URL: ${{ vars.BALENACLOUD_SSH_URL }}
+          DEVICE_TYPE: ${{ matrix.DEVICE_TYPE }}
+          LEVIATHAN_ROOT: ${{ env.LEVIATHAN_ROOT }}
+          QEMU_CPUS: 4
+          QEMU_MEMORY: "4G"
+          REPORTS: ${{ env.LEVIATHAN_REPORTS }}
+          SUITES: ${{ env.LEVIATHAN_SUITES }}
+          WORKER_TYPE: ${{ matrix.WORKER_TYPE }}
+          WORKSPACE: ${{ env.LEVIATHAN_WORKSPACE }}
+          QEMU_SECUREBOOT: 1
+          FLASHER_SECUREBOOT: 1
+
