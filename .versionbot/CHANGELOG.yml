@@ -1,4 +1,19 @@
 - commits:
+    - subject: "balena-deploy: deploy usbboot if available"
+      hash: a62a90bcf05fdccc9cdbaa9961d2db823bbeb9b5
+      body: |
+        This is where the RPI family deploys provisioning artifacts.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.21.10
+  title: ""
+  date: 2024-05-02T09:18:16.451Z
+- commits:
     - subject: "balena-lib: improve base tag detection"
       hash: 872bb3b1df920b026b524e041bf4f4f7c422cb2f
       body: |
