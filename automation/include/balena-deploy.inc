@@ -66,6 +66,10 @@ balena_deploy_artifacts () {
 		cp -v "${device_dir}/CHANGELOG.md" "${_deploy_dir}"
 	fi
 
+	if [ -d "$_yocto_build_deploy/usbboot" ]; then
+		cp -rv "$_yocto_build_deploy/usbboot" "$_deploy_dir" || true
+	fi
+
 	test "${_slug}" = "edge" && return
 
 	if [ "$_deploy_artifact" = "docker-image" ]; then
