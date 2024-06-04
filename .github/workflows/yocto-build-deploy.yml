@@ -132,15 +132,24 @@ on:
         type: string
         default: "us-east-1"
       test-suites:
-        description: "Comma-separated list of test suites to run. No spaces in between."
+        description: "JSON list with the test suites to run."
         required: false
         type: string
-        default: "os,hup,cloud"
+        default: >
+          [
+            "os",
+            "hup",
+            "cloud"
+          ]
       test-workers:
-        description: "Comma-separated list of worker types to use for testing. No spaces in between. The valid worker types are `qemu` and `testbot`."
+        description: "JSON list of worker types to use for testing. Valid element values are `qemu` and `testbot`."
         required: false
         type: string
-        default: "testbot" # Most devices use "testbot" , so qemu is the exception and should be set at the device repo level
+        # Most devices use "testbot", so "qemu" is the exception and should be set at the device repo level
+        default: >
+          [
+            "testbot"
+          ]
       worker-fleets:
         description: "Testbot fleet for finding available Leviathan workers. Not used for QEMU workers. Can accept a list of apps separated by commas, no spaces in between."
         type: string
@@ -962,65 +971,6 @@ jobs:
       #       -w "${WORKSPACE}" \
       #       "${{ steps.ami-helper-image.outputs.id }}" /balena-generate-ami.sh
 
-
-      # Creates an array for the test workers types - e.g qemu or testbot
-      # Example output: JSON_ARRAY='["qemu"]'
-      # Required to create test suite matrix
-      # TODO: if GH actions ever start support splitting string then remove this
-      - id: test_workers
-        name: Prerequiste - Create a JSON array for test_workers
-        shell: bash
-        run: |
-          set -x
-
-          # Remove spaces and newlines from the input
-          INPUT="$(echo "${INPUT}" | tr -d '[:space:]')"
-
-          # Convert to JSON array using jq to split the string by the given delimiter
-          # Add a step to check if the array is empty, default to [""] if so
-          JSON_ARRAY="$(jq --raw-input --compact-output --null-input --arg delim "$DELIMITER" --arg input "$INPUT" '
-            if $input == "" then
-              [""] # Default to a single empty string element if input is empty
-            else
-              $input | split($delim) # Split the input by the delimiter
-            end
-          ')"
-
-          echo "build=${JSON_ARRAY}" >> "${GITHUB_OUTPUT}"
-          echo "json=${JSON_ARRAY}" >> "${GITHUB_OUTPUT}"
-        env:
-          INPUT: ${{ inputs.test-workers }}
-          DELIMITER: ","
-
-      # Creates an array for the test suites
-      # Example output: JSON_ARRAY='["os","hup","cloud"]'
-      # Required to create test suite matrix
-      # TODO: if GH actions ever start support splitting string then remove this
-      - id: test_suites
-        name: Prerequiste - Create a JSON array for test_suites
-        shell: bash
-        run: |
-          set -x
-
-          # Remove spaces and newlines from the input
-          INPUT="$(echo "${INPUT}" | tr -d '[:space:]')"
-
-          # Convert to JSON array using jq to split the string by the given delimiter
-          # Add a step to check if the array is empty, default to [""] if so
-          JSON_ARRAY="$(jq --raw-input --compact-output --null-input --arg delim "$DELIMITER" --arg input "$INPUT" '
-            if $input == "" then
-              [""] # Default to a single empty string element if input is empty
-            else
-              $input | split($delim) # Split the input by the delimiter
-            end
-          ')"
-
-          echo "build=${JSON_ARRAY}" >> "${GITHUB_OUTPUT}"
-          echo "json=${JSON_ARRAY}" >> "${GITHUB_OUTPUT}"
-        env:
-          INPUT: ${{ inputs.test-suites }}
-          DELIMITER: ","
-
       # Creates a test matrix to test the specified suites, on specified workers
       # We do this to run each suite in parallel if there are available workers, and to be able to retry individual test suites
       # Example output: + json='{"TEST_SUITE":["os","hup","cloud"],"DEVICE_TYPE":["generic-amd64"],"ENVIRONMENT":["balenaos-balenamachine"],"WORKER_TYPE":["qemu"]}'
@@ -1030,10 +980,10 @@ jobs:
         env:
           MATRIX: >
             {
-              "TEST_SUITE": ${{ steps.test_suites.outputs.json }},
+              "TEST_SUITE": ${{ inputs.test-suites }},
               "DEVICE_TYPE": ${{ format('["{0}"]', steps.balena-lib.outputs.device_slug) }},
               "ENVIRONMENT": ${{ format('["{0}"]', inputs.test-environment) }},
-              "WORKER_TYPE": ${{ steps.test_workers.outputs.json }}
+              "WORKER_TYPE": ${{ inputs.test-workers }}
             }
         run: |
           echo $json
