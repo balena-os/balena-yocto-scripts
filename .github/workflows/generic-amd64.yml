@@ -95,7 +95,10 @@ jobs:
       #   for device types we use virtualised testing for: test-workers
       machine: generic-amd64
       test-environment: bm.balena-dev.com
-      test-workers: qemu
+      test-workers: >
+        [
+          "qemu"
+        ]
       # Allow overriding these inputs for manual triggers
       environment: ${{ inputs.environment || 'balena-staging.com' }}
       sign-image: ${{ inputs.sign-image || false }}
