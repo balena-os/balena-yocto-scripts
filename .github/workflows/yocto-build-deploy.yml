@@ -253,6 +253,28 @@ jobs:
             Please contact a member of the organization for assistance."
           exit 1
 
+      - name: Validate inputs
+        run: |
+          # We expect `jq` to fail when the input is invalid and that's fine
+          set +e
+
+          # The output we echo here shall be easier to follow than the -x trace
+          set +x
+
+          # Check if the string $2 (which is assumed to come from input $1) is a valid JSON array
+          validate_json_array() {
+            echo "$2" | jq ".[]"
+            status=$?
+            if [ $status -ne 0 ]; then
+              echo "INPUT ERROR: inputs.$1 must be a JSON array, got $2"
+              exit 1
+            fi
+          }
+
+          validate_json_array 'runs-on' '${{ inputs.runs-on }}'
+          validate_json_array 'test-suites' '${{ inputs.test-suites }}'
+          validate_json_array 'test-workers' '${{ inputs.test-workers }}'
+
       # this must be done before putting files in the workspace
       # https://github.com/easimon/maximize-build-space
       - name: Maximize build space
