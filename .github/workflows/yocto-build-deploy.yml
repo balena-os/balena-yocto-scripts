@@ -1202,11 +1202,13 @@ jobs:
       - build
       - test
     runs-on: ubuntu-latest
-    # Do not skip this job if needed jobs are skipped, as we always
-    # want to capture pass/fail for the entire workflow and skipped
-    # jobs count as passing as far as required checks go.
+    # The default condition for jobs is success(), which means that this
+    # job would be skipped if a previous job failed.
+    # Unfortunately GitHub treats skipped jobs as a pass as far as merge requirements!
+    # So we override the conditions of this job to always run, and check
+    # the results of the previous jobs to return overall success or failure.
     if: |
-      always() && inputs.run-tests == true
+      always()
 
     defaults:
       run:
@@ -1218,7 +1220,7 @@ jobs:
         run: |
           if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ]
           then
-            echo "One or more tests have failed"
+            echo "One or more jobs have failed"
             exit 1
           fi
 
@@ -1226,6 +1228,6 @@ jobs:
         run: |
           if [ "${{ contains(needs.*.result, 'cancelled') }}" = "true" ]
           then
-            echo "One or more tests were cancelled"
+            echo "One or more jobs were cancelled"
             exit 1
           fi
