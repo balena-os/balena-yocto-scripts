@@ -1,4 +1,18 @@
 - commits:
+    - subject: Create workflow to build and deploy balenaOS
+      hash: 5868caaa3b7bf506381c8d22f7b0b4035f7e2658
+      body: ""
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.22.0
+  title: ""
+  date: 2024-06-06T17:24:03.676Z
+- commits:
     - subject: "balena-deploy: deploy usbboot if available"
       hash: a62a90bcf05fdccc9cdbaa9961d2db823bbeb9b5
       body: |
