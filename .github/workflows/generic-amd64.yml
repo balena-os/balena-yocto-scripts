@@ -77,6 +77,15 @@ jobs:
   yocto:
     name: Yocto
     uses: ./.github/workflows/yocto-build-deploy.yml
+    # prevent duplicate workflow executions for pull_request and pull_request_target
+    if: |
+      (
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event_name == 'pull_request'
+      ) || (
+        github.event.pull_request.head.repo.full_name != github.repository &&
+        github.event_name == 'pull_request_target'
+      )
     secrets: inherit
     with:
       # runs-on: '[ "ubuntu-latest" ]'

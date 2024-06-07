@@ -1192,3 +1192,42 @@ jobs:
           # Two variables extra for this job
           QEMU_SECUREBOOT: 1
           FLASHER_SECUREBOOT: 1
+
+  # This job always runs and will fail if any of the builds or tests fail.
+  # This way we can mark this job as required for merging PRs.
+  # Otherwise we would need to mark each build and test matrix, suite, etc. as required.
+  all_jobs:
+    name: All jobs
+    needs:
+      - build
+      - test
+    runs-on: ubuntu-latest
+    # The default condition for jobs is success(), which means that this
+    # job would be skipped if a previous job failed.
+    # Unfortunately GitHub treats skipped jobs as a pass as far as merge requirements!
+    # So we override the conditions of this job to always run, and check
+    # the results of the previous jobs to return overall success or failure.
+    if: |
+      always()
+
+    defaults:
+      run:
+        working-directory: .
+        shell: bash --noprofile --norc -eo pipefail -x {0}
+
+    steps:
+      - name: Reject failed jobs
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ]
+          then
+            echo "One or more jobs have failed"
+            exit 1
+          fi
+
+      - name: Reject cancelled jobs
+        run: |
+          if [ "${{ contains(needs.*.result, 'cancelled') }}" = "true" ]
+          then
+            echo "One or more jobs were cancelled"
+            exit 1
+          fi
