@@ -1,4 +1,32 @@
 - commits:
+    - subject: Prevent duplicate workflow runs for multiple triggers
+      hash: e0132cfba86fcc05527dc4702d6841723752be38
+      body: |
+        This may need to be force merged.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Add catchall job to yocto-build-deploy for merge requirements
+      hash: 6b023b572a35d18743cf4a5d36b9d2f7443fc744
+      body: |
+        This is a helper job to avoid having to mark all build/test
+        matrices as required, as this job will always run and return
+        success or failure.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.22.1
+  title: ""
+  date: 2024-06-07T13:45:18.699Z
+- commits:
     - subject: Create workflow to build and deploy balenaOS
       hash: 5868caaa3b7bf506381c8d22f7b0b4035f7e2658
       body: ""
