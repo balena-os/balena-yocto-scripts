@@ -1,4 +1,22 @@
 - commits:
+    - subject: Update the triggers on the example test workflow
+      hash: 1f09e509e09a1a44b62772b9e197fe183c72744d
+      body: |
+        We do not need to run the workflow on close/merge, and we
+        can skip the manual workflow runs on this project as
+        each device type will have it's own workflow in the device
+        repos supporting manual triggers.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.22.2
+  title: ""
+  date: 2024-06-12T17:54:57.718Z
+- commits:
     - subject: Prevent duplicate workflow runs for multiple triggers
       hash: e0132cfba86fcc05527dc4702d6841723752be38
       body: |
