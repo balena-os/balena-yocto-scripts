@@ -28,6 +28,8 @@ fi
 HELPER_IMAGE_REPO="${HELPER_IMAGE_REPO:-"ghcr.io/balena-os/balena-yocto-scripts"}"
 
 # shellcheck disable=SC1091,SC2154
+# This command will populate the BALENA_YOCTO_SCRIPTS_VERSION with the yocto scripts version - it can then be passed to the helper image
+# This way the yocto scripts version will be accesible in the balena-lib.inc helpers inside the image
 source "${automation_dir}/include/balena-lib.inc"
 
 if ! balena_lib_docker_pull_helper_image "${HELPER_IMAGE_REPO}" "" "yocto-build-env" helper_image_id; then
@@ -112,6 +114,7 @@ docker run --rm -t \
     -e HOSTOS_VERSION="$(balena_lib_get_os_version)" \
     -e AWS_SUBNET_ID="${AWS_SUBNET_ID}" \
     -e AWS_SECURITY_GROUP_ID="${AWS_SECURITY_GROUP_ID}" \
+    -e BALENA_YOCTO_SCRIPTS_VERSION="${BALENA_YOCTO_SCRIPTS_VERSION}" \
     -w "${WORKSPACE}" \
     "${helper_image_id}" /balena-generate-ami.sh
 
