@@ -32,7 +32,12 @@ jobs:
   yocto:
     name: Yocto
     uses: ./.github/workflows/yocto-build-deploy.yml
-    # prevent duplicate workflow executions for pull_request and pull_request_target
+    # Prevent duplicate workflow executions for pull_request (PR) and pull_request_target (PRT) events.
+    # Both PR and PRT will be triggered for the same pull request, whether it is internal or from a fork.
+    # This condition will prevent the workflow from running twice for the same pull request.
+    # Condition 1: pull request is NOT from a fork, and the event type is NOT pull_request_target (e.g. push, pull_request, etc.)
+    # OR Condition 2: pull request is from a fork, and the event type must be pull_request_target.
+    # There should be no cases where both are true.
     if: |
       (
         github.event.pull_request.head.repo.full_name == github.repository &&
@@ -43,15 +48,28 @@ jobs:
       )
     secrets: inherit
     with:
-      # runs-on: '[ "ubuntu-latest" ]'
-      # On device repos we need to hardcode: machine
-      # On -some- device repos, we need to also hardcode (defaults will work otherwise):
-      #   for private device types: test-environment
-      #   for device types we use virtualised testing for: test-workers
       machine: generic-amd64
-      test-environment: bm.balena-dev.com
-      test-workers: qemu
       environment: balena-staging.com
-      # Below inputs are not required on device repos as the defaults should be used
+      # device-repo and device-repo-ref inputs should not be provided on device repos
       device-repo: balena-os/balena-generic
       device-repo-ref: master
+      # Use qemu workers for testing
+      test_matrix: >
+        [
+          {
+            "test_suite": "os",
+            "environment": "bm.balena-dev.com",
+            "worker_type": "qemu"
+          },
+          {
+            "test_suite": "cloud",
+            "environment": "bm.balena-dev.com",
+            "worker_type": "qemu",
+            "test_org": "testbot"
+          },
+          {
+            "test_suite": "hup",
+            "environment": "bm.balena-dev.com",
+            "worker_type": "qemu"
+          },
+        ]
