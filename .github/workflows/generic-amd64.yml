@@ -34,18 +34,16 @@ jobs:
     uses: ./.github/workflows/yocto-build-deploy.yml
     # Prevent duplicate workflow executions for pull_request (PR) and pull_request_target (PRT) events.
     # Both PR and PRT will be triggered for the same pull request, whether it is internal or from a fork.
-    # This condition will prevent the workflow from running twice for the same pull request.
-    # Condition 1: pull request is NOT from a fork, and the event type is NOT pull_request_target (e.g. push, pull_request, etc.)
-    # OR Condition 2: pull request is from a fork, and the event type must be pull_request_target.
-    # There should be no cases where both are true.
-    if: |
-      (
-        github.event.pull_request.head.repo.full_name == github.repository &&
-        github.event_name == 'pull_request'
-      ) || (
-        github.event.pull_request.head.repo.full_name != github.repository &&
-        github.event_name == 'pull_request_target'
-      )
+    # This condition will prevent the workflow from running twice for the same pull request while
+    # still allowing it to run for all other event types.
+    # - internal PR (true == true) ok
+    # - internal PRT (true != false) skip
+    # - fork PR (false != true) skip
+    # - fork PRT (false == false) ok
+    # - push (false == false) ok
+    # - workflow_dispatch (false == false) ok
+    # - any trigger other than PR/PRT (false == false) ok
+    if: (github.event.pull_request.head.repo.full_name == github.repository) == (github.event_name == 'pull_request')
     secrets: inherit
     with:
       machine: generic-amd64
