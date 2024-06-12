@@ -983,9 +983,9 @@ jobs:
 
     env:
       # Variables provided via the selected GitHub environment
-      BALENACLOUD_API_URL: ${{ vars.BALENA_URL }}
-      BALENACLOUD_SSH_PORT: ${{ vars.BALENACLOUD_SSH_PORT }}
-      BALENACLOUD_SSH_URL: ${{ vars.BALENACLOUD_SSH_URL }}
+      BALENACLOUD_API_URL: ${{ vars.BALENA_URL || matrix.environment }}
+      BALENACLOUD_SSH_PORT: ${{ vars.BALENACLOUD_SSH_PORT || '222' }}
+      BALENACLOUD_SSH_URL: ssh.devices.${{ vars.BALENA_URL || matrix.environment }}
 
       # Settings specific to this test run.
       # Generally provided via inputs.test_matrix but sane defaults are also provided.
@@ -995,12 +995,14 @@ jobs:
       BALENACLOUD_APP_NAME: ${{ matrix.worker_fleets || 'balena/testbot-rig,balena/testbot-rig-partners,balena/testbot-rig-x86,balena/testbot-rig-partners-x86' }}
       BALENACLOUD_ORG: ${{ matrix.test_org || 'testbot' }}
 
-      # FIXME: hardcode these ahead of time instead of during build steps
+      # Local directories
+      WORKSPACE: ${{ github.workspace }}/leviathan-workspace
+      REPORTS: ${{ github.workspace }}/reports
+      LEVIATHAN_ROOT: ${{ github.workspace }}/layers/meta-balena/tests/leviathan
+      SUITES: ${{ github.workspace }}/layers/meta-balena/tests/suites
+
+      # FIXME: Use the API key provided by the environment
       # BALENACLOUD_API_KEY: ${{ env.BALENACLOUD_API_KEY }}
-      # LEVIATHAN_ROOT: ${{ env.LEVIATHAN_ROOT }}
-      # REPORTS: ${{ env.LEVIATHAN_REPORTS }}
-      # SUITES: ${{ env.LEVIATHAN_TEST_SUITE }}
-      # WORKSPACE: ${{ env.LEVIATHAN_WORKSPACE }}
 
       # QEMU settings
       QEMU_CPUS: 4
@@ -1035,63 +1037,41 @@ jobs:
           git checkout --force "${{ inputs.meta-balena-ref }}"
           git submodule update --init --recursive
 
-      # TODO: use GH CLI/API to fetch the correct keys for the environment
+      # FIXME: Use the API key provided by the environment
       - name: Setup env variables for Prod
         if: matrix.environment == 'balena-cloud.com'
         run: |
           echo "BALENACLOUD_API_KEY=${{ secrets.AUTOKIT_BALENACLOUD_API_KEY }}" >> $GITHUB_ENV
 
+      # FIXME: Use the API key provided by the environment
       - name: Setup env variables for balena-os balenamachine
         if: matrix.environment == 'bm.balena-dev.com'
         run: |
           echo "BALENACLOUD_API_KEY=${{ secrets.AUTOKIT_BALENAMACHINE_API_KEY }}" >> $GITHUB_ENV
 
-      # Leviathan uses env vars to point to certain directories
-      # These directories are bind mounted to Leviathan's containers
-      - name: Setup Leviathan Env vars
-        run: |
-          # Set Leviathan workspace location
-          echo "LEVIATHAN_WORKSPACE=${WORKSPACE}/leviathan-workspace" >> $GITHUB_ENV
-
-          # Set Leviathan root location
-          echo "LEVIATHAN_ROOT=${WORKSPACE}/layers/meta-balena/tests/leviathan" >> $GITHUB_ENV
-
-          # Set suites location
-          echo "LEVIATHAN_TEST_SUITE=${WORKSPACE}/layers/meta-balena/tests/suites" >> $GITHUB_ENV
-
-      # Leviathan expects config.js in a certain place. It also expects a specific folder structure
-      # These are done in a separate step as you can't define an env var in the $GITHUB_ENV file and use it in the same step
-      - name: Setup Leviathan Directories
-        run: |
-          # Create workspace directory
-          mkdir -p ${LEVIATHAN_WORKSPACE}
-
-          # Copy config.js to leviathan workspace
-          cp ${LEVIATHAN_TEST_SUITE}/${TEST_SUITE}/config.js ${LEVIATHAN_WORKSPACE}/
-
-          # Create reports folder
-          echo "LEVIATHAN_REPORTS=${LEVIATHAN_WORKSPACE}/reports" >> $GITHUB_ENV
-
       # Images need to end up in workspace folder and need to have correct names
-      # TODO: Replace hardcoded config.js image paths to variables 
       - name: Fetch artifacts from build job
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
-          path: ${{ env.LEVIATHAN_WORKSPACE }}
+          path: ${{ env.WORKSPACE }}
+
+      - name: Install gzip
+        run: |
+          sudo apt update
+          sudo apt install -y --no-install-recommends gzip
 
       # Image was uploaded uncompressed and Leviathan test config.js expects the image in a certain place and with a certain name
-      - name: Prepare image
+      # The balena.img file is downloaded to ${WORKSPACE}/image/balena.img
+      # Moving it to where the meta-balena config.js expects
+      - name: Prepare workspace
         run: |
-          mkdir -p ${LEVIATHAN_REPORTS}
+          mv ${WORKSPACE}/image/balena.img ${WORKSPACE}
+          gzip ${WORKSPACE}/balena.img
 
-          # The balena.img file is downloaded to ${LEVIATHAN_WORKSPACE}/image/balena.img
-          # Moving it to where the meta-balena config.js expects
-          mv ${LEVIATHAN_WORKSPACE}/image/balena.img ${LEVIATHAN_WORKSPACE}
+          cp -v ${SUITES}/${TEST_SUITE}/config.js ${WORKSPACE}/config.js
 
-          sudo apt update
-          sudo apt install -y gzip
-          gzip ${LEVIATHAN_WORKSPACE}/balena.img
+          mkdir -p "${REPORTS}"
 
       # https://github.com/balena-os/leviathan/blob/master/action.yml
       - name: BalenaOS Leviathan Tests
@@ -1100,10 +1080,6 @@ jobs:
         env:
           # FIXME: hardcode these ahead of time instead of during build steps
           BALENACLOUD_API_KEY: ${{ env.BALENACLOUD_API_KEY }}
-          LEVIATHAN_ROOT: ${{ env.LEVIATHAN_ROOT }}
-          REPORTS: ${{ env.LEVIATHAN_REPORTS }}
-          SUITES: ${{ env.LEVIATHAN_TEST_SUITE }}
-          WORKSPACE: ${{ env.LEVIATHAN_WORKSPACE }}
 
       # Only to run when images are signed, have to run secureboot tests
       # Make sure it has all the same env variables as the job above
@@ -1113,10 +1089,6 @@ jobs:
         env:
           # FIXME: hardcode these ahead of time instead of during build steps
           BALENACLOUD_API_KEY: ${{ env.BALENACLOUD_API_KEY }}
-          LEVIATHAN_ROOT: ${{ env.LEVIATHAN_ROOT }}
-          REPORTS: ${{ env.LEVIATHAN_REPORTS }}
-          SUITES: ${{ env.LEVIATHAN_TEST_SUITE }}
-          WORKSPACE: ${{ env.LEVIATHAN_WORKSPACE }}
           # Two variables are needed for secure boot tests. Check Makefile in Leviathan to trace their usage.
           QEMU_SECUREBOOT: 1
           FLASHER_SECUREBOOT: 1
