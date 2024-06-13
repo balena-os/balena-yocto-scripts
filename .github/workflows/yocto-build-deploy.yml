@@ -172,10 +172,11 @@ jobs:
       BALENARC_BALENA_URL: ${{ inputs.environment || 'balena-cloud.com' }}
       API_ENV: ${{ inputs.environment || 'balena-cloud.com' }}
 
-      # Yocto NFS sstate cache host
-      YOCTO_CACHE_HOST: ${{ vars.YOCTO_CACHE_HOST || 'nfs.product-os.io' }}
-      YOCTO_CACHE_DIR: ${{ github.workspace }}/shared/yocto-cache
       BARYS_ARGUMENTS_VAR: ""
+
+      YOCTO_SHARED_DIR: ${{ github.workspace }}/shared/yocto-cache
+      DOWNLOADS_CACHE_DIR: ${{ github.workspace }}/shared/yocto-cache/shared-downloads
+      SSTATE_CACHE_DIR: ${{ github.workspace }}/shared/yocto-cache/${{ inputs.machine }}/sstate
 
     outputs:
       os_version: ${{ steps.balena-lib.outputs.os_version }}
@@ -372,29 +373,6 @@ jobs:
             echo BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -d" >> $GITHUB_ENV
           fi
 
-      # # https://docs.yoctoproject.org/dev/dev-manual/speeding-up-build.html#speeding-up-a-build
-      # # TODO: Delete  when using properly isolated self-hosted runner resources
-      # - name: Configure bitbake resource limits
-      #   env:
-      #     BB_NUMBER_THREADS: 4
-      #     BB_NUMBER_PARSE_THREADS: 4
-      #     PARALLEL_MAKE: -j4
-      #     PARALLEL_MAKEINST: -j4
-      #     BB_PRESSURE_MAX_CPU: 500
-      #     BB_PRESSURE_MAX_IO: 500
-      #     BB_PRESSURE_MAX_MEMORY: 500
-      #   run: |
-      #     nproc
-      #     free -h
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_NUMBER_THREADS=${BB_NUMBER_THREADS}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_NUMBER_PARSE_THREADS=${BB_NUMBER_PARSE_THREADS}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a PARALLEL_MAKE=${PARALLEL_MAKE}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a PARALLEL_MAKEINST=${PARALLEL_MAKEINST}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_PRESSURE_MAX_CPU=${BB_PRESSURE_MAX_CPU}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_PRESSURE_MAX_IO=${BB_PRESSURE_MAX_IO}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_PRESSURE_MAX_MEMORY=${BB_PRESSURE_MAX_MEMORY}"
-      #     echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR}" >> $GITHUB_ENV
-
       - name: Enable signed images
         if: inputs.sign-image == true
         env:
@@ -410,17 +388,63 @@ jobs:
           BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} --bitbake-args --no-setscene"
           echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR}" >> $GITHUB_ENV
 
-      # the directory is required even if we don't mount the NFS share
-      - name: Create shared cache mount point
+      # https://docs.github.com/en/rest/actions/cache?apiVersion=2022-11-28#list-github-actions-caches-for-a-repository
+      - name: List Action caches
+        continue-on-error: true
+        env:
+          # environment variables used by gh CLI
+          # https://cli.github.com/manual/gh_help_environment
+          GH_DEBUG: "true"
+          GH_PAGER: "cat"
+          GH_PROMPT_DISABLED: "true"
+          GH_REPO: "${{ github.repository }}"
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
-          sudo mkdir -p "${YOCTO_CACHE_DIR}/$(whoami)"
-          sudo chown -R "$(id -u):$(id -g)" "${YOCTO_CACHE_DIR}"
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/${{ github.repository }}/actions/caches
 
-      - name: Mount shared NFS cache
-        if: env.YOCTO_CACHE_HOST != '' && contains(fromJSON(inputs.build-runs-on), 'self-hosted')
+      # https://docs.github.com/en/rest/actions/cache?apiVersion=2022-11-28#get-github-actions-cache-usage-for-a-repository
+      - name: Get Actions cache usage
+        continue-on-error: true
+        env:
+          # environment variables used by gh CLI
+          # https://cli.github.com/manual/gh_help_environment
+          GH_DEBUG: "true"
+          GH_PAGER: "cat"
+          GH_PROMPT_DISABLED: "true"
+          GH_REPO: "${{ github.repository }}"
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
-          sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${YOCTO_CACHE_DIR}" -o fsc,nolock
-          ls -al "${YOCTO_CACHE_DIR}/$(whoami)"
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/${{ github.repository }}/actions/cache/usage
+
+      # https://github.com/actions/cache
+      - name: Sync downloads cache
+        uses: actions/cache@v4.0.2
+        with:
+          # Run the post step to save the cache even if another step before fails
+          save-always: true
+          path: ${{ env.DOWNLOADS_CACHE_DIR }}
+          # Caches are scoped to the current branch, with fallback to the default branch
+          # See: https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+          key: yocto-downloads-${{ inputs.machine }}
+          restore-keys: |
+            yocto-downloads-
+
+      # https://github.com/actions/cache
+      - name: Sync sstate cache
+        uses: actions/cache@v4.0.2
+        with:
+          # Run the post step to save the cache even if another step before fails
+          save-always: true
+          path: ${{ env.SSTATE_CACHE_DIR }}
+          # Caches are scoped to the current branch, with fallback to the default branch
+          # See: https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+          key: yocto-sstate-${{ inputs.machine }}
 
       # All preperation complete before this step
       # Start building balenaOS
@@ -439,10 +463,12 @@ jobs:
           sudo sysctl -w vm.mmap_min_addr=65536
           sysctl vm.mmap_min_addr
 
+          mkdir -p "${YOCTO_SHARED_DIR}"
+
           ./balena-yocto-scripts/build/balena-build.sh \
             -d "${MACHINE}" \
             -t "${{ secrets.BALENA_API_DEPLOY_KEY }}" \
-            -s "${YOCTO_CACHE_DIR}/$(whoami)" \
+            -s "${YOCTO_SHARED_DIR}" \
             -g "${BARYS_ARGUMENTS_VAR}"
 
           if grep -R "ERROR: " build/tmp/log/*; then
