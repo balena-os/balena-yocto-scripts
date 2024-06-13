@@ -1,4 +1,23 @@
 - commits:
+    - subject: "jenkins_generate_ami: pass yocto scripts version as an env var to
+        helper container"
+      hash: af71169b93e855c8ecb378b5de3d4a1c12f44510
+      body: >
+        The ami deploys in jenkins fail at the moment because the balena-lib.inc
+        script fails to fetch the version of the yocto scripts when running
+        inside the helper image. Passing the version to the helper image via an
+        env var helps this
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+  version: 1.22.3
+  title: ""
+  date: 2024-06-13T19:04:31.350Z
+- commits:
     - subject: Update the triggers on the example test workflow
       hash: 1f09e509e09a1a44b62772b9e197fe183c72744d
       body: |
