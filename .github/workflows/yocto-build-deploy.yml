@@ -70,11 +70,6 @@ on:
         required: false
         type: string
         default: balena-cloud.com
-      test-environment:
-        description: The BalenaCloud environment you want tests to target.
-        required: false
-        type: string
-        default: bm.balena-dev.com
       deploy-s3:
         description: Whether to deploy images to S3
         required: false
@@ -121,37 +116,43 @@ on:
         required: false
         type: boolean
         default: ${{ startsWith(github.event.push.ref, 'refs/tags/v20') }} # Set this flag if the tag looks like an esr tag - this is good for 100 years or until balenaOS v20 comes out
+      # FIXME: add to GitHub environments
       aws_iam_role:
         description: "IAM role to assume for S3 permissions"
         required: false
         type: string
-        default: "arn:aws:iam::567579488761:role/balena-os-deploy-s3-access-Role-8r0SXqfzgolr" #TODO - Replace using environments
+        default: "arn:aws:iam::567579488761:role/balena-os-deploy-s3-access-Role-8r0SXqfzgolr"
+      # FIXME: add to GitHub environments or use S3_REGION
       aws_region:
         description: "AWS region"
         required: false
         type: string
         default: "us-east-1"
-      test-suites:
-        description: "Comma-separated list of test suites to run. No spaces in between."
+      # Supported fields for the test matrix:
+      # - test_suite: (required) The test suite to run. The valid test suites are `os`, `hup`, and `cloud`
+      # - environment: (required) The balenaCloud environment to use for testing, e.g. `bm.balena-dev.com` or `balena-cloud.com`
+      # - worker_type: The worker type to use for testing. The valid worker types are `qemu` and `testbot`. The default worker type is `testbot`
+      # - worker_fleets: The testbot fleets for finding available Leviathan workers. Not used for QEMU workers. Can accept a list of apps separated by commas, no spaces in between
+      # - test_org: The organization to use for testing cloud functionality. This default org is `testbot`
+      test_matrix:
+        description: "JSON Leviathan test matrix to use for testing. If not provided, the default test matrix will be used."
         required: false
         type: string
-        default: "os,hup,cloud"
-      test-workers:
-        description: "Comma-separated list of worker types to use for testing. No spaces in between. The valid worker types are `qemu` and `testbot`."
-        required: false
-        type: string
-        default: "testbot" # Most devices use "testbot" , so qemu is the exception and should be set at the device repo level
-      worker-fleets:
-        description: "Testbot fleet for finding available Leviathan workers. Not used for QEMU workers. Can accept a list of apps separated by commas, no spaces in between."
-        type: string
-        required: false
-        default: "balena/testbot-rig,balena/testbot-rig-partners,balena/testbot-rig-x86,balena/testbot-rig-partners-x86"
-      # TODO: add BALENA_API_USER as an environment secret and remove the BALENACLOUD_ORG input
-      BALENACLOUD_ORG:
-        description: "User matching the AUTOKIT_BALENACLOUD_API_KEY - requirement for leviathan config.js"
-        type: string
-        required: false
-        default: testbot
+        default: >
+          [
+            {
+              "test_suite": "os",
+              "environment": "bm.balena-dev.com"
+            },
+            {
+              "test_suite": "cloud",
+              "environment": "bm.balena-dev.com"
+            },
+            {
+              "test_suite": "hup",
+              "environment": "bm.balena-dev.com"
+            },
+          ]
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
@@ -205,8 +206,6 @@ jobs:
       meta_balena_version: ${{ steps.balena-lib.outputs.meta_balena_version }}
       yocto_scripts_ref: ${{ steps.balena-lib.outputs.yocto_scripts_ref }}
       yocto_scripts_version: ${{ steps.balena-lib.outputs.yocto_scripts_version }}
-      leviathan_test_matrix: ${{ steps.leviathan_test_matrix.outputs.json }}
-
 
     defaults:
       run:
@@ -962,85 +961,6 @@ jobs:
       #       -w "${WORKSPACE}" \
       #       "${{ steps.ami-helper-image.outputs.id }}" /balena-generate-ami.sh
 
-
-      # Creates an array for the test workers types - e.g qemu or testbot
-      # Example output: JSON_ARRAY='["qemu"]'
-      # Required to create test suite matrix
-      # TODO: if GH actions ever start support splitting string then remove this
-      - id: test_workers
-        name: Prerequiste - Create a JSON array for test_workers
-        shell: bash
-        run: |
-          set -x
-
-          # Remove spaces and newlines from the input
-          INPUT="$(echo "${INPUT}" | tr -d '[:space:]')"
-
-          # Convert to JSON array using jq to split the string by the given delimiter
-          # Add a step to check if the array is empty, default to [""] if so
-          JSON_ARRAY="$(jq --raw-input --compact-output --null-input --arg delim "$DELIMITER" --arg input "$INPUT" '
-            if $input == "" then
-              [""] # Default to a single empty string element if input is empty
-            else
-              $input | split($delim) # Split the input by the delimiter
-            end
-          ')"
-
-          echo "build=${JSON_ARRAY}" >> "${GITHUB_OUTPUT}"
-          echo "json=${JSON_ARRAY}" >> "${GITHUB_OUTPUT}"
-        env:
-          INPUT: ${{ inputs.test-workers }}
-          DELIMITER: ","
-
-      # Creates an array for the test suites
-      # Example output: JSON_ARRAY='["os","hup","cloud"]'
-      # Required to create test suite matrix
-      # TODO: if GH actions ever start support splitting string then remove this
-      - id: test_suites
-        name: Prerequiste - Create a JSON array for test_suites
-        shell: bash
-        run: |
-          set -x
-
-          # Remove spaces and newlines from the input
-          INPUT="$(echo "${INPUT}" | tr -d '[:space:]')"
-
-          # Convert to JSON array using jq to split the string by the given delimiter
-          # Add a step to check if the array is empty, default to [""] if so
-          JSON_ARRAY="$(jq --raw-input --compact-output --null-input --arg delim "$DELIMITER" --arg input "$INPUT" '
-            if $input == "" then
-              [""] # Default to a single empty string element if input is empty
-            else
-              $input | split($delim) # Split the input by the delimiter
-            end
-          ')"
-
-          echo "build=${JSON_ARRAY}" >> "${GITHUB_OUTPUT}"
-          echo "json=${JSON_ARRAY}" >> "${GITHUB_OUTPUT}"
-        env:
-          INPUT: ${{ inputs.test-suites }}
-          DELIMITER: ","
-
-      # Creates a test matrix to test the specified suites, on specified workers
-      # We do this to run each suite in parallel if there are available workers, and to be able to retry individual test suites
-      # Example output: + json='{"TEST_SUITE":["os","hup","cloud"],"DEVICE_TYPE":["generic-amd64"],"ENVIRONMENT":["balenaos-balenamachine"],"WORKER_TYPE":["qemu"]}'
-      - name: Create Leviathan test matrix
-        id: leviathan_test_matrix
-        if: inputs.run-tests == true
-        env:
-          MATRIX: >
-            {
-              "TEST_SUITE": ${{ steps.test_suites.outputs.json }},
-              "DEVICE_TYPE": ${{ format('["{0}"]', steps.balena-lib.outputs.device_slug) }},
-              "ENVIRONMENT": ${{ format('["{0}"]', inputs.test-environment) }},
-              "WORKER_TYPE": ${{ steps.test_workers.outputs.json }}
-            }
-        run: |
-          echo $json
-          json=$(jq -e -c . <<<"${MATRIX}") || exit $?
-          echo "json=${json}" >> "${GITHUB_OUTPUT}"
-
-
   ##############################
   # Leviathan Test
   ##############################
@@ -1049,7 +969,7 @@ jobs:
     needs: build
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     if: inputs.run-tests == true
-    environment: ${{ inputs.test-environment }}
+    environment: ${{ matrix.environment }}
 
     defaults:
       run:
@@ -1058,7 +978,35 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.build.outputs.leviathan_test_matrix) }}
+      matrix:
+        include: ${{ fromJSON(inputs.test_matrix) }}
+
+    env:
+      # Variables provided via the selected GitHub environment
+      BALENACLOUD_API_URL: ${{ vars.BALENA_URL || matrix.environment }}
+      BALENACLOUD_SSH_PORT: ${{ vars.BALENACLOUD_SSH_PORT || '222' }}
+      BALENACLOUD_SSH_URL: ssh.devices.${{ vars.BALENA_URL || matrix.environment }}
+
+      # Settings specific to this test run.
+      # Generally provided via inputs.test_matrix but sane defaults are also provided.
+      DEVICE_TYPE: ${{ needs.build.outputs.device_slug }}
+      TEST_SUITE: ${{ matrix.test_suite }}
+      WORKER_TYPE: ${{ matrix.worker_type || 'testbot' }}
+      BALENACLOUD_APP_NAME: ${{ matrix.worker_fleets || 'balena/testbot-rig,balena/testbot-rig-partners,balena/testbot-rig-x86,balena/testbot-rig-partners-x86' }}
+      BALENACLOUD_ORG: ${{ matrix.test_org || 'testbot' }}
+
+      # Local directories
+      WORKSPACE: ${{ github.workspace }}/leviathan-workspace
+      REPORTS: ${{ github.workspace }}/reports
+      LEVIATHAN_ROOT: ${{ github.workspace }}/layers/meta-balena/tests/leviathan
+      SUITES: ${{ github.workspace }}/layers/meta-balena/tests/suites
+
+      # FIXME: Use the API key provided by the environment
+      # BALENACLOUD_API_KEY: ${{ env.BALENACLOUD_API_KEY }}
+
+      # QEMU settings
+      QEMU_CPUS: 4
+      QEMU_MEMORY: "1G"
 
     steps:
       # Clone the device respository to fetch Leviathan
@@ -1089,84 +1037,49 @@ jobs:
           git checkout --force "${{ inputs.meta-balena-ref }}"
           git submodule update --init --recursive
 
-      # TODO: use GH CLI/API to fetch the correct keys for the environment
+      # FIXME: Use the API key provided by the environment
       - name: Setup env variables for Prod
-        if: inputs.test-environment == 'balena-cloud.com'
+        if: matrix.environment == 'balena-cloud.com'
         run: |
           echo "BALENACLOUD_API_KEY=${{ secrets.AUTOKIT_BALENACLOUD_API_KEY }}" >> $GITHUB_ENV
 
+      # FIXME: Use the API key provided by the environment
       - name: Setup env variables for balena-os balenamachine
-        if: inputs.test-environment == 'bm.balena-dev.com'
+        if: matrix.environment == 'bm.balena-dev.com'
         run: |
           echo "BALENACLOUD_API_KEY=${{ secrets.AUTOKIT_BALENAMACHINE_API_KEY }}" >> $GITHUB_ENV
 
-      # Leviathan uses env vars to point to certain directories
-      # These directories are bind mounted to Leviathan's containers
-      - name: Setup Leviathan Env vars
-        run: |
-          # Set Leviathan workspace location
-          echo "LEVIATHAN_WORKSPACE=${WORKSPACE}/leviathan-workspace" >> $GITHUB_ENV
-
-          # Set Leviathan root location
-          echo "LEVIATHAN_ROOT=${WORKSPACE}/layers/meta-balena/tests/leviathan" >> $GITHUB_ENV
-
-          # Set suites location
-          echo "LEVIATHAN_TEST_SUITE=${WORKSPACE}/layers/meta-balena/tests/suites" >> $GITHUB_ENV
-
-      # Leviathan expects config.js in a certain place. It also expects a specific folder structure
-      # These are done in a separate step as you can't define an env var in the $GITHUB_ENV file and use it in the same step
-      - name: Setup Leviathan Directories
-        run: |
-          # Create workspace directory
-          mkdir -p ${LEVIATHAN_WORKSPACE}
-
-          # Copy config.js to leviathan workspace
-          cp ${LEVIATHAN_TEST_SUITE}/${{ matrix.TEST_SUITE }}/config.js ${LEVIATHAN_WORKSPACE}/
-
-          # Create reports folder
-          echo "LEVIATHAN_REPORTS=${LEVIATHAN_WORKSPACE}/reports" >> $GITHUB_ENV
-
       # Images need to end up in workspace folder and need to have correct names
-      # TODO: Replace hardcoded config.js image paths to variables 
       - name: Fetch artifacts from build job
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
-          path: ${{ env.LEVIATHAN_WORKSPACE }}
+          path: ${{ env.WORKSPACE }}
+
+      - name: Install gzip
+        run: |
+          sudo apt update
+          sudo apt install -y --no-install-recommends gzip
 
       # Image was uploaded uncompressed and Leviathan test config.js expects the image in a certain place and with a certain name
-      - name: Prepare image
+      # The balena.img file is downloaded to ${WORKSPACE}/image/balena.img
+      # Moving it to where the meta-balena config.js expects
+      - name: Prepare workspace
         run: |
-          mkdir -p ${LEVIATHAN_REPORTS}
+          mv ${WORKSPACE}/image/balena.img ${WORKSPACE}
+          gzip ${WORKSPACE}/balena.img
 
-          # The balena.img file is downloaded to ${LEVIATHAN_WORKSPACE}/image/balena.img
-          # Moving it to where the meta-balena config.js expects
-          mv ${LEVIATHAN_WORKSPACE}/image/balena.img ${LEVIATHAN_WORKSPACE}
+          cp -v ${SUITES}/${TEST_SUITE}/config.js ${WORKSPACE}/config.js
 
-          sudo apt update
-          sudo apt install -y gzip
-          gzip ${LEVIATHAN_WORKSPACE}/balena.img
+          mkdir -p "${REPORTS}"
 
       # https://github.com/balena-os/leviathan/blob/master/action.yml
       - name: BalenaOS Leviathan Tests
         uses: balena-os/leviathan@282fd606611a023795447d9ad71b5155ea5c0f83
         if: inputs.sign-image == false   # Ensure we don't run this for non-signed images
         env:
+          # FIXME: hardcode these ahead of time instead of during build steps
           BALENACLOUD_API_KEY: ${{ env.BALENACLOUD_API_KEY }}
-          BALENACLOUD_API_URL: ${{ vars.BALENA_URL }}
-          BALENACLOUD_APP_NAME: ${{ inputs.worker-fleets }}
-          BALENACLOUD_ORG: ${{ inputs.BALENACLOUD_ORG }}
-          BALENACLOUD_SSH_PORT: ${{ vars.BALENACLOUD_SSH_PORT }}
-          BALENACLOUD_SSH_URL: ${{ vars.BALENACLOUD_SSH_URL }}
-          DEVICE_TYPE: ${{ matrix.DEVICE_TYPE }}
-          LEVIATHAN_ROOT: ${{ env.LEVIATHAN_ROOT }}
-          QEMU_CPUS: 4
-          QEMU_MEMORY: "1G"
-          REPORTS: ${{ env.LEVIATHAN_REPORTS }}
-          SUITES: ${{ env.LEVIATHAN_TEST_SUITE }}
-          WORKER_TYPE: ${{ matrix.WORKER_TYPE }}
-          WORKSPACE: ${{ env.LEVIATHAN_WORKSPACE }}
-          TEST_SUITE: ${{ matrix.TEST_SUITE }}
 
       # Only to run when images are signed, have to run secureboot tests
       # Make sure it has all the same env variables as the job above
@@ -1174,22 +1087,9 @@ jobs:
         if: inputs.sign-image == true
         uses: balena-os/leviathan@282fd606611a023795447d9ad71b5155ea5c0f83
         env:
+          # FIXME: hardcode these ahead of time instead of during build steps
           BALENACLOUD_API_KEY: ${{ env.BALENACLOUD_API_KEY }}
-          BALENACLOUD_API_URL: ${{ vars.BALENA_URL }}
-          BALENACLOUD_APP_NAME: ${{ inputs.worker-fleets }}
-          BALENACLOUD_ORG: ${{ inputs.BALENACLOUD_ORG }}
-          BALENACLOUD_SSH_PORT: ${{ vars.BALENACLOUD_SSH_PORT }}
-          BALENACLOUD_SSH_URL: ${{ vars.BALENACLOUD_SSH_URL }}
-          DEVICE_TYPE: ${{ matrix.DEVICE_TYPE }}
-          LEVIATHAN_ROOT: ${{ env.LEVIATHAN_ROOT }}
-          QEMU_CPUS: 4
-          QEMU_MEMORY: "1G"
-          REPORTS: ${{ env.LEVIATHAN_REPORTS }}
-          SUITES: ${{ env.LEVIATHAN_TEST_SUITE }}
-          WORKER_TYPE: ${{ matrix.WORKER_TYPE }}
-          WORKSPACE: ${{ env.LEVIATHAN_WORKSPACE }}
-          TEST_SUITE: ${{ matrix.TEST_SUITE }}
-          # Two variables extra for this job
+          # Two variables are needed for secure boot tests. Check Makefile in Leviathan to trace their usage.
           QEMU_SECUREBOOT: 1
           FLASHER_SECUREBOOT: 1
 
