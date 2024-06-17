@@ -3,20 +3,15 @@ name: "Yocto Build-Test-Deploy"
 on:
   workflow_call:
     secrets:
-      # TODO: Deprecate this secret in favor of the BALENA_API_KEY secret set at the environment level
-      AUTOKIT_BALENACLOUD_API_KEY:
-        description: balena API key for Leviathan testing from BalenaCloud
+      # BALENA_API_DEPLOY_KEY is a secret that should be specific to the runtime environment
+      # It requires permissions to deploy hostApp releases, and fetch supervisor release images (via yocto recipes)
+      BALENA_API_DEPLOY_KEY:
+        description: balena API key for the deploy environment, used for deploying hostApps and fetching supervisor releases
         required: false
-      # TODO: Deprecate this secret in favor of the BALENA_API_KEY secret set at the environment level
-      AUTOKIT_BALENAMACHINE_API_KEY:
-        description: balena API key for Leviathan testing from balena-os BM instance
-        required: false
-      BALENA_API_KEY:
-        description: balena API key for deploying releases # TODO: Different for staging and prod - add another Secret for staging key
-        required: false
-      # TODO: Deprecate this secret in favor of the BALENA_API_KEY secret set at the environment level
-      BALENAOS_STAGING_TOKEN:
-        description: balena API key for deploying releases to staging # TODO: Different for staging and prod - add another Secret for staging key
+      # BALENA_API_TEST_KEY is a secret that should be specific to the runtime environment
+      # It requires permissions to manage autokit workers, and create test fleets
+      BALENA_API_TEST_KEY:
+        description: balena API key for the test environment, used for finding autokit workers and creating test fleets
         required: false
       # Dockerhub secrets are used only for pulling the helper image for "Prepare files for S3" step - if we simplify this to not use the
       # helper image, these secrets can be removed
@@ -29,7 +24,8 @@ on:
       SIGN_KMOD_KEY_APPEND:
         description: Base64-encoded public key of a kernel module signing keypair
         required: false
-      # TODO: can this be the same as BALENA_API_KEY?
+      # SIGN_API_KEY is a secret that should be specific to the runtime environment
+      # It requires permissions to access the image signing server
       SIGN_API_KEY:
         description: balena API key that provides access to the signing server
         required: false
@@ -116,18 +112,6 @@ on:
         required: false
         type: boolean
         default: ${{ startsWith(github.event.push.ref, 'refs/tags/v20') }} # Set this flag if the tag looks like an esr tag - this is good for 100 years or until balenaOS v20 comes out
-      # FIXME: add to GitHub environments
-      aws_iam_role:
-        description: "IAM role to assume for S3 permissions"
-        required: false
-        type: string
-        default: "arn:aws:iam::567579488761:role/balena-os-deploy-s3-access-Role-8r0SXqfzgolr"
-      # FIXME: add to GitHub environments or use S3_REGION
-      aws_region:
-        description: "AWS region"
-        required: false
-        type: string
-        default: "us-east-1"
       # Supported fields for the test matrix:
       # - test_suite: (required) The test suite to run. The valid test suites are `os`, `hup`, and `cloud`
       # - environment: (required) The balenaCloud environment to use for testing, e.g. `bm.balena-dev.com` or `balena-cloud.com`
@@ -181,21 +165,13 @@ jobs:
 
     env:
       automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
-      BALENARC_BALENA_URL: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
-      API_ENV: ${{ vars.BALENA_URL || 'balena-cloud.com' }}
+      BALENARC_BALENA_URL: ${{ inputs.environment || 'balena-cloud.com' }}
+      API_ENV: ${{ inputs.environment || 'balena-cloud.com' }}
 
       # Yocto NFS sstate cache host
       YOCTO_CACHE_HOST: ${{ vars.YOCTO_CACHE_HOST || 'nfs.product-os.io' }}
       YOCTO_CACHE_DIR: ${{ github.workspace }}/shared/yocto-cache
-      # S3_CACHE_URL: s3://balena-yocto-cache/${{ inputs.machine }}
       BARYS_ARGUMENTS_VAR: ""
-
-      # URL for secure boot signing server API
-      SIGN_API_URL: ${{ vars.SIGN_API_URL || 'https://sign.balena-cloud.com' }}
-
-      # used for deploying images to S3 and deploying AMIs to AWS
-      S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
-      S3_BUCKET: ${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}
 
     outputs:
       os_version: ${{ steps.balena-lib.outputs.os_version }}
@@ -415,11 +391,12 @@ jobs:
       - name: Enable signed images
         if: inputs.sign-image == true
         env:
+          SIGN_API: "${{ vars.SIGN_API_URL || 'https://sign.balena-cloud.com' }}"
           SIGN_API_KEY: "${{ secrets.SIGN_API_KEY }}"
           SIGN_GRUB_KEY_ID: 2EB29B4CE0132F6337897F5FB8A88D1C62FCC729
           SIGN_KMOD_KEY_APPEND: "${{ secrets.SIGN_KMOD_KEY_APPEND }}"
         run: |
-          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_API=${SIGN_API_URL}"
+          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_API=${SIGN_API}"
           BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_API_KEY=${SIGN_API_KEY}"
           BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_GRUB_KEY_ID=${SIGN_GRUB_KEY_ID}"
           BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_KMOD_KEY_APPEND=${SIGN_KMOD_KEY_APPEND}"
@@ -440,6 +417,8 @@ jobs:
 
       # All preperation complete before this step
       # Start building balenaOS
+      # We use the BALENA_API_DEPLOY_KEY secret to preload the supervisor image
+      # (why do we need a key for this? can we use a different key?)
       - name: Build
         id: build
         env:
@@ -455,7 +434,7 @@ jobs:
 
           ./balena-yocto-scripts/build/balena-build.sh \
             -d "${MACHINE}" \
-            -t "${{ secrets.BALENA_API_KEY }}" \
+            -t "${{ secrets.BALENA_API_DEPLOY_KEY }}" \
             -s "${YOCTO_CACHE_DIR}/$(whoami)" \
             -g "${BARYS_ARGUMENTS_VAR}"
 
@@ -566,9 +545,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
-          role-to-assume: ${{ inputs.aws_iam_role }}
+          role-to-assume: ${{ vars.AWS_IAM_ROLE }}
           role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
-          aws-region: ${{ inputs.aws_region }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
           # https://github.com/orgs/community/discussions/26636#discussioncomment-3252664
           mask-aws-account-id: false
 
@@ -579,7 +558,8 @@ jobs:
           S3_CMD: "s4cmd --API-ServerSideEncryption=AES256"
           # TODO before deploy: remove --dry-run flag
           S3_SYNC_OPTS: "--dry-run --recursive --API-ACL=${{ steps.s3-acl-private.outputs.string || steps.s3-acl-public.outputs.string }}"
-          S3_URL: "s3://${{ env.S3_BUCKET }}/${{ steps.s3-images-dir.outputs.string || steps.s3-esr-images-dir.outputs.string }}"
+          S3_URL: "s3://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}/${{ steps.s3-images-dir.outputs.string || steps.s3-esr-images-dir.outputs.string }}"
+          S3_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
           SLUG: ${{ steps.balena-lib.outputs.device_slug }}
           VERSION: ${{ steps.balena-lib.outputs.os_version }}
           SOURCE_DIR: ${{ runner.temp }}/deploy
@@ -616,23 +596,16 @@ jobs:
         run: |
           balena --version
 
-      # SELECT WHICH API KEY TO USE BASED ON ENV
-      # TODO: can be replaced with using gh CLI/API to fetch key based on env
-      - name: Select Balena API key for Prod
-        if: inputs.environment == 'balena-cloud.com'
-        run: echo "BALENAOS_TOKEN=${{ secrets.BALENA_API_KEY }}" >> $GITHUB_ENV
-
-      - name: Select Balena API key for staging
-        if: inputs.environment == 'balena-staging.com'
-        run: echo "BALENAOS_TOKEN=${{ secrets.BALENAOS_STAGING_TOKEN }}" >> $GITHUB_ENV
-
-
       # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
       # https://github.com/balena-io/deploy-to-balena-action/issues/286
       - name: Deploy to balena
         if: inputs.deploy-hostapp == true
         id: deploy-hostapp
         env:
+          # BALENA_API_DEPLOY_KEY is a secret that should be specific to the runtime environment
+          # It requires permissions to deploy hostApp releases, and fetch supervisor release images (via yocto recipes)
+          # This step should never run untrusted user code, as we have a secret in the environment
+          BALENAOS_TOKEN: ${{ secrets.BALENA_API_DEPLOY_KEY }}
           BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
           SLUG: "${{ steps.balena-lib.outputs.device_slug }}"
           APPNAME: "${{ steps.balena-lib.outputs.device_slug }}"
@@ -922,11 +895,12 @@ jobs:
       # - name: Deploy AMI
       #   if: inputs.deploy-ami == true
       #   env:
-      #     AWS_DEFAULT_REGION: "${{ env.S3_REGION }}"
+      #     AWS_DEFAULT_REGION: "${{ vars.AWS_REGION || 'us-east-1' }}"
+      #     S3_BUCKET: "${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}"
       #     AWS_SESSION_TOKEN: "" # only required if MFA is enabled
       #     AWS_SUBNET_ID: ${{ vars.AWS_SUBNET || 'subnet-02d18a08ea4058574' }}
       #     AWS_SECURITY_GROUP_ID: ${{ vars.AWS_SECURITY_GROUP || 'sg-057937f4d89d9d51c' }}
-      #     BALENACLI_TOKEN: ${{ secrets.BALENA_API_KEY }}
+      #     BALENACLI_TOKEN: ${{ secrets.BALENA_API_DEPLOY_KEY }}
       #     HOSTOS_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
       #     AMI_NAME: "${{ steps.ami-name.outputs.string }}"
       #     AMI_ARCHITECTURE: "${{ steps.ami-arch.outputs.string }}"
@@ -983,9 +957,9 @@ jobs:
 
     env:
       # Variables provided via the selected GitHub environment
-      BALENACLOUD_API_URL: ${{ vars.BALENA_URL || matrix.environment }}
+      BALENACLOUD_API_URL: ${{ matrix.environment }}
       BALENACLOUD_SSH_PORT: ${{ vars.BALENACLOUD_SSH_PORT || '222' }}
-      BALENACLOUD_SSH_URL: ssh.devices.${{ vars.BALENA_URL || matrix.environment }}
+      BALENACLOUD_SSH_URL: ssh.devices.${{ matrix.environment }}
 
       # Settings specific to this test run.
       # Generally provided via inputs.test_matrix but sane defaults are also provided.
@@ -1000,9 +974,6 @@ jobs:
       REPORTS: ${{ github.workspace }}/reports
       LEVIATHAN_ROOT: ${{ github.workspace }}/layers/meta-balena/tests/leviathan
       SUITES: ${{ github.workspace }}/layers/meta-balena/tests/suites
-
-      # FIXME: Use the API key provided by the environment
-      # BALENACLOUD_API_KEY: ${{ env.BALENACLOUD_API_KEY }}
 
       # QEMU settings
       QEMU_CPUS: 4
@@ -1037,18 +1008,6 @@ jobs:
           git checkout --force "${{ inputs.meta-balena-ref }}"
           git submodule update --init --recursive
 
-      # FIXME: Use the API key provided by the environment
-      - name: Setup env variables for Prod
-        if: matrix.environment == 'balena-cloud.com'
-        run: |
-          echo "BALENACLOUD_API_KEY=${{ secrets.AUTOKIT_BALENACLOUD_API_KEY }}" >> $GITHUB_ENV
-
-      # FIXME: Use the API key provided by the environment
-      - name: Setup env variables for balena-os balenamachine
-        if: matrix.environment == 'bm.balena-dev.com'
-        run: |
-          echo "BALENACLOUD_API_KEY=${{ secrets.AUTOKIT_BALENAMACHINE_API_KEY }}" >> $GITHUB_ENV
-
       # Images need to end up in workspace folder and need to have correct names
       - name: Fetch artifacts from build job
         uses: actions/download-artifact@v4
@@ -1078,8 +1037,9 @@ jobs:
         uses: balena-os/leviathan@282fd606611a023795447d9ad71b5155ea5c0f83
         if: inputs.sign-image == false   # Ensure we don't run this for non-signed images
         env:
-          # FIXME: hardcode these ahead of time instead of during build steps
-          BALENACLOUD_API_KEY: ${{ env.BALENACLOUD_API_KEY }}
+          # BALENA_API_TEST_KEY is a secret that should be specific to the runtime environment
+          # It requires permissions to manage autokit workers, and create test fleets
+          BALENACLOUD_API_KEY: ${{ secrets.BALENA_API_TEST_KEY }}
 
       # Only to run when images are signed, have to run secureboot tests
       # Make sure it has all the same env variables as the job above
@@ -1087,8 +1047,9 @@ jobs:
         if: inputs.sign-image == true
         uses: balena-os/leviathan@282fd606611a023795447d9ad71b5155ea5c0f83
         env:
-          # FIXME: hardcode these ahead of time instead of during build steps
-          BALENACLOUD_API_KEY: ${{ env.BALENACLOUD_API_KEY }}
+          # BALENA_API_TEST_KEY is a secret that should be specific to the runtime environment
+          # It requires permissions to manage autokit workers, and create test fleets
+          BALENACLOUD_API_KEY: ${{ secrets.BALENA_API_TEST_KEY }}
           # Two variables are needed for secure boot tests. Check Makefile in Leviathan to trace their usage.
           QEMU_SECUREBOOT: 1
           FLASHER_SECUREBOOT: 1
