@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y iptables procps e2fsprogs xfsprogs xz-u
 VOLUME /var/lib/docker
 
 # Install balena-cli
-ENV BALENA_CLI_VERSION 17.2.2
+ENV BALENA_CLI_VERSION 18.2.2
 RUN curl -sSL https://github.com/balena-io/balena-cli/releases/download/v$BALENA_CLI_VERSION/balena-cli-v$BALENA_CLI_VERSION-linux-x64-standalone.zip > balena-cli.zip && \
   unzip balena-cli.zip && \
   mv balena-cli/* /usr/bin && \
