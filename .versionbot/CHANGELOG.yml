@@ -1,4 +1,30 @@
 - commits:
+    - subject: "Dockerfiles: update balenaCLI version to 18.2.2"
+      hash: cd6ff2606e5f7a251c6b03d4cfbea371d00a9db7
+      body: |
+        Update balena CLI from 17.2.2 to 18.2.2.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Joseph Kogut <joseph@balena.io>
+        signed-off-by: Joseph Kogut <joseph@balena.io>
+      author: Joseph Kogut
+      nested: []
+    - subject: "Dockerfile_yocto-build-env: bump base image to 22.04"
+      hash: e027c512dbcf801a66a4bb4da15639ca67eedd2e
+      body: |
+        This brings a new Docker engine version which supports cgroup v2.
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Joseph Kogut <joseph@balena.io>
+        signed-off-by: Joseph Kogut <joseph@balena.io>
+      author: Joseph Kogut
+      nested: []
+  version: 1.23.0
+  title: ""
+  date: 2024-06-19T15:20:58.274Z
+- commits:
     - subject: Update job conditions to allow non-PR events for internal branches
       hash: 2d0f1029d7b5489feb7c98d749ff66c8faf2f1e7
       body: ""
