@@ -30,14 +30,15 @@ on:
         description: balena API key that provides access to the signing server
         required: false
     inputs:
-      runs-on:
-        description: The runner labels to use for the job(s)
+      build-runs-on:
+        description: The runner labels to use for the build job(s)
         required: false
         type: string
         default: >
           [
             "self-hosted",
-            "X64"
+            "X64",
+            "16cpu"
           ]
       device-repo:
         description: balenaOS device repository (owner/repo)
@@ -88,6 +89,8 @@ on:
         required: false
         type: boolean
         default: ${{ github.event_name == 'push' }} # This determines if we want to check the results of the merge PR - we only want to do it when a new tag is made
+      # FIXME: remove this input and set "test_matrix: {}" to skip tests. The open PR event type check can be moved to the job conditions.
+      # Additionally, we may want to change the default test_matrix to {} and make tests opt-in.
       run-tests:
         required: false
         type: boolean
@@ -118,25 +121,41 @@ on:
       # - worker_type: The worker type to use for testing. The valid worker types are `qemu` and `testbot`. The default worker type is `testbot`
       # - worker_fleets: The testbot fleets for finding available Leviathan workers. Not used for QEMU workers. Can accept a list of apps separated by commas, no spaces in between
       # - test_org: The organization to use for testing cloud functionality. This default org is `testbot`
+      # - runs_on: A JSON array of runner labels to use for the test job(s). For qemu workers use the labels `["self-hosted", "X64", "kvm"]`.
+      # To use specific settings for each test job, create an include array like this...
+      # {"include": [
+      #   {
+      #     "test_suite": "os",
+      #     "environment": "bm.balena-dev.com"
+      #   },
+      #   {
+      #     "test_suite": "cloud",
+      #     "environment": "balena-cloud.com",
+      #     "test_org": "testbot"
+      #   },
+      #   {
+      #     "test_suite": "hup",
+      #     "environment": "balena-cloud.com",
+      #     "worker_type": "qemu",
+      #     "runs_on": ["self-hosted", "X64", "kvm"]
+      #   }
+      # ]}
+      # Alternatively, you can have the matrix run on a combinatorial match on the provided values (the default) where every single permutation of the values will be executed ...
+      # {
+      #   "test_suite": ["os","cloud","hup"],
+      #   "environment": ["bm.balena-dev.com"],
+      #   "worker_type": ["qemu","testbot"],
+      #   "runs_on": [["self-hosted", "X64", "kvm"]]
+      # }
       test_matrix:
-        description: "JSON Leviathan test matrix to use for testing. If not provided, the default test matrix will be used."
+        description: "JSON Leviathan test matrix to use for testing. If not provided, the default testbot matrix will be used."
         required: false
         type: string
         default: >
-          [
-            {
-              "test_suite": "os",
-              "environment": "bm.balena-dev.com"
-            },
-            {
-              "test_suite": "cloud",
-              "environment": "bm.balena-dev.com"
-            },
-            {
-              "test_suite": "hup",
-              "environment": "bm.balena-dev.com"
-            },
-          ]
+          {
+            "test_suite": ["os","cloud","hup"],
+            "environment": ["bm.balena-dev.com"]
+          }
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
@@ -160,7 +179,7 @@ permissions:
 jobs:
   build:
     name: Build
-    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    runs-on: ${{ fromJSON(inputs.build-runs-on) }}
     environment: ${{ inputs.environment }}
 
     env:
@@ -222,7 +241,7 @@ jobs:
       # this must be done before putting files in the workspace
       # https://github.com/easimon/maximize-build-space
       - name: Maximize build space
-        if: contains(fromJSON(inputs.runs-on), 'ubuntu-latest') == true
+        if: contains(fromJSON(inputs.build-runs-on), 'ubuntu-latest') == true
         uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c
         with:
           root-reserve-mb: "4096"
@@ -410,7 +429,7 @@ jobs:
           sudo chown -R $(id -u):$(id -g) "${YOCTO_CACHE_DIR}"
 
       - name: Mount shared NFS cache
-        if: env.YOCTO_CACHE_HOST != '' && contains(fromJSON(inputs.runs-on), 'self-hosted')
+        if: env.YOCTO_CACHE_HOST != '' && contains(fromJSON(inputs.build-runs-on), 'self-hosted')
         run: |
           sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${YOCTO_CACHE_DIR}" -o fsc,nolock
           ls -al "${YOCTO_CACHE_DIR}"/$(whoami)
@@ -941,7 +960,12 @@ jobs:
   test:
     name: Test
     needs: build
-    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    # Specify the runner type in the test_matrix input.
+    # QEMU workers need ["self-hosted", "X64", "kvm"] or ["self-hosted", "ARM64", "kvm"] runners.
+    # Testbot workers can use any GitHub hosted (ubuntu-latest) or self-hosted runner.
+    # Default to self-hosted X64 with KVM for now to align with Jenkins but in the future
+    # we should consider using GitHub hosted runners for the testbot workers.
+    runs-on: ${{ matrix.runs_on || fromJSON('["self-hosted", "X64", "kvm"]') }}
     if: inputs.run-tests == true
     environment: ${{ matrix.environment }}
 
@@ -952,8 +976,7 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix:
-        include: ${{ fromJSON(inputs.test_matrix) }}
+      matrix: ${{ fromJSON(inputs.test_matrix) }}
 
     env:
       # Variables provided via the selected GitHub environment
