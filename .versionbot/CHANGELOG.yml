@@ -1,4 +1,20 @@
 - commits:
+    - subject: Refactor secrets and variables to use environments
+      hash: c46eb9cfa4a272f00af4029c31e355477169802a
+      body: |
+        Reduce the required secrets and inputs required by
+        relying on vars and secrets set in each GitHub Environment.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.23.1
+  title: ""
+  date: 2024-06-26T12:43:22.833Z
+- commits:
     - subject: "Dockerfiles: update balenaCLI version to 18.2.2"
       hash: cd6ff2606e5f7a251c6b03d4cfbea371d00a9db7
       body: |
