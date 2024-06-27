@@ -602,15 +602,6 @@ jobs:
       # hostapp Deploy
       ##############################
 
-      - name: Set SECURE_BOOT_FEATURE_FLAG
-        if: inputs.deploy-hostapp == true
-        run: |
-          if [ -n "${{ inputs.sign-image }}" = "true" ]; then
-            echo "SECURE_BOOT_FEATURE_FLAG=yes" >> $GITHUB_ENV
-          else
-            echo "SECURE_BOOT_FEATURE_FLAG=no" >> $GITHUB_ENV
-          fi
-
       - name: Check Balena CLI installation
         run: |
           balena --version
@@ -661,7 +652,7 @@ jobs:
 
           if [ -f "${WORKSPACE}/balena.yml" ]; then
             echo -e "\nversion: ${VERSION}" >> "${WORKSPACE}/balena.yml"
-            if [ "${SECURE_BOOT_FEATURE_FLAG}" = "yes" ]; then
+            if [ "${{ inputs.sign-image }}" = "true" ]; then
               sed -i '/provides:/a \  - type: sw.feature\n    slug: secureboot' "/${WORKSPACE}/balena.yml"
             fi
           fi
