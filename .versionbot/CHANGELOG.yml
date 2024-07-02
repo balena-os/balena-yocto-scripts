@@ -1,4 +1,20 @@
 - commits:
+    - subject: "patch: No upload to GH artifacts when PR is closed"
+      hash: cdee530e227972e251a2c7c06f4a3e97747419ca
+      body: |
+        Uploading artifacts to GH artifact storage when PR is merged
+        (closed event) is wasterful. Since they are only uploaded for temporary
+        basis so it can be used for testing. Hence, the PR to stop doing that
+        for closed PR event
+      footer:
+        Signed-off-by: Vipul Gupta (@vipulgupta2048) <vipulgupta2048@gmail.com>
+        signed-off-by: Vipul Gupta (@vipulgupta2048) <vipulgupta2048@gmail.com>
+      author: Vipul Gupta (@vipulgupta2048)
+      nested: []
+  version: 1.24.3
+  title: ""
+  date: 2024-07-02T22:05:09.072Z
+- commits:
     - subject: Fix quoting of $GITHUB_OUTPUT
       hash: 5f56f3236d8ee3d764e46e419aa2431dd42d45ff
       body: |
