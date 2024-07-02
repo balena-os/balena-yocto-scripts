@@ -281,7 +281,7 @@ jobs:
         run: |
           merge_commit=$(git rev-parse :/"^Merge pull request")
           echo "Found merge commit ${merge_commit}"
-          echo "merge_commit=${merge_commit}" >> $GITHUB_OUTPUT"
+          echo "merge_commit=${merge_commit}" >> "$GITHUB_OUTPUT"
 
       # On the inputs to this workflow, there is a regexp check to see if its esr - so this *should* not be needed
       # - name: 'Check ESR release'
@@ -308,7 +308,7 @@ jobs:
           if curl -sL "${status_url}" --header "Authorization: Bearer $GH_TOKEN" | jq -e '.[] | select(.context == "'"${WORKFLOW_NAME}"'") | select(.state == "success")' > /dev/null 2>&1; then
             passed="true"
           fi
-          echo "finalize=${passed}" >> $GITHUB_OUTPUT"
+          echo "finalize=${passed}" >> "$GITHUB_OUTPUT"
 
       # Check if the repository is a yocto device respository
       - name: Device repository check
