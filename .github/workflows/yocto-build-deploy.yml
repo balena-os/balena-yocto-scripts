@@ -503,6 +503,7 @@ jobs:
       # Separate "flasher" and "raw" variants are not used in the testing flow
       - name: Upload artifacts
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        if: github.event_name != 'push'
         with:
           name: build-artifacts
           if-no-files-found: error
