@@ -1,4 +1,19 @@
 - commits:
+    - subject: Fix quoting of $GITHUB_OUTPUT
+      hash: 5f56f3236d8ee3d764e46e419aa2431dd42d45ff
+      body: |
+        We had typos in two cases, in which we missed the opening quote.
+      footer:
+        Signed-off-by: Leandro Motta Barros <leandro@balena.io>
+        signed-off-by: Leandro Motta Barros <leandro@balena.io>
+        Change-type: patch
+        change-type: patch
+      author: Leandro Motta Barros
+      nested: []
+  version: 1.24.2
+  title: ""
+  date: 2024-07-02T00:54:39.074Z
+- commits:
     - subject: Simplify check for secure boot
       hash: be189f7e2f6fb26f778f29e1f955a1cdd01bc8a4
       body: |
