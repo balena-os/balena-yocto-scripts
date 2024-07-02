@@ -255,7 +255,7 @@ jobs:
 
       # https://github.com/actions/checkout
       - name: Clone device repository
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           repository: ${{ inputs.device-repo }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -996,7 +996,7 @@ jobs:
     steps:
       # Clone the device respository to fetch Leviathan
       - name: Clone device repository
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           repository: ${{ inputs.device-repo }}
           token: ${{ secrets.GITHUB_TOKEN }}
