@@ -84,11 +84,6 @@ on:
         required: false
         type: boolean
         default: false # The default is "no" - because the `check-merge-tests` will determine whether or not to mark the hostapp as final. This is purely here for a manual override
-      check-merge-tests:
-        description: Whether to check the test results from the merge commit that resulted in new tagged version - can be overridden in dispatch for manual deploy
-        required: false
-        type: boolean
-        default: ${{ github.event_name == 'push' }} # This determines if we want to check the results of the merge PR - we only want to do it when a new tag is made
       deploy-ami:
         description: Whether to deploy an AMI to AWS
         required: false
@@ -156,14 +151,15 @@ env:
   WORKSPACE: ${{ github.workspace }}
   MACHINE: ${{ inputs.machine }}
   VERBOSE: verbose
-  WORKFLOW_NAME: ${{ github.workflow }} # Name of the calling workflow - for use when checking the result of test job on merged PR. Also, can we be clever here and also use it to differentiate between manual/auto runs
+  WORKFLOW_NAME: ${{ github.workflow }}
 
 # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
 # https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect#adding-permissions-settings
 permissions:
-  id-token: write # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
-  statuses: read # We are fetching status check results of a merge commit when workflow is triggered by new tag, to see if tests pass
+  id-token: write   # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
+  actions: read    # We are fetching workflow run results of a merge commit when workflow is triggered by new tag, to see if tests pass
+  pull-requests: read # Required to fetch the PR that merged, in order to get the test results
 
 jobs:
   build:
@@ -257,44 +253,47 @@ jobs:
       # reference: https://github.com/balena-os/github-workflows/blob/master/.github/workflows/build_and_deploy.yml#L89
       # NOTE: This will not be necessary if we had a way to deploy artifacts and mark as final like with fleet releases
 
-      # Not needed as we should be able to get the tag from the caller workflow
-      # - name: 'Fetch latest tag'
-      #   id: get-latest-tag
-      #   if: ${{ inputs.check-merge-tests }}
-      #   uses: "actions-ecosystem/action-get-latest-tag@v1"
-
       # We're also checking out the tag in this step, so the subsequent build is done from the tagged version of the device repo
       - name: "Fetch merge commit"
         id: set-merge-commit
-        if: ${{ inputs.check-merge-tests }} # Left in the case of manual deploys where tests are failing but we had to force merge
+        if: ${{ github.event_name == 'push' }} # Only perform on push event - i.e a new version tag
         run: |
           merge_commit=$(git rev-parse :/"^Merge pull request")
           echo "Found merge commit ${merge_commit}"
           echo "merge_commit=${merge_commit}" >> "$GITHUB_OUTPUT"
 
-      # On the inputs to this workflow, there is a regexp check to see if its esr - so this *should* not be needed
-      # - name: 'Check ESR release'
-      #   if: ${{ ! inputs.manual_call }}
-      #   uses:  actions-ecosystem/action-regex-match@v2
-      #   id: regex-match
-      #   with:
-      #     text: ${{ steps.get-latest-tag.outputs.tag }}
-      #     regex: '^v20[0-9][0-9].[0-1]?[1470].[0-9]+$'
 
       # This will control the deployment of the hostapp only - it will determine if it is marked as final or not
-      # The hostapp being finalised is what determines if the API will present this OS version to users
+      # The hostapp being finalised is what determines if the API will present this OS version to user
+      # If the test_matrix is empty - it means there are no tests for the DT - so don't check tests, and don't finalise, unless manually done with "finalise-hostapp" input
       - name: Check test results
-        if: ${{ inputs.check-merge-tests }} # Left in the case of manual deploys where tests are failing but we had to force merge
+        # https://docs.github.com/en/actions/learn-github-actions/expressions#functions
+        # this expression checks if test matrix is any variation of empty
+        if: ${{github.event_name == 'push' && contains(fromJSON('["[]","{}","","null"]'), inputs.test_matrix) == false }}
         id: merge-test-result
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ inputs.device-repo }}
           COMMIT: ${{ steps.set-merge-commit.outputs.merge_commit }}
+          # environment variables used by gh CLI
+          # https://cli.github.com/manual/gh_help_environment
+          GH_DEBUG: "true"
+          GH_PAGER: "cat"
+          GH_PROMPT_DISABLED: "true"
+          GH_REPO: "${{ github.repository }}"
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
+          # Gets the PR number of the merge commit
           prid=$(gh api -H "Accept: application/vnd.github+json" /repos/$REPO/commits/$COMMIT --jq '.commit.message' | head -n1 | cut -d "#" -f2 | awk '{ print $1}')
-          status_url=$(gh api -H "Accept: application/vnd.github+json" /repos/$REPO/pulls/$prid --jq '._links.statuses.href')
+          
+          # Gets the head commit of the PR - needed to fetch workflows ran on that commit
+          head=$(gh api -H "Accept: application/vnd.github+json" /repos/$REPO/pulls/$prid --jq '.head.sha')
+
+          # Fetching workflow runs and filtering by the commit of the head of the PR returns the latest attempts of the workflow for that commit
+          # Selecting for workflows with the same name as the workflow name ("github.workflow")
+          # There will be "pull_request" and "pull_request_trigger" triggered workflow runs in the response - one will be skipped, one will be success/fail
+          # So selecting for .conclusion==success will give us a response and evaluate to true in the following "if" statement if either we successful
           passed="false"
-          if curl -sL "${status_url}" --header "Authorization: Bearer $GH_TOKEN" | jq -e '.[] | select(.context == "'"${WORKFLOW_NAME}"'") | select(.state == "success")' > /dev/null 2>&1; then
+          if gh api -H "Accept: application/vnd.github+json" /repos/$REPO/actions/runs --jq '.workflow_runs[] | select(.head_sha == "'"${head}"'") | select(.name == "'"${WORKFLOW_NAME}"'") | select(.conclusion == "success")'; then
             passed="true"
           fi
           echo "finalize=${passed}" >> "$GITHUB_OUTPUT"
@@ -949,6 +948,7 @@ jobs:
     # we should consider using GitHub hosted runners for the testbot workers.
     runs-on: ${{ matrix.runs_on || fromJSON('["self-hosted", "X64", "kvm"]') }}
     environment: ${{ matrix.environment }}
+    if: ${{ github.event_name != 'push'}}
 
     defaults:
       run:
