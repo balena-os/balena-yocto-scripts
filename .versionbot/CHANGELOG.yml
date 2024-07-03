@@ -1,4 +1,21 @@
 - commits:
+    - subject: Do not run any tests by default unless provided by calling workflow
+      hash: d0cfc42cf8a17ef6b5f2ac4eed6f84d1581435e6
+      body: |
+        As there are currently more device types without tests than with,
+        and some of those with tests need to provide overrides anyway, it's
+        simpler to assume an empty test matrix unless provided.
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.25.0
+  title: ""
+  date: 2024-07-03T15:44:25.729Z
+- commits:
     - subject: "patch: No upload to GH artifacts when PR is closed"
       hash: cdee530e227972e251a2c7c06f4a3e97747419ca
       body: |
