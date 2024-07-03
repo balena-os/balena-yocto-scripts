@@ -89,12 +89,6 @@ on:
         required: false
         type: boolean
         default: ${{ github.event_name == 'push' }} # This determines if we want to check the results of the merge PR - we only want to do it when a new tag is made
-      # FIXME: remove this input and set "test_matrix: {}" to skip tests. The open PR event type check can be moved to the job conditions.
-      # Additionally, we may want to change the default test_matrix to {} and make tests opt-in.
-      run-tests:
-        required: false
-        type: boolean
-        default: ${{ github.event_name == 'pull_request' }} # on pull request syncs + opens we want to run tests
       deploy-ami:
         description: Whether to deploy an AMI to AWS
         required: false
@@ -140,7 +134,7 @@ on:
       #     "runs_on": ["self-hosted", "X64", "kvm"]
       #   }
       # ]}
-      # Alternatively, you can have the matrix run on a combinatorial match on the provided values (the default) where every single permutation of the values will be executed ...
+      # Alternatively, you can have the matrix run on a combinatorial match on the provided values where every single permutation of the values will be executed ...
       # {
       #   "test_suite": ["os","cloud","hup"],
       #   "environment": ["bm.balena-dev.com"],
@@ -148,14 +142,9 @@ on:
       #   "runs_on": [["self-hosted", "X64", "kvm"]]
       # }
       test_matrix:
-        description: "JSON Leviathan test matrix to use for testing. If not provided, the default testbot matrix will be used."
+        description: "JSON Leviathan test matrix to use for testing. No tests will be run if not provided."
         required: false
         type: string
-        default: >
-          {
-            "test_suite": ["os","cloud","hup"],
-            "environment": ["bm.balena-dev.com"]
-          }
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
@@ -173,8 +162,8 @@ env:
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
 # https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect#adding-permissions-settings
 permissions:
-  id-token: write   # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
-  statuses: read    # We are fetching status check results of a merge commit when workflow is triggered by new tag, to see if tests pass
+  id-token: write # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
+  statuses: read # We are fetching status check results of a merge commit when workflow is triggered by new tag, to see if tests pass
 
 jobs:
   build:
@@ -275,7 +264,7 @@ jobs:
       #   uses: "actions-ecosystem/action-get-latest-tag@v1"
 
       # We're also checking out the tag in this step, so the subsequent build is done from the tagged version of the device repo
-      - name: 'Fetch merge commit'
+      - name: "Fetch merge commit"
         id: set-merge-commit
         if: ${{ inputs.check-merge-tests }} # Left in the case of manual deploys where tests are failing but we had to force merge
         run: |
@@ -597,7 +586,6 @@ jobs:
           $S3_CMD ${S3_SYNC_OPTS} dsync "${SOURCE_DIR}/${SLUG}/${VERSION}/" "${S3_URL}/${SLUG}/${VERSION}/"
           $S3_CMD put "${SOURCE_DIR}/${SLUG}/latest" "${S3_URL}/${SLUG}/" --API-ACL=public-read -f
           $S3_CMD del "${S3_URL}/${SLUG}/${VERSION}/IGNORE"
-
 
       ##############################
       # hostapp Deploy
@@ -958,7 +946,6 @@ jobs:
     # Default to self-hosted X64 with KVM for now to align with Jenkins but in the future
     # we should consider using GitHub hosted runners for the testbot workers.
     runs-on: ${{ matrix.runs_on || fromJSON('["self-hosted", "X64", "kvm"]') }}
-    if: inputs.run-tests == true
     environment: ${{ matrix.environment }}
 
     defaults:
@@ -968,7 +955,8 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(inputs.test_matrix) }}
+      # If test matrix is empty, skip the job by providing an empty object
+      matrix: ${{ fromJSON(inputs.test_matrix) || '{}' }}
 
     env:
       # Variables provided via the selected GitHub environment
@@ -1050,7 +1038,7 @@ jobs:
       # https://github.com/balena-os/leviathan/blob/master/action.yml
       - name: BalenaOS Leviathan Tests
         uses: balena-os/leviathan@282fd606611a023795447d9ad71b5155ea5c0f83
-        if: inputs.sign-image == false   # Ensure we don't run this for non-signed images
+        if: inputs.sign-image == false # Ensure we don't run this for non-signed images
         env:
           # BALENA_API_TEST_KEY is a secret that should be specific to the runtime environment
           # It requires permissions to manage autokit workers, and create test fleets
