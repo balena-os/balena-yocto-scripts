@@ -214,7 +214,7 @@ jobs:
 
           pr_labels="$(gh pr view ${{ github.event.pull_request.number }} --json labels -q .labels[].name)"
 
-          for label in "${pr_labels}"
+          for label in ${pr_labels}
           do
             if [[ "$label" =~ "${{ env.ok_to_test_label }}" ]]
             then
@@ -415,13 +415,13 @@ jobs:
       - name: Create shared cache mount point
         run: |
           sudo mkdir -p "${YOCTO_CACHE_DIR}/$(whoami)"
-          sudo chown -R $(id -u):$(id -g) "${YOCTO_CACHE_DIR}"
+          sudo chown -R "$(id -u):$(id -g)" "${YOCTO_CACHE_DIR}"
 
       - name: Mount shared NFS cache
         if: env.YOCTO_CACHE_HOST != '' && contains(fromJSON(inputs.build-runs-on), 'self-hosted')
         run: |
           sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${YOCTO_CACHE_DIR}" -o fsc,nolock
-          ls -al "${YOCTO_CACHE_DIR}"/$(whoami)
+          ls -al "${YOCTO_CACHE_DIR}/$(whoami)"
 
       # All preperation complete before this step
       # Start building balenaOS
@@ -624,7 +624,7 @@ jobs:
         run: |
           set -e
 
-          ##  Adapted from https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/entry_scripts/balena-deploy-block.sh
+          ## Adapted from https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/entry_scripts/balena-deploy-block.sh
           ## That script was executed from inside a helper image - here we're doing it inline
 
           # load hostapp bundle and get local image reference, needed for `balena deploy`
@@ -664,7 +664,7 @@ jobs:
             # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L128
             echo "Creating App"
             _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"app_name": "${BALENAOS_ACCOUNT}/${APPNAME}", "device_type": "${APPNAME}"}')
-            appID=$(echo "${_json}" | jq --raw-output '.id' || true)
+            _appID=$(echo "${_json}" | jq --raw-output '.id' || true)
             echo "${_appID}"
 
             # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L882
@@ -684,7 +684,10 @@ jobs:
             # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L914
             # Give the team developer access to the app
             _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/team_application_access" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"team": "${_team_id}", "grants_access_to__application": "${_appID}", "application_membership_role": "${_role_id}""}')
-            id=$(echo "${_json}" | jq -r '.id')
+            _id=$(echo "${_json}" | jq -r '.id')
+            if [ "${_id}" = "null" ]; then
+              >&2 echo "Failed to add ${HOSTAPP_ACCESS_ROLE} access tole to ${APPNAME}"
+            fi
 
             # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L207
             # Set it to public
@@ -707,7 +710,7 @@ jobs:
               _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application_tag" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"application": "${_appID}", "tag_key": "release-policy", "value": "esr"}')
             fi
           else
-            >&2 echo "[${_appName}] Application ${_appID} already exists."
+            >&2 echo "[${APPNAME}] Application ${_appID} already exists."
           fi
           echo "${_appID}"
 
@@ -817,7 +820,7 @@ jobs:
 
 
           if [ "${last_current}" = "null" ]; then
-            echo "[INFO][${${BALENAOS_ACCOUNT}/${APPNAME}}] Tagging fleet with esr-current: ${_x_version}"
+            echo "[INFO][${BALENAOS_ACCOUNT}/${APPNAME}] Tagging fleet with esr-current: ${_x_version}"
             BALENARC_BALENA_URL=${API_ENV} balena tag set esr-current "${_x_version}" --fleet "${BALENAOS_ACCOUNT}/${APPNAME}"
           elif [ "${last_sunset}" = "null" ]; then
             if [ "${last_next}" = "null" ]; then
