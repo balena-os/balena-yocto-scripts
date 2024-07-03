@@ -565,8 +565,7 @@ jobs:
         if: inputs.deploy-s3 == true && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
         env:
           S3_CMD: "s4cmd --API-ServerSideEncryption=AES256"
-          # TODO before deploy: remove --dry-run flag
-          S3_SYNC_OPTS: "--dry-run --recursive --API-ACL=${{ steps.s3-acl-private.outputs.string || steps.s3-acl-public.outputs.string }}"
+          S3_SYNC_OPTS: "--recursive --API-ACL=${{ steps.s3-acl-private.outputs.string || steps.s3-acl-public.outputs.string }}"
           S3_URL: "s3://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}/${{ steps.s3-images-dir.outputs.string || steps.s3-esr-images-dir.outputs.string }}"
           S3_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
           SLUG: ${{ steps.balena-lib.outputs.device_slug }}
