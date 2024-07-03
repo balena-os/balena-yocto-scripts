@@ -1,4 +1,18 @@
 - commits:
+    - subject: Fix actionlint errors and warnings in shell steps
+      hash: da910ed9ac6fdd70bd0ebd1beb0dbbd1248517fd
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.25.1
+  title: ""
+  date: 2024-07-03T18:33:05.802Z
+- commits:
     - subject: Do not run any tests by default unless provided by calling workflow
       hash: d0cfc42cf8a17ef6b5f2ac4eed6f84d1581435e6
       body: |
