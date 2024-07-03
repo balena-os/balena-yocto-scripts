@@ -1,4 +1,20 @@
 - commits:
+    - subject: Remove dry-run flag from S3 upload
+      hash: cf0301996022ef58a9c19d40d002d72a1bbcf705
+      body: |
+        We are publishing hostapp releases to staging already, we should
+        start including the associated S3 files as well.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.25.2
+  title: ""
+  date: 2024-07-03T21:19:20.964Z
+- commits:
     - subject: Fix actionlint errors and warnings in shell steps
       hash: da910ed9ac6fdd70bd0ebd1beb0dbbd1248517fd
       body: ""
