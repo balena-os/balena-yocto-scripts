@@ -70,6 +70,10 @@ balena_deploy_artifacts () {
 		cp -rv "$_yocto_build_deploy/usbboot" "$_deploy_dir" || true
 	fi
 
+	if [ -d "$_yocto_build_deploy/rpi-eeprom/secure-boot-lock" ]; then
+		cp -rv "$_yocto_build_deploy/rpi-eeprom/secure-boot-lock" "$_deploy_dir" || true
+	fi
+
 	test "${_slug}" = "edge" && return
 
 	if [ "$_deploy_artifact" = "docker-image" ]; then
