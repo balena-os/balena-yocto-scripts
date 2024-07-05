@@ -1,4 +1,21 @@
 - commits:
+    - subject: use workflow run of PR head instead of statuses to determine test results
+      hash: ad06820f4174568383678710fa68b2054da6db57
+      body: >
+        Since we have moved to workflows for tests instead of status checks, we
+        have to fetch the workflow runs for the appropriate commit to determine
+        a test pass/fail.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+  version: 1.25.3
+  title: ""
+  date: 2024-07-05T12:42:09.570Z
+- commits:
     - subject: Remove dry-run flag from S3 upload
       hash: cf0301996022ef58a9c19d40d002d72a1bbcf705
       body: |
