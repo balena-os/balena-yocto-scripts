@@ -1,4 +1,18 @@
 - commits:
+    - subject: "balena-deploy: deploy secure boot lock artifacts if available"
+      hash: 01378a49b0b2264afcf6d2dc4d016e2be206fde7
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.25.4
+  title: ""
+  date: 2024-07-06T09:01:53.726Z
+- commits:
     - subject: use workflow run of PR head instead of statuses to determine test results
       hash: ad06820f4174568383678710fa68b2054da6db57
       body: >
