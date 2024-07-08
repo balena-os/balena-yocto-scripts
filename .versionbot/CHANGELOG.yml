@@ -1,4 +1,18 @@
 - commits:
+    - subject: only login to s3 if deploying to s3
+      hash: a23ed7074fd2af18b952b9d0f6ee2623dd6a76f8
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+  version: 1.25.5
+  title: ""
+  date: 2024-07-08T16:52:21.474Z
+- commits:
     - subject: "balena-deploy: deploy secure boot lock artifacts if available"
       hash: 01378a49b0b2264afcf6d2dc4d016e2be206fde7
       body: ""
