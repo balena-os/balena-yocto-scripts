@@ -29,6 +29,9 @@ on:
       SIGN_API_KEY:
         description: balena API key that provides access to the signing server
         required: false
+      GH_APP_PRIVATE_KEY:
+        description: "GPG Private Key for GitHub App to generate ephemeral tokens (used with vars.FLOWZONE_APP_ID)"
+        required: false
     inputs:
       build-runs-on:
         description: The runner labels to use for the build job(s)
@@ -157,8 +160,8 @@ env:
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
 # https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect#adding-permissions-settings
 permissions:
-  id-token: write   # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
-  actions: read    # We are fetching workflow run results of a merge commit when workflow is triggered by new tag, to see if tests pass
+  id-token: write # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
+  actions: read # We are fetching workflow run results of a merge commit when workflow is triggered by new tag, to see if tests pass
   pull-requests: read # Required to fetch the PR that merged, in order to get the test results
 
 jobs:
@@ -238,16 +241,42 @@ jobs:
           remove-codeql: "true"
           remove-docker-images: "true"
 
+      # Generate an app installation token that has access to
+      # all repos where the app is installed (usually the whole org)
+      # https://github.com/actions/create-github-app-token
+      - name: Create GitHub App installation token
+        uses: actions/create-github-app-token@v1.10.3
+        id: app-token
+        if: vars.FLOWZONE_APP_ID != ''
+        with:
+          app-id: ${{ vars.FLOWZONE_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+
+      # Generate another app token for the balena-io organization
+      # so we can checkout private contracts
+      # https://github.com/actions/create-github-app-token
+      - name: Create GitHub App installation token (balena-io)
+        uses: actions/create-github-app-token@v1.10.3
+        id: app-token-balena-io
+        if: vars.FLOWZONE_APP_ID != ''
+        with:
+          app-id: ${{ vars.FLOWZONE_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: balena-io
+
       # https://github.com/actions/checkout
       - name: Clone device repository
         uses: actions/checkout@v4.1.1
         with:
           repository: ${{ inputs.device-repo }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
           ref: ${{ inputs.device-repo-ref }} # In the case of a new tagged version, this will be the new tag, claimed from ${{ github.events.push.ref }}
           submodules: true
           fetch-depth: 0 # DEBUG - this is for testing on a device repo
           fetch-tags: true
+          # Do not persist the app installation token credentials,
+          # and prefer that each step provide credentials where required
+          persist-credentials: false
 
       # In the old workflow we had to fetch the merge commit, get the check runs from the PR, and check if a device type passed or failed
       # reference: https://github.com/balena-os/github-workflows/blob/master/.github/workflows/build_and_deploy.yml#L89
@@ -261,7 +290,6 @@ jobs:
           merge_commit=$(git rev-parse :/"^Merge pull request")
           echo "Found merge commit ${merge_commit}"
           echo "merge_commit=${merge_commit}" >> "$GITHUB_OUTPUT"
-
 
       # This will control the deployment of the hostapp only - it will determine if it is marked as final or not
       # The hostapp being finalised is what determines if the API will present this OS version to user
@@ -284,7 +312,7 @@ jobs:
         run: |
           # Gets the PR number of the merge commit
           prid=$(gh api -H "Accept: application/vnd.github+json" /repos/$REPO/commits/$COMMIT --jq '.commit.message' | head -n1 | cut -d "#" -f2 | awk '{ print $1}')
-          
+
           # Gets the head commit of the PR - needed to fetch workflows ran on that commit
           head=$(gh api -H "Accept: application/vnd.github+json" /repos/$REPO/pulls/$prid --jq '.head.sha')
 
@@ -986,15 +1014,27 @@ jobs:
       QEMU_MEMORY: "1G"
 
     steps:
+      # https://github.com/actions/create-github-app-token
+      - name: Create GitHub App installation token
+        uses: actions/create-github-app-token@v1.10.3
+        id: app-token
+        if: vars.FLOWZONE_APP_ID != ''
+        with:
+          app-id: ${{ vars.FLOWZONE_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+
       # Clone the device respository to fetch Leviathan
       - name: Clone device repository
         uses: actions/checkout@v4.1.1
         with:
           repository: ${{ inputs.device-repo }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
           ref: ${{ inputs.device-repo-ref }}
           submodules: recursive # We need to set this to recursive as leviathan is a submodule nested inside the meta-balena submodule of the device repo
           fetch-tags: true
+          # Do not persist the app installation token credentials,
+          # and prefer that each step provide credentials where required
+          persist-credentials: false
 
       # Check if the repository is a yocto device respository
       - name: Device repository check
