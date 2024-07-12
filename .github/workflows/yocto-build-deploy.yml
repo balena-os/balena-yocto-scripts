@@ -399,10 +399,33 @@ jobs:
           is_private=$(${CURL} -XGET -H "Content-type: application/json" -H "Authorization: bearer ${BALENAOS_TOKEN}" --silent --retry 5 "https://api.${API_ENV}/${TRANSLATION}/device_type?\$filter=slug%20eq%20%27${device_slug}%27&\$select=slug,is_private" | jq -r '.d[0].is_private')
           echo "is_private=${is_private}" >> $GITHUB_OUTPUT
 
-          if [ ! -f "${WORKSPACE}/balena.yml" ]; then
-            _contract=$(balena_lib_build_contract "${device_slug}")
-            cp "${_contract}" "${WORKSPACE}/balena.yml"
+      - name: Checkout private Contracts
+        uses: actions/checkout@v4.1.1
+        if: steps.balena-lib.outputs.is_private == 'true'
+        with:
+          repository: balena-io/private-contracts
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ github.workspace }}/private-contracts
+
+      # Unrolled balena_api_is_dt_private function - https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
+      # Had to be unrolled due to this: https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191 function relying on a jenkins env var to select the balena env - so failed
+      - name: Build OS contract
+        env:
+          CONTRACTS_BUILD_DIR: "${{ github.workspace }}/balena-yocto-scripts/build/contracts"
+          NODE: node
+          DEVICE_TYPE_SLUG: ${{ steps.balena-lib.outputs.device_slug }}
+          CONTRACTS_OUTPUT_DIR: "${{ github.workspace }}/build/contracts"
+        run: |
+          npm --prefix="${CONTRACTS_BUILD_DIR}" ci > /dev/null || (>&2 echo "[balena_lib_build_contracts]: npm failed installing dependencies" && return 1)
+          NODE_PATH="${CONTRACTS_BUILD_DIR}/node_modules" ${NODE} "${CONTRACTS_BUILD_DIR}/generate-oscontracts.js" > /dev/null
+          if [ -f "${CONTRACTS_OUTPUT_DIR}/${DEVICE_TYPE_SLUG}/balena-os/balena.yml" ]; then
+            echo "${CONTRACTS_OUTPUT_DIR}/${DEVICE_TYPE_SLUG}/balena-os/balena.yml"
+          else
+            >&2 echo "[balena_lib_build_contracts]: Failed to build OS contract for ${DEVICE_TYPE_SLUG}"
+            return 1
           fi
+          # Move newly generated OS contract to location expected later on in the workflow
+          cp "${CONTRACTS_OUTPUT_DIR}/${DEVICE_TYPE_SLUG}/balena-os/balena.yml" "${WORKSPACE}/balena.yml"
 
       - name: Enable development mode in BalenaOS
         if: inputs.os-dev == true
