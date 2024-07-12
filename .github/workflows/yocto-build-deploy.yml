@@ -987,7 +987,7 @@ jobs:
     strategy:
       fail-fast: false
       # If test matrix is empty, skip the job by providing an empty object
-      matrix: ${{ fromJSON(inputs.test_matrix) || '{}' }}
+      matrix: ${{ fromJSON(inputs.test_matrix || '{}') }}
 
     env:
       # Variables provided via the selected GitHub environment
