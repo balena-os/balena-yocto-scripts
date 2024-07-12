@@ -362,6 +362,10 @@ jobs:
       # A lot of outputs inferred from here are used everywhere else in the workflow
       - name: Set build outputs
         id: balena-lib
+        env: 
+          CURL: "curl --silent --retry 10 --location --compressed"
+          TRANSLATION: "v6"
+          BALENAOS_TOKEN: ${{ secrets.BALENA_API_DEPLOY_KEY }}
         run: |
           source "${automation_dir}/include/balena-api.inc"
           source "${automation_dir}/include/balena-lib.inc"
@@ -390,7 +394,9 @@ jobs:
           dt_arch="$(balena_lib_get_dt_arch "${MACHINE}")"
           echo "dt_arch=${dt_arch}" >> $GITHUB_OUTPUT
 
-          is_private="$(balena_api_is_dt_private "${{ inputs.machine }}")"
+          # Unrolled balena_api_is_dt_private function - https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
+          # Had to be unrolled due to this: https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191 function relying on a jenkins env var to select the balena env - so failed
+          is_private=$(${CURL} -XGET -H "Content-type: application/json" -H "Authorization: bearer ${BALENAOS_TOKEN}" --silent --retry 5 "https://api.${API_ENV}/${TRANSLATION}/device_type?\$filter=slug%20eq%20%27${device_slug}%27&\$select=slug,is_private" | jq -r '.d[0].is_private')
           echo "is_private=${is_private}" >> $GITHUB_OUTPUT
 
           if [ ! -f "${WORKSPACE}/balena.yml" ]; then
