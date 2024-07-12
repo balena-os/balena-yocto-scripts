@@ -404,7 +404,7 @@ jobs:
         if: steps.balena-lib.outputs.is_private == 'true'
         with:
           repository: balena-io/private-contracts
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token-balena-io.outputs.token }}
           path: ${{ github.workspace }}/private-contracts
 
       # Unrolled balena_api_is_dt_private function - https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
