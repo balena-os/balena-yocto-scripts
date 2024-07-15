@@ -1,4 +1,18 @@
 - commits:
+    - subject: Use App Installation tokens so we can clone private submodules
+      hash: 9ca32e51938efc3c5cd01b96eecce85665fb9698
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.25.6
+  title: ""
+  date: 2024-07-15T15:11:37.708Z
+- commits:
     - subject: only login to s3 if deploying to s3
       hash: a23ed7074fd2af18b952b9d0f6ee2623dd6a76f8
       body: ""
