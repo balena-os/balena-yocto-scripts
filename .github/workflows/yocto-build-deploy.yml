@@ -296,8 +296,13 @@ jobs:
       # If the test_matrix is empty - it means there are no tests for the DT - so don't check tests, and don't finalise, unless manually done with "finalise-hostapp" input
       - name: Check test results
         # https://docs.github.com/en/actions/learn-github-actions/expressions#functions
-        # this expression checks if test matrix is any variation of empty
-        if: ${{github.event_name == 'push' && contains(fromJSON('["[]","{}","","null"]'), inputs.test_matrix) == false }}
+        # this expression checks to make sure at least one test suite was provided via either matrix syntax
+        if: |
+          github.event_name == 'push' &&
+          (
+            join(fromJSON(inputs.test_matrix).test_suite) != '' ||
+            join(fromJSON(inputs.test_matrix).include.*.test_suite) != ''
+          )
         id: merge-test-result
         env:
           REPO: ${{ inputs.device-repo }}
@@ -977,7 +982,14 @@ jobs:
     # we should consider using GitHub hosted runners for the testbot workers.
     runs-on: ${{ matrix.runs_on || fromJSON('["self-hosted", "X64", "kvm"]') }}
     environment: ${{ matrix.environment }}
-    if: ${{ github.event_name != 'push'}}
+    # https://docs.github.com/en/actions/learn-github-actions/expressions#functions
+    # this expression checks to make sure at least one test suite was provided via either matrix syntax
+    if: |
+      github.event_name != 'push' &&
+      (
+        join(fromJSON(inputs.test_matrix).test_suite) != '' ||
+        join(fromJSON(inputs.test_matrix).include.*.test_suite) != ''
+      )
 
     defaults:
       run:
@@ -986,8 +998,7 @@ jobs:
 
     strategy:
       fail-fast: false
-      # If test matrix is empty, skip the job by providing an empty object
-      matrix: ${{ fromJSON(inputs.test_matrix || '{}') }}
+      matrix: ${{ fromJSON(inputs.test_matrix) }}
 
     env:
       # Variables provided via the selected GitHub environment
