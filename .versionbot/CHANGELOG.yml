@@ -1,4 +1,21 @@
 - commits:
+    - subject: Use env vars BALENA_HOST and BALENACLOUD_SSH_URL when provided
+      hash: f04607fc0f50a99bb2fd14370a2e2dae0e3f7094
+      body: |
+        These currently differ between environments, and we will need
+        to start supporting environment names that are not the same
+        as the balena host.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.25.8
+  title: ""
+  date: 2024-07-17T19:56:20.231Z
+- commits:
     - subject: Fix handling of empty test matrix input
       hash: 727d8d275455361d3bc82b5aec392e9aaa08248b
       body: |
