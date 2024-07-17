@@ -172,8 +172,8 @@ jobs:
 
     env:
       automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
-      BALENARC_BALENA_URL: ${{ inputs.environment || 'balena-cloud.com' }}
-      API_ENV: ${{ inputs.environment || 'balena-cloud.com' }}
+      BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || inputs.environment || 'balena-cloud.com' }}
+      API_ENV: ${{ vars.BALENA_HOST || inputs.environment || 'balena-cloud.com' }}
 
       # Yocto NFS sstate cache host
       YOCTO_CACHE_HOST: ${{ vars.YOCTO_CACHE_HOST || 'nfs.product-os.io' }}
@@ -1002,9 +1002,9 @@ jobs:
 
     env:
       # Variables provided via the selected GitHub environment
-      BALENACLOUD_API_URL: ${{ matrix.environment }}
-      BALENACLOUD_SSH_PORT: ${{ vars.BALENACLOUD_SSH_PORT || '222' }}
-      BALENACLOUD_SSH_URL: ssh.devices.${{ matrix.environment }}
+      BALENACLOUD_API_URL: ${{ vars.BALENA_HOST || matrix.environment || 'balena-cloud.com' }}
+      BALENACLOUD_SSH_PORT: ${{ vars.BALENACLOUD_SSH_PORT || '22' }}
+      BALENACLOUD_SSH_URL: ${{ vars.BALENACLOUD_SSH_URL || 'ssh.balena-devices.com' }}
 
       # Settings specific to this test run.
       # Generally provided via inputs.test_matrix but sane defaults are also provided.
