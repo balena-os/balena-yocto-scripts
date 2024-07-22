@@ -1,4 +1,45 @@
 - commits:
+    - subject: use token to fetch private contracts
+      hash: acfc8d20ce8dd4b29eae67679dd1a89ffcc75c7c
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+    - subject: unroll balena_lib_build_contract function
+      hash: 82c9e482f3bfb0fcd960c455f2c8ff0c42c98baa
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+    - subject: unroll balena_api_is_dt_private function
+      hash: cc3102dbb1348ee563b08dfd3afd37daaa0404ca
+      body: >
+        when building + deploying or a private DT , the check to see if the DT
+        is private fails. This is due to
+        https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
+        using this function:
+        https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191
+        - which uses the jenkins deployTo variable to select the correct api url
+        and token.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+  version: 1.25.9
+  title: ""
+  date: 2024-07-22T16:18:49.689Z
+- commits:
     - subject: Use env vars BALENA_HOST and BALENACLOUD_SSH_URL when provided
       hash: f04607fc0f50a99bb2fd14370a2e2dae0e3f7094
       body: |
