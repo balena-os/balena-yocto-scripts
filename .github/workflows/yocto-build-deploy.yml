@@ -79,9 +79,9 @@ on:
         description: Whether to deploy a hostApp container image to a balena environment
         required: false
         type: boolean
-        # We want to deploy the hostapp by default - as a draft if its on a PR, or as final if a new tagged version. This is an input however to allow for manual runs where deploying the hostapp isn't wanted or needed.
+        # By default, deploy the hostapp only on creation of new tags, as we do for S3 deployment.
         # At some point in the future we want to modify the HUP test suite to use the hostapp as the HUP target, rather than sending the DUT the docker image and doing a HUP using that file
-        default: true
+        default: ${{ github.event_name == 'push' }}
       finalize-hostapp:
         description: Whether to finalize a hostApp container image to a balena environment
         required: false
