@@ -1,4 +1,20 @@
 - commits:
+    - subject: By default, deploy hostapp on push only
+      hash: 87763dfc75504522c1dadc698f74576bbf0e9320
+      body: |
+        This is meant to keep the defaults of `deploy-s3` and `deploy-hostapp`
+        consistent.
+      footer:
+        Signed-off-by: Leandro Motta Barros <leandro@balena.io>
+        signed-off-by: Leandro Motta Barros <leandro@balena.io>
+        Change-type: patch
+        change-type: patch
+      author: Leandro Motta Barros
+      nested: []
+  version: 1.25.10
+  title: ""
+  date: 2024-07-23T02:23:14.094Z
+- commits:
     - subject: use token to fetch private contracts
       hash: acfc8d20ce8dd4b29eae67679dd1a89ffcc75c7c
       body: ""
