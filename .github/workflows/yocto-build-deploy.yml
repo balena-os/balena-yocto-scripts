@@ -1037,6 +1037,18 @@ jobs:
 
           mkdir -p "${REPORTS}"
 
+      # https://github.com/actions/runner-images/discussions/7191#discussioncomment-8351370
+      # https://github.com/reactivecircus/android-emulator-runner?tab=readme-ov-file#running-hardware-accelerated-emulators-on-linux-runners
+      # https://github.com/ankidroid/Anki-Android/commit/3a5ecaa9837691817022d11b0dbe383b8e82d9fe
+      # https://github.blog/changelog/2023-02-23-hardware-accelerated-android-virtualization-on-actions-windows-and-linux-larger-hosted-runners/
+      - name: Enable KVM group perms
+        if: contains(matrix.runs_on,'ubuntu-latest') || contains(matrix.runs_on,'ubuntu-22.04')
+        continue-on-error: true
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger -v --name-match=kvm
+
       # https://github.com/balena-os/leviathan/blob/master/action.yml
       - name: BalenaOS Leviathan Tests
         uses: balena-os/leviathan@282fd606611a023795447d9ad71b5155ea5c0f83
