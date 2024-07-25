@@ -1,4 +1,4 @@
-FROM ubuntu:22.04 AS yocto-build-env
+FROM ubuntu:24.04 AS yocto-build-env
 
 ARG DEBIAN_FRONTEND=noninteractive
 
