@@ -9,7 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@balena/contrato": "^0.6.5",
+    "@balena/contrato": "^0.9.0",
     "fs-extra": "^10.1.0",
     "lodash": "^4.17.21",
     "require-all": "^3.0.0"
