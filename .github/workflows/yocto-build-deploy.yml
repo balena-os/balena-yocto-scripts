@@ -245,7 +245,7 @@ jobs:
       # all repos where the app is installed (usually the whole org)
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token
-        uses: actions/create-github-app-token@v1.10.3
+        uses: actions/create-github-app-token@31c86eb3b33c9b601a1f60f98dcbfd1d70f379b4 # v1.10.3
         id: app-token
         if: vars.FLOWZONE_APP_ID != ''
         with:
@@ -256,7 +256,7 @@ jobs:
       # so we can checkout private contracts
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token (balena-io)
-        uses: actions/create-github-app-token@v1.10.3
+        uses: actions/create-github-app-token@31c86eb3b33c9b601a1f60f98dcbfd1d70f379b4 # v1.10.3
         id: app-token-balena-io
         if: vars.FLOWZONE_APP_ID != ''
         with:
@@ -266,7 +266,7 @@ jobs:
 
       # https://github.com/actions/checkout
       - name: Clone device repository
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           repository: ${{ inputs.device-repo }}
           token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
@@ -400,7 +400,7 @@ jobs:
           echo "is_private=${is_private}" >> $GITHUB_OUTPUT
 
       - name: Checkout private Contracts
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         if: steps.balena-lib.outputs.is_private == 'true'
         with:
           repository: balena-io/private-contracts
@@ -1056,7 +1056,7 @@ jobs:
     steps:
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token
-        uses: actions/create-github-app-token@v1.10.3
+        uses: actions/create-github-app-token@31c86eb3b33c9b601a1f60f98dcbfd1d70f379b4 # v1.10.3
         id: app-token
         if: vars.FLOWZONE_APP_ID != ''
         with:
@@ -1065,7 +1065,7 @@ jobs:
 
       # Clone the device respository to fetch Leviathan
       - name: Clone device repository
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           repository: ${{ inputs.device-repo }}
           token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
@@ -1096,7 +1096,7 @@ jobs:
 
       # Images need to end up in workspace folder and need to have correct names
       - name: Fetch artifacts from build job
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
         with:
           name: build-artifacts
           path: ${{ env.WORKSPACE }}
