@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update Pin dependencies
+      hash: c48f1f984f2f22f49fc9aee3f1cc9883f8ca7ec5
+      body: |
+        Update actions/checkout
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.12
+  title: ""
+  date: 2024-07-29T18:13:01.088Z
+- commits:
     - subject: "revovate: change config to use balena-io template"
       hash: f4d82d9029f39245cf15d2433a783d33787a73d1
       body: >
