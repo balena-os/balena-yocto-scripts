@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/checkout action to v4.1.7
+      hash: c9da5d524bbebe7dde5175584589cce5634b7a41
+      body: |
+        Update actions/checkout from 4.1.1 to 4.1.7
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.13
+  title: ""
+  date: 2024-07-29T20:55:15.720Z
+- commits:
     - subject: Update Pin dependencies
       hash: c48f1f984f2f22f49fc9aee3f1cc9883f8ca7ec5
       body: |
