@@ -1,4 +1,20 @@
 - commits:
+    - subject: "revovate: change config to use balena-io template"
+      hash: f4d82d9029f39245cf15d2433a783d33787a73d1
+      body: >
+        in this repo we are using "change-type" commits, but renovate is using
+        the balena-os default which is using "changelog-entry"
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+  version: 1.25.11
+  title: ""
+  date: 2024-07-29T15:14:59.755Z
+- commits:
     - subject: By default, deploy hostapp on push only
       hash: 87763dfc75504522c1dadc698f74576bbf0e9320
       body: |
