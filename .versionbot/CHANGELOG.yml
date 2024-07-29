@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan digest to 36aafe0
+      hash: e5842524bf70adc29c62f35e0744ee970d232866
+      body: |
+        Update balena-os/leviathan
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.14
+  title: ""
+  date: 2024-07-29T22:37:24.756Z
+- commits:
     - subject: Update actions/checkout action to v4.1.7
       hash: c9da5d524bbebe7dde5175584589cce5634b7a41
       body: |
