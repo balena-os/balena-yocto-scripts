@@ -34,3 +34,52 @@ The workflow is triggered on :
 | check-merge-tests | false | true    | true          |          |
 | run-tests         | true  | false   | false         |          |
 | deploy-esr        | false | false   | true          |          |
+
+## Flowchart
+
+This flowchart represents the indended logic tree taking into account
+various user inputs, event types, and expected results/outputs.
+
+```mermaid
+flowchart TD
+    Start[Start] --> EventType{Event Type}
+    EventType -->|Pull Request| BaseBranch{Base Branch}
+    BaseBranch -->|main| DoNotDeployHostApp[Do not deploy hostApp]
+    BaseBranch -->|ESR regex| DoNotDeployHostApp
+    DoNotDeployHostApp --> PRNoS3[Do not deploy to S3]
+    EventType -->|Tag Push| TPTagName{Tag Name}
+    TPTagName -->|rolling| TPMain{{Auto Finalize?}}
+    TPTagName -->|ESR regex| TPESR{{Auto Finalize?}}
+    EventType -->|Workflow Dispatch| WDOnBranch{On Branch}
+    WDOnBranch -->|main| WDForceMain{{Force Finalize?}}
+    WDOnBranch -->|ESR regex| WDForceESR{{Force Finalize?}}
+    WDForceMain -->|yes| WDMainFinal[Deploy hostApp as final]
+    WDForceMain -->|no| WDMainDraft[Deploy hostApp as draft]
+    WDForceESR -->|yes| WDESRFinal[Deploy hostApp as ESR final]
+    WDForceESR -->|no| WDESRDraft[Deploy hostApp as ESR draft]
+    WDMainFinal --> WDMainS3Final[Deploy to S3 as final]
+    WDMainDraft --> WDNoS3[Do not deploy to S3]
+    WDESRDraft --> WDNoS3
+    WDESRFinal --> WDESRs3Final[Deploy to S3 as ESR final]
+    TPMain -->|yes| TPMainTests{Check last tests}
+    TPMainTests -->|passed| TPMainFinal[Deploy hostApp as final]
+    TPMainTests -->|failed| TPMainDraft[Deploy hostApp as draft]
+    TPMain -->|no| TPMainDraft
+    TPESR -->|yes| TPESRTests{Check last tests}
+    TPESR -->|no| TPESRDraft[Deploy hostApp as ESR draft]
+    TPESRTests -->|passed| TPESRFinal[Deploy hostApp as ESR final]
+    TPESRTests -->|failed| TPESRDraft
+    TPMainFinal --> TPMainS3Final[Deploy to S3 as final]
+    TPMainDraft --> TPNoS3[Do not deploy to S3]
+    TPESRDraft --> TPNoS3
+    TPESRFinal --> TPESRs3Final[Deploy to S3 as ESR final]
+
+    classDef userInput stroke:#ff3e00,stroke-width:3px;
+    class TPMain,TPESR,WDForceMain,WDForceESR userInput;
+    classDef final fill:#4caf50,stroke:#45a049,color:#ffffff;
+    classDef noDeploy fill:#ff9800,stroke:#f57c00,color:#ffffff;
+    classDef draft fill:#64b5f6,stroke:#1e88e5,color:#ffffff;
+    class WDMainFinal,WDESRFinal,TPMainFinal,TPESRFinal,WDMainS3Final,WDESRs3Final,TPMainS3Final,TPESRs3Final final;
+    class WDMainDraft,WDESRDraft,TPMainDraft,TPESRDraft,PRMain,PRESR draft;
+    class PRNoS3,WDNoS3,TPNoS3,DoNotDeployHostApp noDeploy;
+```
