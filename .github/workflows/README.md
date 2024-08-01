@@ -43,43 +43,84 @@ various user inputs, event types, and expected results/outputs.
 ```mermaid
 flowchart TD
     Start[Start] --> EventType{Event Type}
-    EventType -->|Pull Request| BaseBranch{Base Branch}
-    BaseBranch -->|main| DoNotDeployHostApp[Do not deploy hostApp]
-    BaseBranch -->|ESR regex| DoNotDeployHostApp
-    DoNotDeployHostApp --> PRNoS3[Do not deploy to S3]
-    EventType -->|Tag Push| TPTagName{Tag Name}
-    TPTagName -->|rolling| TPMain{{Auto Finalize?}}
-    TPTagName -->|ESR regex| TPESR{{Auto Finalize?}}
-    EventType -->|Workflow Dispatch| WDOnBranch{On Branch}
-    WDOnBranch -->|main| WDForceMain{{Force Finalize?}}
-    WDOnBranch -->|ESR regex| WDForceESR{{Force Finalize?}}
-    WDForceMain -->|yes| WDMainFinal[Deploy hostApp as final]
-    WDForceMain -->|no| WDMainDraft[Deploy hostApp as draft]
-    WDForceESR -->|yes| WDESRFinal[Deploy hostApp as ESR final]
-    WDForceESR -->|no| WDESRDraft[Deploy hostApp as ESR draft]
-    WDMainFinal --> WDMainS3Final[Deploy to S3 as final]
-    WDMainDraft --> WDNoS3[Do not deploy to S3]
-    WDESRDraft --> WDNoS3
-    WDESRFinal --> WDESRs3Final[Deploy to S3 as ESR final]
-    TPMain -->|yes| TPMainTests{Check last tests}
-    TPMainTests -->|passed| TPMainFinal[Deploy hostApp as final]
-    TPMainTests -->|failed| TPMainDraft[Deploy hostApp as draft]
-    TPMain -->|no| TPMainDraft
-    TPESR -->|yes| TPESRTests{Check last tests}
-    TPESR -->|no| TPESRDraft[Deploy hostApp as ESR draft]
-    TPESRTests -->|passed| TPESRFinal[Deploy hostApp as ESR final]
-    TPESRTests -->|failed| TPESRDraft
-    TPMainFinal --> TPMainS3Final[Deploy to S3 as final]
-    TPMainDraft --> TPNoS3[Do not deploy to S3]
-    TPESRDraft --> TPNoS3
-    TPESRFinal --> TPESRs3Final[Deploy to S3 as ESR final]
+    EventType -->|Pull Request| PullRequest{Base Branch}
+    EventType -->|Tag Push| TagPush{Tag Name}
+    EventType -->|Workflow Dispatch| WorkflowDispatch{On Branch}
 
-    classDef userInput stroke:#ff3e00,stroke-width:3px;
-    class TPMain,TPESR,WDForceMain,WDForceESR userInput;
+    PullRequest -->|main| ForceFinalize-5{{Force Finalize?}}
+    PullRequest -->|ESR regex| ForceFinalize-6{{Force Finalize?}}
+
+    ForceFinalize-5 --> |yes| DeployFinalHostapp-3[Deploy hostApp as final]
+    ForceFinalize-5 --> |no| AutoFinalize-5{{Auto Finalize?}}
+
+    ForceFinalize-6 --> |no| AutoFinalize-5{{Auto Finalize?}}
+    ForceFinalize-6 --> |yes| DeployFinalESRHostapp-4[Deploy hostApp as ESR final]
+
+    DeployFinalHostapp-3 --> DeployFinalS3-3[Deploy S3 as final]
+    DeployFinalESRHostapp-4 --> DeployFinalS3-4[Deploy S3 as ESR final]
+
+    AutoFinalize-5 --> |yes| DoNotDeployHostapp[Do not deploy hostApp]
+    AutoFinalize-5 --> |no| DoNotDeployHostapp
+    
+    DoNotDeployHostapp --> DoNotDeployS3-1[Do not deploy S3]
+
+    TagPush -->|rolling| ForceFinalize-1{{Force Finalize?}}
+    TagPush -->|ESR regex| ForceFinalize-2{{Force Finalize?}}
+
+    ForceFinalize-1 -->|yes| DeployFinalHostapp-1[Deploy hostApp as final]
+    ForceFinalize-1 -->|no| AutoFinalize-1{{Auto Finalize?}}
+
+    AutoFinalize-1 -->|yes| TPRollingNoForceAuto{Check last tests}
+    AutoFinalize-1 -->|no| DeployDraftHostapp-1[Deploy hostApp as draft]
+
+    TPRollingNoForceAuto -->|passed| DeployFinalHostapp-1
+    TPRollingNoForceAuto -->|failed| DeployDraftHostapp-1
+
+    DeployDraftHostapp-1 --> DoNotDeployS3-2[Do not deploy S3]
+
+    ForceFinalize-2 -->|yes| DeployFinalESRHostapp[Deploy hostApp as ESR final]
+    ForceFinalize-2 -->|no| AutoFinalize-2{{Auto Finalize?}}
+
+    AutoFinalize-2 -->|yes| CheckTests1{Check last tests}
+    AutoFinalize-2 -->|no| DeployDraftESRHostapp[Deploy hostApp as ESR draft]
+
+    CheckTests1 -->|passed| DeployFinalESRHostapp
+    CheckTests1 -->|failed| DeployDraftESRHostapp
+    DeployFinalHostapp-1 --> DeployFinalS3-1[Deploy S3 as final]
+
+    DeployDraftESRHostapp --> DoNotDeployS3-3[Do not deploy S3]
+    DeployFinalESRHostapp --> DeployFinalESRS3[Deploy S3 as ESR final]
+    
+    WorkflowDispatch -->|main| ForceFinalize-3{{Force Finalize?}}
+    WorkflowDispatch -->|ESR regex| ForceFinalize-4{{Force Finalize?}}
+
+    ForceFinalize-3 -->|yes| DeployFinalHostapp-2[Deploy hostApp as final]
+    ForceFinalize-3 -->|no| AutoFinalize-3{{Auto Finalize?}}
+    AutoFinalize-3 -->|yes| DeployDraftHostapp-2[Deploy hostApp as draft]
+    AutoFinalize-3 -->|no| DeployDraftHostapp-2[Deploy hostApp as draft]
+
+    ForceFinalize-4 -->|yes| DeployFinalESRHostapp-1[Deploy hostApp as ESR final]
+    ForceFinalize-4 -->|no| AutoFinalize-4{{Auto Finalize?}}
+    AutoFinalize-4 -->|yes| DeployDraftESRHostapp2[Deploy hostApp as ESR draft]
+    AutoFinalize-4 -->|no| DeployDraftESRHostapp2[Deploy hostApp as ESR draft]
+
+    DeployFinalHostapp-2 --> DeployFinalS3-2[Deploy S3 as final]
+    DeployDraftHostapp-2 --> DoNotDeployS3-4[Do not deploy S3]
+    DeployDraftESRHostapp2 --> DoNotDeployS3-5[Do not deploy S3]
+    DeployFinalESRHostapp-1 --> DeployFinalESRS3-2[Deploy S3 as ESR final]
+
+    classDef forceFinalize stroke:#ff3e00,stroke-width:3px;
+    classDef autoFinalize stroke:#00a86b,stroke-width:3px;
+    class ForceFinalize-1,ForceFinalize-2,ForceFinalize-3,ForceFinalize-4,ForceFinalize-5,ForceFinalize-6 forceFinalize;
+    class AutoFinalize-1,AutoFinalize-2,AutoFinalize-3,AutoFinalize-4,AutoFinalize-5 autoFinalize;
     classDef final fill:#4caf50,stroke:#45a049,color:#ffffff;
+    classDef finalESR fill:#4caf50,stroke:#45a049,color:#ffffff,stroke-width:4px,stroke-dasharray: 5 5;
     classDef noDeploy fill:#ff9800,stroke:#f57c00,color:#ffffff;
     classDef draft fill:#64b5f6,stroke:#1e88e5,color:#ffffff;
-    class WDMainFinal,WDESRFinal,TPMainFinal,TPESRFinal,WDMainS3Final,WDESRs3Final,TPMainS3Final,TPESRs3Final final;
-    class WDMainDraft,WDESRDraft,TPMainDraft,TPESRDraft,PRMain,PRESR draft;
-    class PRNoS3,WDNoS3,TPNoS3,DoNotDeployHostApp noDeploy;
+    classDef draftESR fill:#64b5f6,stroke:#1e88e5,color:#ffffff,stroke-width:4px,stroke-dasharray: 5 5;
+    class DeployFinalHostapp-1,DeployFinalHostapp-2,DeployFinalHostapp-3,DeployFinalS3-1,DeployFinalS3-2,DeployFinalS3-3 final;
+    class DeployFinalESRHostapp,DeployFinalESRHostapp-1,DeployFinalESRHostapp-4,DeployFinalS3-4,DeployFinalESRS3,DeployFinalESRS3-2 finalESR;
+    class DeployDraftHostapp-1,DeployDraftHostapp-2 draft;
+    class DeployDraftESRHostapp,DeployDraftESRHostapp2 draftESR;
+    class DoNotDeployS3-1,DoNotDeployS3-2,DoNotDeployS3-3,DoNotDeployS3-4,DoNotDeployS3-5,DoNotDeployHostapp noDeploy;
 ```
