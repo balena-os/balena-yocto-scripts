@@ -24,21 +24,13 @@ The workflow is triggered on :
 
 ## Architecture diagram
 
-## Input defaults
-
-|                   | PR    | New Tag | New Tag (esr) | Dispatch |
-|-------------------|-------|---------|---------------|----------|
-| deploy-s3         | false | true    | true          |          |
-| deploy-hostapp    | true  | true    | true          |          |
-| finalize-hostapp  | false | true    | true          |          |
-| check-merge-tests | false | true    | true          |          |
-| run-tests         | true  | false   | false         |          |
-| deploy-esr        | false | false   | true          |          |
-
 ## Flowchart
 
-This flowchart represents the indended logic tree taking into account
-various user inputs, event types, and expected results/outputs.
+This flowchart represents the intended logic graph taking into account
+user inputs, event types, and expected results/outputs.
+
+Only inputs we expect to use for average device workflows are shown here.
+Inputs used for testing the workflow itself and turning features on/off are not covered.
 
 ```mermaid
 flowchart TD
@@ -51,15 +43,15 @@ flowchart TD
     PullRequest -->|ESR regex| ForceFinalize-6{{Force Finalize?}}
 
     ForceFinalize-5 --> |yes| DeployFinalHostapp-3[Deploy hostApp as final]
-    ForceFinalize-5 --> |no| AutoFinalize-5{{Auto Finalize?}}
+    ForceFinalize-5 --> |"no (default)"| AutoFinalize-5{{Auto Finalize?}}
 
-    ForceFinalize-6 --> |no| AutoFinalize-5{{Auto Finalize?}}
+    ForceFinalize-6 --> |"no (default)"| AutoFinalize-5{{Auto Finalize?}}
     ForceFinalize-6 --> |yes| DeployFinalESRHostapp-4[Deploy hostApp as ESR final]
 
     DeployFinalHostapp-3 --> DeployFinalS3-3[Deploy S3 as final]
     DeployFinalESRHostapp-4 --> DeployFinalS3-4[Deploy S3 as ESR final]
 
-    AutoFinalize-5 --> |yes| DoNotDeployHostapp[Do not deploy hostApp]
+    AutoFinalize-5 --> |"yes (default)"| DoNotDeployHostapp[Do not deploy hostApp]
     AutoFinalize-5 --> |no| DoNotDeployHostapp
     
     DoNotDeployHostapp --> DoNotDeployS3-1[Do not deploy S3]
@@ -68,9 +60,9 @@ flowchart TD
     TagPush -->|ESR regex| ForceFinalize-2{{Force Finalize?}}
 
     ForceFinalize-1 -->|yes| DeployFinalHostapp-1[Deploy hostApp as final]
-    ForceFinalize-1 -->|no| AutoFinalize-1{{Auto Finalize?}}
+    ForceFinalize-1 -->|"no (default)"| AutoFinalize-1{{Auto Finalize?}}
 
-    AutoFinalize-1 -->|yes| TPRollingNoForceAuto{Check last tests}
+    AutoFinalize-1 -->|"yes (default)"| TPRollingNoForceAuto{Check last tests}
     AutoFinalize-1 -->|no| DeployDraftHostapp-1[Deploy hostApp as draft]
 
     TPRollingNoForceAuto -->|passed| DeployFinalHostapp-1
@@ -79,13 +71,13 @@ flowchart TD
     DeployDraftHostapp-1 --> DoNotDeployS3-2[Do not deploy S3]
 
     ForceFinalize-2 -->|yes| DeployFinalESRHostapp[Deploy hostApp as ESR final]
-    ForceFinalize-2 -->|no| AutoFinalize-2{{Auto Finalize?}}
+    ForceFinalize-2 -->|"no (default)"| AutoFinalize-2{{Auto Finalize?}}
 
-    AutoFinalize-2 -->|yes| CheckTests1{Check last tests}
+    AutoFinalize-2 -->|"yes (default)"| CheckTests-1{Check last tests}
     AutoFinalize-2 -->|no| DeployDraftESRHostapp[Deploy hostApp as ESR draft]
 
-    CheckTests1 -->|passed| DeployFinalESRHostapp
-    CheckTests1 -->|failed| DeployDraftESRHostapp
+    CheckTests-1 -->|passed| DeployFinalESRHostapp
+    CheckTests-1 -->|failed| DeployDraftESRHostapp
     DeployFinalHostapp-1 --> DeployFinalS3-1[Deploy S3 as final]
 
     DeployDraftESRHostapp --> DoNotDeployS3-3[Do not deploy S3]
@@ -95,13 +87,13 @@ flowchart TD
     WorkflowDispatch -->|ESR regex| ForceFinalize-4{{Force Finalize?}}
 
     ForceFinalize-3 -->|yes| DeployFinalHostapp-2[Deploy hostApp as final]
-    ForceFinalize-3 -->|no| AutoFinalize-3{{Auto Finalize?}}
-    AutoFinalize-3 -->|yes| DeployDraftHostapp-2[Deploy hostApp as draft]
+    ForceFinalize-3 -->|"no (default)"| AutoFinalize-3{{Auto Finalize?}}
+    AutoFinalize-3 -->|"yes (default)"| DeployDraftHostapp-2[Deploy hostApp as draft]
     AutoFinalize-3 -->|no| DeployDraftHostapp-2[Deploy hostApp as draft]
 
     ForceFinalize-4 -->|yes| DeployFinalESRHostapp-1[Deploy hostApp as ESR final]
-    ForceFinalize-4 -->|no| AutoFinalize-4{{Auto Finalize?}}
-    AutoFinalize-4 -->|yes| DeployDraftESRHostapp2[Deploy hostApp as ESR draft]
+    ForceFinalize-4 -->|"no (default)"| AutoFinalize-4{{Auto Finalize?}}
+    AutoFinalize-4 -->|"yes (default)"| DeployDraftESRHostapp2[Deploy hostApp as ESR draft]
     AutoFinalize-4 -->|no| DeployDraftESRHostapp2[Deploy hostApp as ESR draft]
 
     DeployFinalHostapp-2 --> DeployFinalS3-2[Deploy S3 as final]
