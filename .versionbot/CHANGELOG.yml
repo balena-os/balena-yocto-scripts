@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update Lock file maintenance
+      hash: bb1923b984c6646d36356f4acf171a30cabdfd3d
+      body: |
+        Update 
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.17
+  title: ""
+  date: 2024-08-05T02:04:43.860Z
+- commits:
     - subject: Update docker/login-action action to v3.3.0
       hash: 65a653d66efd1cbfdca1616d62a9387dc47eb50e
       body: |
