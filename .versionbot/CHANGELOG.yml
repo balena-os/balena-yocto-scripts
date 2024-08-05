@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/upload-artifact action to v4.3.5
+      hash: 47535180af9f0a0dcb35ba6b0edea204e7de3ba7
+      body: |
+        Update actions/upload-artifact from 4.3.4 to 4.3.5
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.18
+  title: ""
+  date: 2024-08-05T04:31:00.525Z
+- commits:
     - subject: Update Lock file maintenance
       hash: bb1923b984c6646d36356f4acf171a30cabdfd3d
       body: |
