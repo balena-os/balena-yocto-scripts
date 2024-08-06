@@ -552,7 +552,7 @@ jobs:
       # We upload `balena-image.docker` for use in the HUP test suite - if we could fetch the hostapp from the draft release instead, we can remove that to save the artifact storage space
       # Separate "flasher" and "raw" variants are not used in the testing flow
       - name: Upload artifacts
-        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4.3.5
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
         if: github.event_name != 'push'
         with:
           name: build-artifacts
