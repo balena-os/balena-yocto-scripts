@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan digest to f4e9332
+      hash: 6a7097208111936aac9a8862c61d6f600d1652dd
+      body: |
+        Update balena-os/leviathan
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.21
+  title: ""
+  date: 2024-08-06T18:50:02.588Z
+- commits:
     - subject: Update actions/upload-artifact action to v4.3.6
       hash: 03b4f76a25f7c887c3c1cbae6293bce772773f6d
       body: |
