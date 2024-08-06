@@ -724,7 +724,7 @@ jobs:
 
             # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L128
             echo "Creating App"
-            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"app_name": "${BALENAOS_ACCOUNT}/${APPNAME}", "device_type": "${APPNAME}"}')
+            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"app_name\": \"${APPNAME}\", \"device_type\": \"${APPNAME}\"}")
             _appID=$(echo "${_json}" | jq --raw-output '.id' || true)
             echo "${_appID}"
 
@@ -744,7 +744,7 @@ jobs:
 
             # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L914
             # Give the team developer access to the app
-            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/team_application_access" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"team": "${_team_id}", "grants_access_to__application": "${_appID}", "application_membership_role": "${_role_id}""}')
+            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/team_application_access" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"team\": \"${_team_id}\", \"grants_access_to__application\": \"${_appID}\", \"application_membership_role\": \"${_role_id}\"}")
             _id=$(echo "${_json}" | jq -r '.id')
             if [ "${_id}" = "null" ]; then
               >&2 echo "Failed to add ${HOSTAPP_ACCESS_ROLE} access tole to ${APPNAME}"
@@ -752,23 +752,23 @@ jobs:
 
             # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L207
             # Set it to public
-            _json=$(${CURL} -XPATCH "https://api.${API_ENV}/${TRANSLATION}/application(${_appID})" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"is_public": true, "is_stored_at__repository_url": "${{ inputs.device-repo }}"}')
+            _json=$(${CURL} -XPATCH "https://api.${API_ENV}/${TRANSLATION}/application(${_appID})" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"is_public\": true, \"is_stored_at__repository_url\": \"${{ inputs.device-repo }}\"}")
 
             # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L166
             # Mark is as class "app"
-            _json=$(${CURL} -XPATCH "https://api.${API_ENV}/${TRANSLATION}/application(${_appID})" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"is_of__class": "app"}')
+            _json=$(${CURL} -XPATCH "https://api.${API_ENV}/${TRANSLATION}/application(${_appID})" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"is_of__class\": \"app\"}")
 
             # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L248
             # Mark as host
             # NOTE: this -might- be why we used the email auth in the original yocto scripts - does the API key we use have the privileges to do this?
             if [ "${BOOTABLE}" = 1 ]; then
-              _json=$(${CURL} -XPATCH "https://api.${API_ENV}/${TRANSLATION}/application(${_appID})" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"is_host": true}')
+              _json=$(${CURL} -XPATCH "https://api.${API_ENV}/${TRANSLATION}/application(${_appID})" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"is_host\": true}")
             fi
 
             # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L86
             # Set esr policy
             if [ "${ESR}" = true ]; then
-              _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application_tag" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"application": "${_appID}", "tag_key": "release-policy", "value": "esr"}')
+              _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application_tag" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"application\": \"${_appID}\", \"tag_key\": \"release-policy\", \"value\": \"esr\"}")
             fi
           else
             >&2 echo "[${APPNAME}] Application ${_appID} already exists."
