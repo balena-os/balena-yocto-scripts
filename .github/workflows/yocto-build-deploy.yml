@@ -97,11 +97,6 @@ on:
         required: false
         type: boolean
         default: false # Always false by default, override on specific device types which this is relevant in the device repo
-      os-dev:
-        description: Enable OS development features
-        required: false
-        type: boolean
-        default: false # Only for use with manual runs/dispatches
       deploy-esr:
         description: "Enable to deploy ESR"
         required: false
@@ -426,13 +421,6 @@ jobs:
           fi
           # Move newly generated OS contract to location expected later on in the workflow
           cp "${CONTRACTS_OUTPUT_DIR}/${DEVICE_TYPE_SLUG}/balena-os/balena.yml" "${WORKSPACE}/balena.yml"
-
-      - name: Enable development mode in BalenaOS
-        if: inputs.os-dev == true
-        run: |
-          if [ "${OS_DEVELOPMENT}" = "true" ]; then
-            echo BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -d" >> $GITHUB_ENV
-          fi
 
       # # https://docs.yoctoproject.org/dev/dev-manual/speeding-up-build.html#speeding-up-a-build
       # # TODO: Delete  when using properly isolated self-hosted runner resources
