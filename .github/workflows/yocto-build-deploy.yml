@@ -102,6 +102,11 @@ on:
         required: false
         type: boolean
         default: false # Only for use with manual runs/dispatches
+      OVERRIDE_TEST_DEVICE_TYPE:
+        description: Override the device type for testing
+        required: false
+        type: string
+        default: "raspberrypi3"
       deploy-esr:
         description: "Enable to deploy ESR"
         required: false
@@ -1037,7 +1042,7 @@ jobs:
 
       # Settings specific to this test run.
       # Generally provided via inputs.test_matrix but sane defaults are also provided.
-      DEVICE_TYPE: ${{ needs.build.outputs.device_slug }}
+      DEVICE_TYPE: ${{ inputs.OVERRIDE_TEST_DEVICE_TYPE }}
       TEST_SUITE: ${{ matrix.test_suite }}
       WORKER_TYPE: ${{ matrix.worker_type || 'testbot' }}
       BALENACLOUD_APP_NAME: ${{ matrix.worker_fleets || 'balena/testbot-rig,balena/testbot-rig-partners,balena/testbot-rig-x86,balena/testbot-rig-partners-x86' }}
