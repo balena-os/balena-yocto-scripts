@@ -48,8 +48,8 @@ flowchart TD
     ForceFinalize-6 --> |"no (default)"| AutoFinalize-5{{Auto Finalize?}}
     ForceFinalize-6 --> |yes| DeployFinalESRHostapp-4[Deploy hostApp as ESR final]
 
-    DeployFinalHostapp-3 --> DeployFinalS3-3[Deploy S3 as final]
-    DeployFinalESRHostapp-4 --> DeployFinalS3-4[Deploy S3 as ESR final]
+    DeployFinalHostapp-3 --> DeployFinalS3-3[Deploy S3]
+    DeployFinalESRHostapp-4 --> DeployFinalS3-4[Deploy S3 as ESR]
 
     AutoFinalize-5 --> |"yes (default)"| DoNotDeployHostapp[Do not deploy hostApp]
     AutoFinalize-5 --> |no| DoNotDeployHostapp
@@ -68,7 +68,7 @@ flowchart TD
     TPRollingNoForceAuto -->|passed| DeployFinalHostapp-1
     TPRollingNoForceAuto -->|failed| DeployDraftHostapp-1
 
-    DeployDraftHostapp-1 --> DoNotDeployS3-2[Do not deploy S3]
+    DeployDraftHostapp-1 --> DeployFinalS3-1[Deploy S3]
 
     ForceFinalize-2 -->|yes| DeployFinalESRHostapp[Deploy hostApp as ESR final]
     ForceFinalize-2 -->|"no (default)"| AutoFinalize-2{{Auto Finalize?}}
@@ -78,10 +78,10 @@ flowchart TD
 
     CheckTests-1 -->|passed| DeployFinalESRHostapp
     CheckTests-1 -->|failed| DeployDraftESRHostapp
-    DeployFinalHostapp-1 --> DeployFinalS3-1[Deploy S3 as final]
+    DeployFinalHostapp-1 --> DeployFinalS3-1[Deploy S3]
 
-    DeployDraftESRHostapp --> DoNotDeployS3-3[Do not deploy S3]
-    DeployFinalESRHostapp --> DeployFinalESRS3[Deploy S3 as ESR final]
+    DeployDraftESRHostapp --> DeployFinalESRS3[Deploy S3 as ESR]
+    DeployFinalESRHostapp --> DeployFinalESRS3[Deploy S3 as ESR]
     
     WorkflowDispatch -->|main| ForceFinalize-3{{Force Finalize?}}
     WorkflowDispatch -->|ESR regex| ForceFinalize-4{{Force Finalize?}}
@@ -96,10 +96,10 @@ flowchart TD
     AutoFinalize-4 -->|"yes (default)"| DeployDraftESRHostapp2[Deploy hostApp as ESR draft]
     AutoFinalize-4 -->|no| DeployDraftESRHostapp2[Deploy hostApp as ESR draft]
 
-    DeployFinalHostapp-2 --> DeployFinalS3-2[Deploy S3 as final]
-    DeployDraftHostapp-2 --> DoNotDeployS3-4[Do not deploy S3]
-    DeployDraftESRHostapp2 --> DoNotDeployS3-5[Do not deploy S3]
-    DeployFinalESRHostapp-1 --> DeployFinalESRS3-2[Deploy S3 as ESR final]
+    DeployFinalHostapp-2 --> DeployFinalS3-2[Deploy S3]
+    DeployDraftHostapp-2 --> DeployFinalS3-2[Deploy S3]
+    DeployDraftESRHostapp2 --> DeployFinalESRS3-2[Do not deploy S3]
+    DeployFinalESRHostapp-1 --> DeployFinalESRS3-2[Deploy S3 as ESR]
 
     classDef forceFinalize stroke:#ff3e00,stroke-width:3px;
     classDef autoFinalize stroke:#00a86b,stroke-width:3px;
