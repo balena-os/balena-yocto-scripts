@@ -75,18 +75,18 @@ on:
         required: false
         type: boolean
         default: ${{ github.event_name == 'push' }} # Deploy to s3 only on creation of new tags - a "push " event. We're happy with just push events, as the caller workflow only starts this on pushed tags, matched with semver
-      deploy-hostapp:
-        description: Whether to deploy a hostApp container image to a balena environment
+      # This input exists because we want the option to not auto-finalise for some device types, even if they have tests and those tests pass - for example some custom device types, the customer doesn't want new releases published until they green light it 
+      finalize-on-push-if-tests-passed:
+        description: Whether to finalize a hostApp container image to a balena environment, if tests pass.
         required: false
         type: boolean
-        # By default, deploy the hostapp only on creation of new tags, as we do for S3 deployment.
-        # At some point in the future we want to modify the HUP test suite to use the hostapp as the HUP target, rather than sending the DUT the docker image and doing a HUP using that file
-        default: ${{ github.event_name == 'push' }}
-      finalize-hostapp:
-        description: Whether to finalize a hostApp container image to a balena environment
+        default: true # Default behaviour is auto-finalise if tests pass, unless opted out by customer
+      # For use when we need to force deploy a release, for example after manual testing (negates finalize-on-push-if-tests-pass)
+      force-finalize:
+        description: Force deploy a finalized release
         required: false
         type: boolean
-        default: false # The default is "no" - because the `check-merge-tests` will determine whether or not to mark the hostapp as final. This is purely here for a manual override
+        default: false 
       deploy-ami:
         description: Whether to deploy an AMI to AWS
         required: false
@@ -288,7 +288,7 @@ jobs:
 
       # This will control the deployment of the hostapp only - it will determine if it is marked as final or not
       # The hostapp being finalised is what determines if the API will present this OS version to user
-      # If the test_matrix is empty - it means there are no tests for the DT - so don't check tests, and don't finalise, unless manually done with "finalise-hostapp" input
+      # If the test_matrix is empty - it means there are no tests for the DT - so don't check tests, and don't finalise, unless manually done with "force-finalize" input
       - name: Check test results
         # https://docs.github.com/en/actions/learn-github-actions/expressions#functions
         # this expression checks to make sure at least one test suite was provided via either matrix syntax
@@ -297,7 +297,7 @@ jobs:
           (
             join(fromJSON(inputs.test_matrix).test_suite) != '' ||
             join(fromJSON(inputs.test_matrix).include.*.test_suite) != ''
-          )
+          ) && inputs.finalize-on-push-if-tests-passed
         id: merge-test-result
         env:
           REPO: ${{ inputs.device-repo }}
@@ -640,6 +640,21 @@ jobs:
       # hostapp Deploy
       ##############################
 
+      # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
+      - name: Evaluate whether to finalize release
+        if: steps.merge-test-result.outputs.finalize || inputs.force-finalize
+        id: should-finalize
+        run: |
+          echo "finalize=true" >> $GITHUB_OUTPUT
+
+      # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
+      # We want to push a hostapp on push events (PR merge) , or dispatch??
+      - name: Evaluate whether to deploy hostapp
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        id: should-deploy
+        run: |
+          echo "deploy=true" >> $GITHUB_OUTPUT
+
       - name: Check Balena CLI installation
         run: |
           balena --version
@@ -647,7 +662,7 @@ jobs:
       # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
       # https://github.com/balena-io/deploy-to-balena-action/issues/286
       - name: Deploy to balena
-        if: inputs.deploy-hostapp == true
+        if: steps.should-deploy.outputs.deploy
         id: deploy-hostapp
         env:
           # BALENA_API_DEPLOY_KEY is a secret that should be specific to the runtime environment
@@ -661,7 +676,7 @@ jobs:
           RELEASE_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
           BOOTABLE: 1
           TRANSLATION: "v6"
-          FINAL: ${{ steps.merge-test-result.outputs.finalize || inputs.finalize-hostapp }}
+          FINAL: ${{ steps.should-finalize.outputs.finalize }}
           ESR: "${{ inputs.deploy-esr }}"
           balenaCloudEmail: # TODO: currently trying to use named API key only, its possible email/pw auth no longer has the additional privileges that it used to
           balenaCloudPassword: # TODO: currently trying to use named API key only, its possible email/pw auth no longer has the additional privileges that it used to
@@ -827,10 +842,8 @@ jobs:
             fi
           done
 
-      # Note: in the original "yocto-scripts" there were a few checks to ensure that the release was a finalised version, and that it didn't already have a version tag
-      # The versions tags are legacy now anyway - so I haven't included that - and we know this will be a finalised release anyway
       - name: Tag ESR release
-        if: inputs.deploy-hostapp == true && inputs.deploy-esr && (steps.merge-test-result.outputs.finalize || inputs.finalize-hostapp)
+        if: steps.should-deploy.outputs.deploy && inputs.deploy-esr && steps.should-finalize.outputs.finalize
         env:
           BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
           SLUG: "${{ steps.balena-lib.outputs.device_slug }}"
