@@ -70,11 +70,6 @@ on:
         required: false
         type: string
         default: balena-cloud.com
-      deploy-s3:
-        description: Whether to deploy images to S3
-        required: false
-        type: boolean
-        default: ${{ github.event_name == 'push' }} # Deploy to s3 only on creation of new tags - a "push " event. We're happy with just push events, as the caller workflow only starts this on pushed tags, matched with semver
       # This input exists because we want the option to not auto-finalise for some device types, even if they have tests and those tests pass - for example some custom device types, the customer doesn't want new releases published until they green light it 
       finalize-on-push-if-tests-passed:
         description: Whether to finalize a hostApp container image to a balena environment, if tests pass.
@@ -506,15 +501,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zip
 
-      # TODO: pre-install on self-hosted-runners
-      # S4cmd is a command-line utility for accessing Amazon S3
-      # https://github.com/bloomreach/s4cmd
-      - name: Install s4cmd
-        if: inputs.deploy-s3 == true
-        run: |
-          pip install s4cmd
-          s4cmd --help
-
       # DEPLOY_PATH is the path that all build artifacts get exported to by "balena_deploy_artifacts"
       - name: Export prepare artifacts deploy path to env
         env:
@@ -551,22 +537,49 @@ jobs:
             ${{ env.DEPLOY_PATH }}/image/balena.img
             ${{ env.DEPLOY_PATH }}/balena-image.docker
 
+
+      # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
+      - name: Evaluate whether to finalize release
+        if: steps.merge-test-result.outputs.finalize || inputs.force-finalize
+        id: should-finalize
+        run: |
+          echo "finalize=true" >> $GITHUB_OUTPUT
+
+      # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
+      # We want to push a hostapp on push events (PR merge) , or dispatch??
+      # If we deploy the hostapp, also deploy the s3 artifacts
+      - name: Evaluate whether to deploy hostapp
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        id: should-deploy
+        run: |
+          echo "deploy=true" >> $GITHUB_OUTPUT
+
       ##############################
       # S3 Deploy
       ##############################
+
+      # TODO: pre-install on self-hosted-runners
+      # S4cmd is a command-line utility for accessing Amazon S3
+      # https://github.com/bloomreach/s4cmd
+      - name: Install s4cmd
+        if: steps.should-deploy.outputs.deploy
+        run: |
+          pip install s4cmd
+          s4cmd --help
+
 
       # login required to pull private balena/balena-img image
       # https://github.com/docker/login-action
       - name: Login to Docker Hub
         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
-        if: inputs.deploy-s3 == true
+        if: steps.should-deploy.outputs.deploy
         with:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Prepare files for S3
-        if: inputs.deploy-s3 == true && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
+        if: steps.should-deploy.outputs.deploy && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
         env:
           HELPER_IMAGE: balena/balena-img:6.20.26
           # This path is different from DEPLOY_PATH due to the structure the prepare.ts expects: "/host/image/${device_slug}/${version}/..."
@@ -581,28 +594,28 @@ jobs:
 
       - name: Set S3 ACL (private)
         id: s3-acl-private
-        if: inputs.deploy-s3 == true && steps.balena-lib.outputs.is_private != 'false'
+        if: steps.should-deploy.outputs.deploy && steps.balena-lib.outputs.is_private != 'false'
         run: echo "string=private" >> $GITHUB_OUTPUT
 
       - name: Set S3 ACL (public-read)
         id: s3-acl-public
-        if: inputs.deploy-s3 == true && steps.balena-lib.outputs.is_private == 'false'
+        if: steps.should-deploy.outputs.deploy && steps.balena-lib.outputs.is_private == 'false'
         run: echo "string=public-read" >> $GITHUB_OUTPUT
 
       - name: Set S3 destination directory
         id: s3-images-dir
-        if: inputs.deploy-s3 == true && inputs.deploy-esr != true
+        if: steps.should-deploy.outputs.deploy && inputs.deploy-esr != true
         run: echo "string=images" >> $GITHUB_OUTPUT
 
       - name: Set S3 destination directory (ESR)
         id: s3-esr-images-dir
-        if: inputs.deploy-s3 == true && inputs.deploy-esr == true
+        if: steps.should-deploy.outputs.deploy && inputs.deploy-esr == true
         run: echo "string=esr-images" >> $GITHUB_OUTPUT
 
       # # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
-        if: inputs.deploy-s3 == true
+        if: steps.should-deploy.outputs.deploy
         with:
           role-to-assume: ${{ vars.AWS_IAM_ROLE }}
           role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -612,7 +625,7 @@ jobs:
 
       # "If no keys are provided, but an IAM role is associated with the EC2 instance, it will be used transparently".
       - name: Deploy to S3
-        if: inputs.deploy-s3 == true && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
+        if: steps.should-deploy.outputs.deploy && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
         env:
           S3_CMD: "s4cmd --API-ServerSideEncryption=AES256"
           S3_SYNC_OPTS: "--recursive --API-ACL=${{ steps.s3-acl-private.outputs.string || steps.s3-acl-public.outputs.string }}"
@@ -639,21 +652,6 @@ jobs:
       ##############################
       # hostapp Deploy
       ##############################
-
-      # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
-      - name: Evaluate whether to finalize release
-        if: steps.merge-test-result.outputs.finalize || inputs.force-finalize
-        id: should-finalize
-        run: |
-          echo "finalize=true" >> $GITHUB_OUTPUT
-
-      # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
-      # We want to push a hostapp on push events (PR merge) , or dispatch??
-      - name: Evaluate whether to deploy hostapp
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        id: should-deploy
-        run: |
-          echo "deploy=true" >> $GITHUB_OUTPUT
 
       - name: Check Balena CLI installation
         run: |
