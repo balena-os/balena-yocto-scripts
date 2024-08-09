@@ -65,8 +65,8 @@ on:
         description: yocto board name
         required: true
         type: string
-      environment:
-        description: The GitHub Environment to use for the job(s)
+      deploy-environment:
+        description: The GitHub environment to deploy to - includes the balena Cloud environment and related vars
         required: false
         type: string
         default: balena-cloud.com
@@ -163,12 +163,12 @@ jobs:
   build:
     name: Build
     runs-on: ${{ fromJSON(inputs.build-runs-on) }}
-    environment: ${{ inputs.environment }}
+    environment: ${{ inputs.deploy-environment }}
 
     env:
       automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
-      BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || inputs.environment || 'balena-cloud.com' }}
-      API_ENV: ${{ vars.BALENA_HOST || inputs.environment || 'balena-cloud.com' }}
+      BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || inputs.deploy-environment || 'balena-cloud.com' }}
+      API_ENV: ${{ vars.BALENA_HOST || inputs.deploy-environment || 'balena-cloud.com' }}
 
       # Yocto NFS sstate cache host
       YOCTO_CACHE_HOST: ${{ vars.YOCTO_CACHE_HOST || 'nfs.product-os.io' }}
