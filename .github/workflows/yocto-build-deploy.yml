@@ -92,11 +92,6 @@ on:
         required: false
         type: boolean
         default: false # Always false by default, override on specific device types which this is relevant in the device repo
-      deploy-esr:
-        description: "Enable to deploy ESR"
-        required: false
-        type: boolean
-        default: ${{ startsWith(github.event.push.ref, 'refs/tags/v20') }} # Set this flag if the tag looks like an esr tag - this is good for 100 years or until balenaOS v20 comes out
       # Supported fields for the test matrix:
       # - test_suite: (required) The test suite to run. The valid test suites are `os`, `hup`, and `cloud`
       # - environment: (required) The balenaCloud environment to use for testing, e.g. `bm.balena-dev.com` or `balena-cloud.com`
@@ -554,6 +549,17 @@ jobs:
         run: |
           echo "deploy=true" >> $GITHUB_OUTPUT
 
+      # TODO: check that github.ref_name actually gives the name of the branch in workflow dispatch: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/contexts#github-context
+      # This will work up until we have a rolling v20.x.x release of balenaOS
+      - name: Evaluate ESR
+        if: |
+          (github.event_name == 'push' && startsWith(github.event.push.ref, 'refs/tags/v20')) ||
+          (github.event_name == 'workflow_dispatch' && startsWith(github.ref_name, '20'))
+        id: esr-check
+        run: |
+          echo "is-esr=true" >> $GITHUB_OUTPUT
+
+
       ##############################
       # S3 Deploy
       ##############################
@@ -604,12 +610,12 @@ jobs:
 
       - name: Set S3 destination directory
         id: s3-images-dir
-        if: steps.should-deploy.outputs.deploy && inputs.deploy-esr != true
+        if: steps.should-deploy.outputs.deploy && steps.esr-check.outputs.is-esr
         run: echo "string=images" >> $GITHUB_OUTPUT
 
       - name: Set S3 destination directory (ESR)
         id: s3-esr-images-dir
-        if: steps.should-deploy.outputs.deploy && inputs.deploy-esr == true
+        if: steps.should-deploy.outputs.deploy && steps.esr-check.outputs.is-esr
         run: echo "string=esr-images" >> $GITHUB_OUTPUT
 
       # # https://github.com/aws-actions/configure-aws-credentials
@@ -675,7 +681,7 @@ jobs:
           BOOTABLE: 1
           TRANSLATION: "v6"
           FINAL: ${{ steps.should-finalize.outputs.finalize }}
-          ESR: "${{ inputs.deploy-esr }}"
+          ESR: "${{ steps.esr-check.outputs.is-esr }}"
           balenaCloudEmail: # TODO: currently trying to use named API key only, its possible email/pw auth no longer has the additional privileges that it used to
           balenaCloudPassword: # TODO: currently trying to use named API key only, its possible email/pw auth no longer has the additional privileges that it used to
           CURL: "curl --silent --retry 10 --location --compressed"
@@ -841,7 +847,7 @@ jobs:
           done
 
       - name: Tag ESR release
-        if: steps.should-deploy.outputs.deploy && inputs.deploy-esr && steps.should-finalize.outputs.finalize
+        if: steps.should-deploy.outputs.deploy && steps.esr-check.outputs.is-esr && steps.should-finalize.outputs.finalize
         env:
           BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
           SLUG: "${{ steps.balena-lib.outputs.device_slug }}"
