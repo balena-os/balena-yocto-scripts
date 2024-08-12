@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update Lock file maintenance
+      hash: 156711aceb7e2be7048ea668800ff9368bf35df8
+      body: |
+        Update 
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.22
+  title: ""
+  date: 2024-08-12T01:57:02.017Z
+- commits:
     - subject: Update balena-os/leviathan digest to f4e9332
       hash: 6a7097208111936aac9a8862c61d6f600d1652dd
       body: |
