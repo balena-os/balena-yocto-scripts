@@ -543,8 +543,9 @@ jobs:
       # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
       # We want to push a hostapp on push events (PR merge) , or dispatch??
       # If we deploy the hostapp, also deploy the s3 artifacts
+      # Force finlize will finalize no matter what - so we want to make sure there is something to finlize - so it will always trigger this if true
       - name: Evaluate whether to deploy hostapp
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || inputs.force-finalize
         id: should-deploy
         run: |
           echo "deploy=true" >> $GITHUB_OUTPUT
@@ -553,7 +554,7 @@ jobs:
       # This will work up until we have a rolling v20.x.x release of balenaOS
       - name: Evaluate ESR
         if: |
-          (github.event_name == 'push' && startsWith(github.event.push.ref, 'refs/tags/v20')) ||
+          (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v20')) ||
           (github.event_name == 'workflow_dispatch' && startsWith(github.ref_name, '20'))
         id: esr-check
         run: |
@@ -610,7 +611,7 @@ jobs:
 
       - name: Set S3 destination directory
         id: s3-images-dir
-        if: steps.should-deploy.outputs.deploy && steps.esr-check.outputs.is-esr
+        if: steps.should-deploy.outputs.deploy && !steps.esr-check.outputs.is-esr
         run: echo "string=images" >> $GITHUB_OUTPUT
 
       - name: Set S3 destination directory (ESR)
@@ -851,7 +852,7 @@ jobs:
         env:
           BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
           SLUG: "${{ steps.balena-lib.outputs.device_slug }}"
-          APPNAME: "${{ steps.balena-lib.outputs.device_slug }}"
+          APPNAME: "${{ steps.balena-lib.outputs.device_slug }}-esr"
           META_BALENA_VERSION: "${{ steps.balena-lib.outputs.meta_balena_version }}"
           TRANSLATION: "v6"
           CURL: "curl --silent --retry 10 --location --compressed"
@@ -875,13 +876,13 @@ jobs:
           BALENARC_BALENA_URL=${API_ENV} balena tag set meta-balena-base "${META_BALENA_VERSION}" --release "${HOSTAPP_RELEASE_ID}"
 
           _x_version="${VERSION%.*}.x"
-          _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${SLUG}%27)%20and%20(tag_key%20eq%20%27esr-current%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
+          _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${APPNAME}%27)%20and%20(tag_key%20eq%20%27esr-current%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
           last_current=$(echo "${_json}" | jq -r -e '.d[0].value') || true
 
-          _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${SLUG}%27)%20and%20(tag_key%20eq%20%27esr-sunset%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
+          _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${APPNAME}%27)%20and%20(tag_key%20eq%20%27esr-sunset%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
           last_sunset=$(echo "${_json}" | jq -r -e '.d[0].value') || true
 
-          _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${SLUG}%27)%20and%20(tag_key%20eq%20%27esr-next%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
+          _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${APPNAME}%27)%20and%20(tag_key%20eq%20%27esr-next%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
           last_next=$(echo "${_json}" | jq -r -e '.d[0].value') || true
 
 
