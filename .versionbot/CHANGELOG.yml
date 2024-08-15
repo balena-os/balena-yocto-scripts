@@ -1,4 +1,18 @@
 - commits:
+    - subject: Add mermaid flowchart to yocto workflow README
+      hash: af6f93c1a415ecf90785428c32b31801b26ad160
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.25.23
+  title: ""
+  date: 2024-08-15T20:45:12.698Z
+- commits:
     - subject: Update Lock file maintenance
       hash: 156711aceb7e2be7048ea668800ff9368bf35df8
       body: |
