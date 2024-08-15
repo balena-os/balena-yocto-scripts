@@ -24,7 +24,13 @@ The workflow is triggered on :
 
 ## Architecture diagram
 
-## Flowchart
+### Big Picture
+
+This diagram shows the current state of the balenaOS build + test + deploy reusable workflow.
+
+![](../../flowchart.jpg)
+
+### Flowchart
 
 This flowchart represents the intended logic graph taking into account
 user inputs, event types, and expected results/outputs.
