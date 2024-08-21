@@ -1,4 +1,82 @@
 - commits:
+    - subject: ensure "force-finalize" guarantees a finalized release
+      hash: 08e6722b16af9c6e339fd1862b28d641fdcc5035
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+    - subject: update example workflow to use "deploy-environment" input
+      hash: 044e2122041ba0d7d4a18c2d0cd653b512c42130
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+    - subject: remove "deploy-esr" input
+      hash: 2ea4e3b60c88da21427cf525ed7fed4ab32de6f5
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+    - subject: remove "deploy-s3" input
+      hash: dee1de47e43055e8ef8dd3dc17c8e614e89e835e
+      body: |
+        Instead, always deploy to s3 if we "deploy" anything
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+    - subject: remove "deploy-hostapp" and add "force-finalize" and
+        "finalize-on-push-if-tests-passed"
+      hash: d1de37252ca8d1d1e41d6253abdac602d9999f1d
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+    - subject: rename "envinroment" input to "deploy-environment" for clarity
+      hash: 14e6a1e57faf63f98970254902fd82deb49e586d
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+    - subject: remove os-dev input
+      hash: 8f5bd516abe24758ee129cb835d3b021bb5c3284
+      body: >
+        Removing denabling of development features as we determined it would
+        rarely be used - dev images can just be built locally instead
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+  version: 1.25.24
+  title: ""
+  date: 2024-08-21T16:22:42.006Z
+- commits:
     - subject: Add mermaid flowchart to yocto workflow README
       hash: af6f93c1a415ecf90785428c32b31801b26ad160
       body: ""
