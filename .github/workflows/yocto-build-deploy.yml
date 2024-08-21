@@ -65,28 +65,23 @@ on:
         description: yocto board name
         required: true
         type: string
-      environment:
-        description: The GitHub Environment to use for the job(s)
+      deploy-environment:
+        description: The GitHub environment to deploy to - includes the balena Cloud environment and related vars
         required: false
         type: string
         default: balena-cloud.com
-      deploy-s3:
-        description: Whether to deploy images to S3
+      # This input exists because we want the option to not auto-finalise for some device types, even if they have tests and those tests pass - for example some custom device types, the customer doesn't want new releases published until they green light it 
+      finalize-on-push-if-tests-passed:
+        description: Whether to finalize a hostApp container image to a balena environment, if tests pass.
         required: false
         type: boolean
-        default: ${{ github.event_name == 'push' }} # Deploy to s3 only on creation of new tags - a "push " event. We're happy with just push events, as the caller workflow only starts this on pushed tags, matched with semver
-      deploy-hostapp:
-        description: Whether to deploy a hostApp container image to a balena environment
+        default: true # Default behaviour is auto-finalise if tests pass, unless opted out by customer
+      # For use when we need to force deploy a release, for example after manual testing (negates finalize-on-push-if-tests-pass)
+      force-finalize:
+        description: Force deploy a finalized release
         required: false
         type: boolean
-        # By default, deploy the hostapp only on creation of new tags, as we do for S3 deployment.
-        # At some point in the future we want to modify the HUP test suite to use the hostapp as the HUP target, rather than sending the DUT the docker image and doing a HUP using that file
-        default: ${{ github.event_name == 'push' }}
-      finalize-hostapp:
-        description: Whether to finalize a hostApp container image to a balena environment
-        required: false
-        type: boolean
-        default: false # The default is "no" - because the `check-merge-tests` will determine whether or not to mark the hostapp as final. This is purely here for a manual override
+        default: false 
       deploy-ami:
         description: Whether to deploy an AMI to AWS
         required: false
@@ -97,16 +92,6 @@ on:
         required: false
         type: boolean
         default: false # Always false by default, override on specific device types which this is relevant in the device repo
-      os-dev:
-        description: Enable OS development features
-        required: false
-        type: boolean
-        default: false # Only for use with manual runs/dispatches
-      deploy-esr:
-        description: "Enable to deploy ESR"
-        required: false
-        type: boolean
-        default: ${{ startsWith(github.event.push.ref, 'refs/tags/v20') }} # Set this flag if the tag looks like an esr tag - this is good for 100 years or until balenaOS v20 comes out
       # Supported fields for the test matrix:
       # - test_suite: (required) The test suite to run. The valid test suites are `os`, `hup`, and `cloud`
       # - environment: (required) The balenaCloud environment to use for testing, e.g. `bm.balena-dev.com` or `balena-cloud.com`
@@ -168,12 +153,12 @@ jobs:
   build:
     name: Build
     runs-on: ${{ fromJSON(inputs.build-runs-on) }}
-    environment: ${{ inputs.environment }}
+    environment: ${{ inputs.deploy-environment }}
 
     env:
       automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
-      BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || inputs.environment || 'balena-cloud.com' }}
-      API_ENV: ${{ vars.BALENA_HOST || inputs.environment || 'balena-cloud.com' }}
+      BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || inputs.deploy-environment || 'balena-cloud.com' }}
+      API_ENV: ${{ vars.BALENA_HOST || inputs.deploy-environment || 'balena-cloud.com' }}
 
       # Yocto NFS sstate cache host
       YOCTO_CACHE_HOST: ${{ vars.YOCTO_CACHE_HOST || 'nfs.product-os.io' }}
@@ -293,7 +278,7 @@ jobs:
 
       # This will control the deployment of the hostapp only - it will determine if it is marked as final or not
       # The hostapp being finalised is what determines if the API will present this OS version to user
-      # If the test_matrix is empty - it means there are no tests for the DT - so don't check tests, and don't finalise, unless manually done with "finalise-hostapp" input
+      # If the test_matrix is empty - it means there are no tests for the DT - so don't check tests, and don't finalise, unless manually done with "force-finalize" input
       - name: Check test results
         # https://docs.github.com/en/actions/learn-github-actions/expressions#functions
         # this expression checks to make sure at least one test suite was provided via either matrix syntax
@@ -302,7 +287,7 @@ jobs:
           (
             join(fromJSON(inputs.test_matrix).test_suite) != '' ||
             join(fromJSON(inputs.test_matrix).include.*.test_suite) != ''
-          )
+          ) && inputs.finalize-on-push-if-tests-passed
         id: merge-test-result
         env:
           REPO: ${{ inputs.device-repo }}
@@ -427,13 +412,6 @@ jobs:
           # Move newly generated OS contract to location expected later on in the workflow
           cp "${CONTRACTS_OUTPUT_DIR}/${DEVICE_TYPE_SLUG}/balena-os/balena.yml" "${WORKSPACE}/balena.yml"
 
-      - name: Enable development mode in BalenaOS
-        if: inputs.os-dev == true
-        run: |
-          if [ "${OS_DEVELOPMENT}" = "true" ]; then
-            echo BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -d" >> $GITHUB_ENV
-          fi
-
       # # https://docs.yoctoproject.org/dev/dev-manual/speeding-up-build.html#speeding-up-a-build
       # # TODO: Delete  when using properly isolated self-hosted runner resources
       # - name: Configure bitbake resource limits
@@ -518,15 +496,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zip
 
-      # TODO: pre-install on self-hosted-runners
-      # S4cmd is a command-line utility for accessing Amazon S3
-      # https://github.com/bloomreach/s4cmd
-      - name: Install s4cmd
-        if: inputs.deploy-s3 == true
-        run: |
-          pip install s4cmd
-          s4cmd --help
-
       # DEPLOY_PATH is the path that all build artifacts get exported to by "balena_deploy_artifacts"
       - name: Export prepare artifacts deploy path to env
         env:
@@ -563,22 +532,61 @@ jobs:
             ${{ env.DEPLOY_PATH }}/image/balena.img
             ${{ env.DEPLOY_PATH }}/balena-image.docker
 
+
+      # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
+      - name: Evaluate whether to finalize release
+        if: steps.merge-test-result.outputs.finalize || inputs.force-finalize
+        id: should-finalize
+        run: |
+          echo "finalize=true" >> $GITHUB_OUTPUT
+
+      # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
+      # We want to push a hostapp on push events (PR merge) , or dispatch??
+      # If we deploy the hostapp, also deploy the s3 artifacts
+      # Force finlize will finalize no matter what - so we want to make sure there is something to finlize - so it will always trigger this if true
+      - name: Evaluate whether to deploy hostapp
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || inputs.force-finalize
+        id: should-deploy
+        run: |
+          echo "deploy=true" >> $GITHUB_OUTPUT
+
+      # TODO: check that github.ref_name actually gives the name of the branch in workflow dispatch: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/contexts#github-context
+      # This will work up until we have a rolling v20.x.x release of balenaOS
+      - name: Evaluate ESR
+        if: |
+          (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v20')) ||
+          (github.event_name == 'workflow_dispatch' && startsWith(github.ref_name, '20'))
+        id: esr-check
+        run: |
+          echo "is-esr=true" >> $GITHUB_OUTPUT
+
+
       ##############################
       # S3 Deploy
       ##############################
+
+      # TODO: pre-install on self-hosted-runners
+      # S4cmd is a command-line utility for accessing Amazon S3
+      # https://github.com/bloomreach/s4cmd
+      - name: Install s4cmd
+        if: steps.should-deploy.outputs.deploy
+        run: |
+          pip install s4cmd
+          s4cmd --help
+
 
       # login required to pull private balena/balena-img image
       # https://github.com/docker/login-action
       - name: Login to Docker Hub
         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
-        if: inputs.deploy-s3 == true
+        if: steps.should-deploy.outputs.deploy
         with:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Prepare files for S3
-        if: inputs.deploy-s3 == true && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
+        if: steps.should-deploy.outputs.deploy && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
         env:
           HELPER_IMAGE: balena/balena-img:6.20.26
           # This path is different from DEPLOY_PATH due to the structure the prepare.ts expects: "/host/image/${device_slug}/${version}/..."
@@ -593,28 +601,28 @@ jobs:
 
       - name: Set S3 ACL (private)
         id: s3-acl-private
-        if: inputs.deploy-s3 == true && steps.balena-lib.outputs.is_private != 'false'
+        if: steps.should-deploy.outputs.deploy && steps.balena-lib.outputs.is_private != 'false'
         run: echo "string=private" >> $GITHUB_OUTPUT
 
       - name: Set S3 ACL (public-read)
         id: s3-acl-public
-        if: inputs.deploy-s3 == true && steps.balena-lib.outputs.is_private == 'false'
+        if: steps.should-deploy.outputs.deploy && steps.balena-lib.outputs.is_private == 'false'
         run: echo "string=public-read" >> $GITHUB_OUTPUT
 
       - name: Set S3 destination directory
         id: s3-images-dir
-        if: inputs.deploy-s3 == true && inputs.deploy-esr != true
+        if: steps.should-deploy.outputs.deploy && !steps.esr-check.outputs.is-esr
         run: echo "string=images" >> $GITHUB_OUTPUT
 
       - name: Set S3 destination directory (ESR)
         id: s3-esr-images-dir
-        if: inputs.deploy-s3 == true && inputs.deploy-esr == true
+        if: steps.should-deploy.outputs.deploy && steps.esr-check.outputs.is-esr
         run: echo "string=esr-images" >> $GITHUB_OUTPUT
 
       # # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
-        if: inputs.deploy-s3 == true
+        if: steps.should-deploy.outputs.deploy
         with:
           role-to-assume: ${{ vars.AWS_IAM_ROLE }}
           role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -624,7 +632,7 @@ jobs:
 
       # "If no keys are provided, but an IAM role is associated with the EC2 instance, it will be used transparently".
       - name: Deploy to S3
-        if: inputs.deploy-s3 == true && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
+        if: steps.should-deploy.outputs.deploy && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
         env:
           S3_CMD: "s4cmd --API-ServerSideEncryption=AES256"
           S3_SYNC_OPTS: "--recursive --API-ACL=${{ steps.s3-acl-private.outputs.string || steps.s3-acl-public.outputs.string }}"
@@ -659,7 +667,7 @@ jobs:
       # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
       # https://github.com/balena-io/deploy-to-balena-action/issues/286
       - name: Deploy to balena
-        if: inputs.deploy-hostapp == true
+        if: steps.should-deploy.outputs.deploy
         id: deploy-hostapp
         env:
           # BALENA_API_DEPLOY_KEY is a secret that should be specific to the runtime environment
@@ -673,8 +681,8 @@ jobs:
           RELEASE_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
           BOOTABLE: 1
           TRANSLATION: "v6"
-          FINAL: ${{ steps.merge-test-result.outputs.finalize || inputs.finalize-hostapp }}
-          ESR: "${{ inputs.deploy-esr }}"
+          FINAL: ${{ steps.should-finalize.outputs.finalize }}
+          ESR: "${{ steps.esr-check.outputs.is-esr }}"
           balenaCloudEmail: # TODO: currently trying to use named API key only, its possible email/pw auth no longer has the additional privileges that it used to
           balenaCloudPassword: # TODO: currently trying to use named API key only, its possible email/pw auth no longer has the additional privileges that it used to
           CURL: "curl --silent --retry 10 --location --compressed"
@@ -839,14 +847,12 @@ jobs:
             fi
           done
 
-      # Note: in the original "yocto-scripts" there were a few checks to ensure that the release was a finalised version, and that it didn't already have a version tag
-      # The versions tags are legacy now anyway - so I haven't included that - and we know this will be a finalised release anyway
       - name: Tag ESR release
-        if: inputs.deploy-hostapp == true && inputs.deploy-esr && (steps.merge-test-result.outputs.finalize || inputs.finalize-hostapp)
+        if: steps.should-deploy.outputs.deploy && steps.esr-check.outputs.is-esr && steps.should-finalize.outputs.finalize
         env:
           BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
           SLUG: "${{ steps.balena-lib.outputs.device_slug }}"
-          APPNAME: "${{ steps.balena-lib.outputs.device_slug }}"
+          APPNAME: "${{ steps.balena-lib.outputs.device_slug }}-esr"
           META_BALENA_VERSION: "${{ steps.balena-lib.outputs.meta_balena_version }}"
           TRANSLATION: "v6"
           CURL: "curl --silent --retry 10 --location --compressed"
@@ -870,13 +876,13 @@ jobs:
           BALENARC_BALENA_URL=${API_ENV} balena tag set meta-balena-base "${META_BALENA_VERSION}" --release "${HOSTAPP_RELEASE_ID}"
 
           _x_version="${VERSION%.*}.x"
-          _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${SLUG}%27)%20and%20(tag_key%20eq%20%27esr-current%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
+          _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${APPNAME}%27)%20and%20(tag_key%20eq%20%27esr-current%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
           last_current=$(echo "${_json}" | jq -r -e '.d[0].value') || true
 
-          _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${SLUG}%27)%20and%20(tag_key%20eq%20%27esr-sunset%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
+          _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${APPNAME}%27)%20and%20(tag_key%20eq%20%27esr-sunset%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
           last_sunset=$(echo "${_json}" | jq -r -e '.d[0].value') || true
 
-          _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${SLUG}%27)%20and%20(tag_key%20eq%20%27esr-next%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
+          _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${APPNAME}%27)%20and%20(tag_key%20eq%20%27esr-next%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
           last_next=$(echo "${_json}" | jq -r -e '.d[0].value') || true
 
 
