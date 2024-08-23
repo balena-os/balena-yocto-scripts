@@ -131,7 +131,7 @@ on:
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}-${{ inputs.machine }}
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}-${{ inputs.machine }}-${{ inputs.deploy-environment}}
   # cancel jobs in progress for updated PRs, but not merge or tag events
   cancel-in-progress: ${{ github.event.action == 'synchronize' }}
 
@@ -1167,6 +1167,13 @@ jobs:
       run:
         working-directory: .
         shell: bash --noprofile --norc -eo pipefail -x {0}
+
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - machine: ${{ inputs.machine }}
+            environment: ${{ inputs.deploy-environment }}
 
     steps:
       - name: Reject failed jobs
