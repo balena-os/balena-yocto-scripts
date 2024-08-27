@@ -1,4 +1,21 @@
 - commits:
+    - subject: Fix if condition for checking merge commit test results
+      hash: c7b37652661b12832a2a40a39e4548632478b8ef
+      body: >
+        The logic for this step was broken - even when no test matrix was
+        provided, it was chekcing for test results, which we don't want (as they
+        won't exist)
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+  version: 1.25.26
+  title: ""
+  date: 2024-08-27T16:58:34.259Z
+- commits:
     - subject: Add unique unique identifiers to summary job
       hash: 625a45b652c332ec5d048caeee7dc25638df8dfb
       body: |
