@@ -41,7 +41,7 @@ on:
           [
             "self-hosted",
             "X64",
-            "16cpu"
+            "yocto"
           ]
       device-repo:
         description: balenaOS device repository (owner/repo)
