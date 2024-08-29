@@ -562,13 +562,16 @@ jobs:
       ##############################
 
       # TODO: pre-install on self-hosted-runners
+      # Install from debian as using pip like recommended in the repo readme is NOT recommended for externally-managed-environments
+      # Note: s4cmd version in the debian repo and pip is the same (2.1.0)
       # S4cmd is a command-line utility for accessing Amazon S3
       # https://github.com/bloomreach/s4cmd
       - name: Install s4cmd
         if: steps.should-deploy.outputs.deploy
         run: |
-          pip install s4cmd
-          s4cmd --help
+          sudo apt-get update
+          sudo apt-get install -y s4cmd
+          s4cmd --version
 
 
       # login required to pull private balena/balena-img image
