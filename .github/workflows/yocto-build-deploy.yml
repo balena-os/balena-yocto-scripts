@@ -657,6 +657,7 @@ jobs:
       ##############################
 
       - name: Check Balena CLI installation
+        if: steps.should-deploy.outputs.deploy
         run: |
           balena --version
 
