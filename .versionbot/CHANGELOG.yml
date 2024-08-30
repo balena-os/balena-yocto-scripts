@@ -1,4 +1,18 @@
 - commits:
+    - subject: checkout private contracts for test job
+      hash: d49882c54127d8b805191ff313a3a00d1c163590
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+  version: 1.25.28
+  title: ""
+  date: 2024-08-30T14:24:42.877Z
+- commits:
     - subject: use apt-get to install s4cmd instead of pip
       hash: 938730ae60d60574f9abf757c1c4efcc4e526a2f
       body: >
