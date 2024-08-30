@@ -515,10 +515,11 @@ jobs:
       # https://github.com/actions/upload-artifact
       # We upload only `balena.img` for use with the leviathan tests - this is the artifact that is presented to users
       # We upload `balena-image.docker` for use in the HUP test suite - if we could fetch the hostapp from the draft release instead, we can remove that to save the artifact storage space
+      # Only upload if tests will be running - i.e on PR's only, and only on devices that tests are defined for
       # Separate "flasher" and "raw" variants are not used in the testing flow
       - name: Upload artifacts
         uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
-        if: github.event_name != 'push'
+        if: github.event_name != 'push' && inputs.test_matrix
         with:
           name: build-artifacts
           if-no-files-found: error
