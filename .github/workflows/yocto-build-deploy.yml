@@ -1068,6 +1068,18 @@ jobs:
           app-id: ${{ vars.FLOWZONE_APP_ID }}
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
 
+      # Generate another app token for the balena-io organization
+      # so we can checkout private contracts
+      # https://github.com/actions/create-github-app-token
+      - name: Create GitHub App installation token (balena-io)
+        uses: actions/create-github-app-token@31c86eb3b33c9b601a1f60f98dcbfd1d70f379b4 # v1.10.3
+        id: app-token-balena-io
+        if: vars.FLOWZONE_APP_ID != ''
+        with:
+          app-id: ${{ vars.FLOWZONE_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: balena-io
+
       # Clone the device respository to fetch Leviathan
       - name: Clone device repository
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -1110,6 +1122,15 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y --no-install-recommends gzip
+
+      # Check out private contracts if this is a private device type - as these are required for the tests
+      - name: Checkout private Contracts
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        if: needs.build.outputs.is_private == 'true'
+        with:
+          repository: balena-io/private-contracts
+          token: ${{ steps.app-token-balena-io.outputs.token }}
+          path: ${{ env.LEVIATHAN_ROOT }}/core/private-contracts
 
       # Image was uploaded uncompressed and Leviathan test config.js expects the image in a certain place and with a certain name
       # The balena.img file is downloaded to ${WORKSPACE}/image/balena.img
