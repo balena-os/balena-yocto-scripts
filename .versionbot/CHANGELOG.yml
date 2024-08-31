@@ -1,4 +1,23 @@
 - commits:
+    - subject: Restrict runners via yocto label, not 16cpu
+      hash: 5ec368545ccc173631b7b82f68f7619b1dbfe5e5
+      body: >
+        We currently have many `8cpu` runners available that are
+
+        migrating from Jenkins that we should allow to use for yocto builds.
+
+
+        As long as some runners don't have the `yocto` tag so we don't
+        bottleneck the runner queue for other orgs.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Kyle Harding
+      nested: []
+  version: 1.25.29
+  title: ""
+  date: 2024-08-31T23:20:44.235Z
+- commits:
     - subject: checkout private contracts for test job
       hash: d49882c54127d8b805191ff313a3a00d1c163590
       body: ""
