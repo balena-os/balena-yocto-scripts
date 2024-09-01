@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan digest to ff6a079
+      hash: 3eff42640327916a3ea7acb35eb1b5c4905303e8
+      body: |
+        Update balena-os/leviathan
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.30
+  title: ""
+  date: 2024-09-01T02:30:52.700Z
+- commits:
     - subject: Restrict runners via yocto label, not 16cpu
       hash: 5ec368545ccc173631b7b82f68f7619b1dbfe5e5
       body: >
