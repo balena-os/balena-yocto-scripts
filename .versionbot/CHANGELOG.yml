@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan digest to da52396
+      hash: 807851bdb98648080dfd8565e3de047f92323454
+      body: |
+        Update balena-os/leviathan
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.35
+  title: ""
+  date: 2024-09-04T09:07:04.754Z
+- commits:
     - subject: Update actions/create-github-app-token action to v1.10.4
       hash: e6a68531b03ca9d6b477fa85c9ec43990edd1a7a
       body: |
