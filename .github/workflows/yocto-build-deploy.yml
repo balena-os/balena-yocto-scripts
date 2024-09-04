@@ -230,7 +230,7 @@ jobs:
       # all repos where the app is installed (usually the whole org)
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token
-        uses: actions/create-github-app-token@31c86eb3b33c9b601a1f60f98dcbfd1d70f379b4 # v1.10.3
+        uses: actions/create-github-app-token@3378cda945da322a8db4b193e19d46352ebe2de5 # v1.10.4
         id: app-token
         if: vars.FLOWZONE_APP_ID != ''
         with:
@@ -241,7 +241,7 @@ jobs:
       # so we can checkout private contracts
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token (balena-io)
-        uses: actions/create-github-app-token@31c86eb3b33c9b601a1f60f98dcbfd1d70f379b4 # v1.10.3
+        uses: actions/create-github-app-token@3378cda945da322a8db4b193e19d46352ebe2de5 # v1.10.4
         id: app-token-balena-io
         if: vars.FLOWZONE_APP_ID != ''
         with:
@@ -1061,7 +1061,7 @@ jobs:
     steps:
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token
-        uses: actions/create-github-app-token@31c86eb3b33c9b601a1f60f98dcbfd1d70f379b4 # v1.10.3
+        uses: actions/create-github-app-token@3378cda945da322a8db4b193e19d46352ebe2de5 # v1.10.4
         id: app-token
         if: vars.FLOWZONE_APP_ID != ''
         with:
@@ -1072,7 +1072,7 @@ jobs:
       # so we can checkout private contracts
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token (balena-io)
-        uses: actions/create-github-app-token@31c86eb3b33c9b601a1f60f98dcbfd1d70f379b4 # v1.10.3
+        uses: actions/create-github-app-token@3378cda945da322a8db4b193e19d46352ebe2de5 # v1.10.4
         id: app-token-balena-io
         if: vars.FLOWZONE_APP_ID != ''
         with:
