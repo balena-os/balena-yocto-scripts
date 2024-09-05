@@ -1146,7 +1146,7 @@ jobs:
 
       # https://github.com/balena-os/leviathan/blob/master/action.yml
       - name: BalenaOS Leviathan Tests
-        uses: balena-os/leviathan@5db2b5d67ce1c6e14b57a43f77f9a23a7d851bca
+        uses: balena-os/leviathan@8fb47f2f219dc2f9686a8a7c33ac80842b2ec81d
         if: inputs.sign-image == false # Ensure we don't run this for non-signed images
         env:
           # BALENA_API_TEST_KEY is a secret that should be specific to the runtime environment
@@ -1157,7 +1157,7 @@ jobs:
       # Make sure it has all the same env variables as the job above
       - name: "[Secureboot] BalenaOS Leviathan Tests"
         if: inputs.sign-image == true
-        uses: balena-os/leviathan@5db2b5d67ce1c6e14b57a43f77f9a23a7d851bca
+        uses: balena-os/leviathan@8fb47f2f219dc2f9686a8a7c33ac80842b2ec81d
         env:
           # BALENA_API_TEST_KEY is a secret that should be specific to the runtime environment
           # It requires permissions to manage autokit workers, and create test fleets
