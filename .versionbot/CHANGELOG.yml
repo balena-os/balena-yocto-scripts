@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan digest to 5db2b5d
+      hash: 3ea0421883a4c50185c8fa4f66de9f4e74f12a0b
+      body: |
+        Update balena-os/leviathan
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.36
+  title: ""
+  date: 2024-09-05T16:03:09.417Z
+- commits:
     - subject: Update balena-os/leviathan digest to da52396
       hash: 807851bdb98648080dfd8565e3de047f92323454
       body: |
