@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan digest to 8fb47f2
+      hash: 0bdd362c660078414259a167e492f1e91f3ea70e
+      body: |
+        Update balena-os/leviathan
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.37
+  title: ""
+  date: 2024-09-05T23:21:25.987Z
+- commits:
     - subject: Update balena-os/leviathan digest to 5db2b5d
       hash: 3ea0421883a4c50185c8fa4f66de9f4e74f12a0b
       body: |
