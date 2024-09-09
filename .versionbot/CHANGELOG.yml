@@ -1,4 +1,18 @@
 - commits:
+    - subject: Include semver when bumping leviathan action
+      hash: 39084536604f4713516ab50bce7a82a0aae28523
+      body: >
+        This makes it more human readable, and allows us to treat patch, minor,
+        and major revisions of the action differently if needed.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Kyle Harding
+      nested: []
+  version: 1.25.38
+  title: ""
+  date: 2024-09-09T17:05:16.878Z
+- commits:
     - subject: Update balena-os/leviathan digest to 8fb47f2
       hash: 0bdd362c660078414259a167e492f1e91f3ea70e
       body: |
