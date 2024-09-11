@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/create-github-app-token action to v1.11.0
+      hash: f96ac0de8cb911cacb2e9699a35d2b7a22cd7404
+      body: |
+        Update actions/create-github-app-token from 1.10.4 to 1.11.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.39
+  title: ""
+  date: 2024-09-11T22:32:31.676Z
+- commits:
     - subject: Include semver when bumping leviathan action
       hash: 39084536604f4713516ab50bce7a82a0aae28523
       body: >
