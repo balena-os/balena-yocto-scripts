@@ -32,6 +32,10 @@ on:
       GH_APP_PRIVATE_KEY:
         description: "GPG Private Key for GitHub App to generate ephemeral tokens (used with vars.FLOWZONE_APP_ID)"
         required: false
+      PBDKF2_PASSPHRASE:
+        description: "Passphrase used to encrypt/decrypt balenaOS assets at rest in GitHub."
+        required: true
+
     inputs:
       build-runs-on:
         description: The runner labels to use for the build job(s)
@@ -516,6 +520,21 @@ jobs:
 
           find "${DEPLOY_PATH}" -exec ls -lh {} \;
 
+      - name: Encrypt artifacts
+        id: encrypt
+        env:
+          BUILD_ARTIFACTS: '${{ env.DEPLOY_PATH }}/image/balena.img ${{ env.DEPLOY_PATH }}/balena-image.docker'
+        run: |
+          result="$(openssl enc -aes-256-cbc -k '${{ secrets.PBDKF2_PASSPHRASE }}' -P -pbkdf2)"
+          salt="$(echo "${result}" | sed 's/iv =/iv=/g' | tr ' ' '\n' | awk -F'=' '{print $2}' | head -n1)"
+          iv="$(echo "${result}" | sed 's/iv =/iv=/g' | tr ' ' '\n' | awk -F'=' '{print $2}' | tail -n1)"
+          key="$(echo "${result}" | sed 's/iv =/iv=/g' | tr ' ' '\n' | awk -F'=' '{print $2}' | head -n2 | tail -n1)"
+
+          for artifact in ${BUILD_ARTIFACTS}; do
+              cat <"${artifact}" | openssl enc -e -aes-256-cbc -in - -out - -K "${key}" -iv "${iv}" -S "${salt}" >"${artifact}.enc"
+          done
+          echo "artifacts='${{ env.DEPLOY_PATH }}/image/balena.img.enc ${{ env.DEPLOY_PATH }}/balena-image.docker.enc'" >>"${GITHUB_OUTPUT}"
+
       # https://github.com/actions/upload-artifact
       # We upload only `balena.img` for use with the leviathan tests - this is the artifact that is presented to users
       # We upload `balena-image.docker` for use in the HUP test suite - if we could fetch the hostapp from the draft release instead, we can remove that to save the artifact storage space
@@ -529,10 +548,7 @@ jobs:
           if-no-files-found: error
           retention-days: 3
           compression-level: 7
-          path: |
-            ${{ env.DEPLOY_PATH }}/image/balena.img
-            ${{ env.DEPLOY_PATH }}/balena-image.docker
-
+          path: ${{ steps.encrypt.outputs.artifacts }}
 
       # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
       - name: Evaluate whether to finalize release
@@ -1122,6 +1138,19 @@ jobs:
         with:
           name: build-artifacts
           path: ${{ env.WORKSPACE }}
+
+      - name: Decrypt artifacts
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          result="$(openssl enc -aes-256-cbc -k '${{ secrets.PBDKF2_PASSPHRASE }}' -P -pbkdf2)"
+          salt="$(echo "${result}" | sed 's/iv =/iv=/g' | tr ' ' '\n' | awk -F'=' '{print $2}' | head -n1)"
+          iv="$(echo "${result}" | sed 's/iv =/iv=/g' | tr ' ' '\n' | awk -F'=' '{print $2}' | tail -n1)"
+          key="$(echo "${result}" | sed 's/iv =/iv=/g' | tr ' ' '\n' | awk -F'=' '{print $2}' | head -n2 | tail -n1)"
+
+          find . -type f -name '*.enc' \
+            | xargs -I{} echo {} \
+            | sed 's/\.enc//g' \
+            | xargs -I{} openssl enc -d -aes-256-cbc -in {}.enc -out {} -K "${key}" -iv "${iv}" -S "${salt}"
 
       - name: Install gzip
         run: |
