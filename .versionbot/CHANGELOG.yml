@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.44
+      hash: ec2c830e179ca39b6338b48c1949d70e36944317
+      body: |
+        Update balena-os/leviathan from 2.31.43 to 2.31.44
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.44
+  title: ""
+  date: 2024-09-18T20:53:09.966Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.43
       hash: 1d06142fd45940bb41e902b3c03ba6fa5e1c7665
       body: |
