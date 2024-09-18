@@ -1,4 +1,21 @@
 - commits:
+    - subject: only upload artifacts when test_matrix is defined
+      hash: 51751d241c7e845351e3a26c74e615157ad38f52
+      body: >
+        This prevents uploads of artifacts that will never be used - as they are
+        only used in the tests step, if there are no tests then no need to
+        upload
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+  version: 1.25.42
+  title: ""
+  date: 2024-09-18T11:05:33.621Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.40
       hash: e11f1d2897a59918f2e79c0a1b1aa39204e5fa79
       body: |
