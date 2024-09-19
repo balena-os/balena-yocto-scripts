@@ -1,4 +1,30 @@
 - commits:
+    - subject: fix check of finalize value
+      hash: 8d17204120d75bfc6aba1f793163e7deb2008a1f
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+    - subject: Improve checking of previous test results
+      hash: 71cae7e5434be7ee4e009343885c2c855c9d416b
+      body: |
+        The previous API command was limited to 20 results, and
+        did not correctly evaluate to false when no workflow runs were found.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.25.45
+  title: ""
+  date: 2024-09-19T22:33:26.650Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.44
       hash: ec2c830e179ca39b6338b48c1949d70e36944317
       body: |
