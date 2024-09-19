@@ -307,7 +307,8 @@ jobs:
           # There will be "pull_request" and "pull_request_trigger" triggered workflow runs in the response - one will be skipped, one will be success/fail
           # So selecting for .conclusion==success will give us a response and evaluate to true in the following "if" statement if either we successful
           passed="false"
-          if gh api -H "Accept: application/vnd.github+json" /repos/$REPO/actions/runs --jq '.workflow_runs[] | select(.head_sha == "'"${head}"'") | select(.name == "'"${WORKFLOW_NAME}"'") | select(.conclusion == "success")'; then
+          conclusion="$(gh run list -w "${WORKFLOW_NAME}" -c "${head}" --json conclusion --jq '.[] | select(.conclusion == "success").conclusion')"
+          if [[ "${conclusion}" = "success" ]]; then
             passed="true"
           fi
           echo "finalize=${passed}" >> "$GITHUB_OUTPUT"
@@ -532,7 +533,7 @@ jobs:
 
       # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
       - name: Evaluate whether to finalize release
-        if: steps.merge-test-result.outputs.finalize || inputs.force-finalize
+        if: steps.merge-test-result.outputs.finalize == 'true' || inputs.force-finalize
         id: should-finalize
         run: |
           echo "finalize=true" >> $GITHUB_OUTPUT
