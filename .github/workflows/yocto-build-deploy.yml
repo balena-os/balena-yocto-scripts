@@ -159,6 +159,13 @@ jobs:
     runs-on: ${{ fromJSON(inputs.build-runs-on) }}
     environment: ${{ inputs.deploy-environment }}
 
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - machine: ${{ inputs.machine }}
+            environment: ${{ inputs.deploy-environment }}
+
     env:
       automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
       BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || inputs.deploy-environment || 'balena-cloud.com' }}
