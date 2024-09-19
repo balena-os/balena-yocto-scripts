@@ -533,7 +533,7 @@ jobs:
 
       # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
       - name: Evaluate whether to finalize release
-        if: steps.merge-test-result.outputs.finalize || inputs.force-finalize
+        if: steps.merge-test-result.outputs.finalize == 'true' || inputs.force-finalize
         id: should-finalize
         run: |
           echo "finalize=true" >> $GITHUB_OUTPUT
