@@ -1098,6 +1098,7 @@ jobs:
           owner: balena-io
 
       # Clone the device respository to fetch Leviathan
+      # https://github.com/actions/checkout
       - name: Clone device repository
         uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
         with:
@@ -1105,6 +1106,7 @@ jobs:
           token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
           ref: ${{ inputs.device-repo-ref }}
           submodules: recursive # We need to set this to recursive as leviathan is a submodule nested inside the meta-balena submodule of the device repo
+          fetch-depth: 0
           fetch-tags: true
           # Do not persist the app installation token credentials,
           # and prefer that each step provide credentials where required
