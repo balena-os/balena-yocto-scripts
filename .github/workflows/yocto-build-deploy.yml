@@ -518,8 +518,6 @@ jobs:
           # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-deploy.inc#L23
           balena_deploy_artifacts "${{ inputs.machine }}" "${DEPLOY_PATH}" false
 
-          find "${DEPLOY_PATH}" -exec ls -lh {} \;
-
       - name: Encrypt artifacts
         id: encrypt
         if: |
@@ -527,8 +525,9 @@ jobs:
           (inputs.sign-image == true || steps.balena-lib.outputs.is_private == 'true')
         run: |
           for artifact in ${{ env.DEPLOY_PATH }}/image/balena.img ${{ env.DEPLOY_PATH }}/balena-image.docker; do
-              cat <"${artifact}" | openssl enc -e -aes-256-cbc -k '${{ secrets.PBDKF2_PASSPHRASE }}' -pbkdf2 -iter 310000 -md sha256 -salt -in - -out - >"${artifact}.enc"
+            openssl enc -e -aes-256-cbc -k '${{ secrets.PBDKF2_PASSPHRASE }}' -pbkdf2 -iter 310000 -md sha256 -salt -in "${artifact}" -out "${artifact}.enc"
           done
+          echo "ENCRYPTED_EXTENSION=.enc" >>"${GITHUB_ENV}"
 
       # https://github.com/actions/upload-artifact
       # We upload only `balena.img` for use with the leviathan tests - this is the artifact that is presented to users
@@ -543,11 +542,10 @@ jobs:
           if-no-files-found: error
           retention-days: 3
           compression-level: 7
+          # ENCRYPTED_EXTENSION may be empty if the artifact is not encrypted
           path: |
-            ${{ env.DEPLOY_PATH }}/image/balena.img
-            ${{ env.DEPLOY_PATH }}/image/balena.img.enc
-            ${{ env.DEPLOY_PATH }}/balena-image.docker
-            ${{ env.DEPLOY_PATH }}/balena-image.docker.enc
+            ${{ env.DEPLOY_PATH }}/image/balena.img${{ env.ENCRYPTED_EXTENSION }}
+            ${{ env.DEPLOY_PATH }}/balena-image.docker${{ env.ENCRYPTED_EXTENSION }}
 
       # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
       - name: Evaluate whether to finalize release
@@ -576,7 +574,6 @@ jobs:
         run: |
           echo "is-esr=true" >>"${GITHUB_OUTPUT}"
 
-
       ##############################
       # S3 Deploy
       ##############################
@@ -592,7 +589,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y s4cmd
           s4cmd --version
-
 
       # login required to pull private balena/balena-img image
       # https://github.com/docker/login-action
