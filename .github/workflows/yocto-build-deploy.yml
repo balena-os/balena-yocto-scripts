@@ -525,7 +525,7 @@ jobs:
           (inputs.sign-image == true || steps.balena-lib.outputs.is_private == 'true')
         run: |
           for artifact in ${{ env.DEPLOY_PATH }}/image/balena.img ${{ env.DEPLOY_PATH }}/balena-image.docker; do
-            openssl enc -e -aes-256-cbc -k '${{ secrets.PBDKF2_PASSPHRASE }}' -pbkdf2 -iter 310000 -md sha256 -salt -in "${artifact}" -out "${artifact}.enc"
+            openssl enc -v -e -aes-256-cbc -k '${{ secrets.PBDKF2_PASSPHRASE }}' -pbkdf2 -iter 310000 -md sha256 -salt -in "${artifact}" -out "${artifact}.enc"
           done
           echo "ENCRYPTED_EXTENSION=.enc" >>"${GITHUB_ENV}"
 
@@ -1138,10 +1138,9 @@ jobs:
       - name: Decrypt artifacts
         working-directory: ${{ env.WORKSPACE }}
         run: |
-          # shellcheck disable=SC2038
-          find . -type f -name '*.enc' \
-            | xargs -I{} echo {} | sed 's/\.enc//g' \
-            | xargs -I{} openssl enc -d -aes-256-cbc -k '${{ secrets.PBDKF2_PASSPHRASE }}' -pbkdf2 -iter 310000 -md sha256 -salt -in {}.enc -out {}
+          for artifact in *.enc **/*.enc; do
+            openssl enc -v -d -aes-256-cbc -k '${{ secrets.PBDKF2_PASSPHRASE }}' -pbkdf2 -iter 310000 -md sha256 -salt -in "${artifact}" -out "${artifact/.enc/}"
+          done
 
       - name: Install gzip
         run: |
