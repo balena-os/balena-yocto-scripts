@@ -523,7 +523,7 @@ jobs:
       - name: Encrypt artifacts
         id: encrypt
         if: |
-          github.event.repository.public &&
+          github.event.repository.private != true &&
           (inputs.sign-image == true || steps.balena-lib.outputs.is_private == 'true')
         run: |
           for artifact in ${{ env.DEPLOY_PATH }}/image/balena.img ${{ env.DEPLOY_PATH }}/balena-image.docker; do
