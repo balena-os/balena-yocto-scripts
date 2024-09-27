@@ -5,7 +5,7 @@
 # to the inputs and the defaults.
 
 # TODO: We need a system to keep these inputs aligned across all device repos
-name: Generic x86_64 (GPT)
+name: Generic x86_64 (legacy MBR)
 
 on:
   # With these triggers the Yocto jobs will run
@@ -46,10 +46,10 @@ jobs:
     if: (github.event.pull_request.head.repo.full_name == github.repository) == (github.event_name == 'pull_request')
     secrets: inherit
     with:
-      machine: generic-amd64
+      machine: genericx86-64-ext
       deploy-environment: balena-staging.com
       # device-repo and device-repo-ref inputs should not be provided on device repos
-      device-repo: balena-os/balena-generic
+      device-repo: balena-os/balena-intel
       device-repo-ref: master
       # Use qemu workers for testing
       test_matrix: >
