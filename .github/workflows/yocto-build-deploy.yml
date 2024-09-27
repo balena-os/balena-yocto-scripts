@@ -70,7 +70,7 @@ on:
         required: false
         type: string
         default: balena-cloud.com
-      # This input exists because we want the option to not auto-finalise for some device types, even if they have tests and those tests pass - for example some custom device types, the customer doesn't want new releases published until they green light it 
+      # This input exists because we want the option to not auto-finalise for some device types, even if they have tests and those tests pass - for example some custom device types, the customer doesn't want new releases published until they green light it
       finalize-on-push-if-tests-passed:
         description: Whether to finalize a hostApp container image to a balena environment, if tests pass.
         required: false
@@ -81,7 +81,7 @@ on:
         description: Force deploy a finalized release
         required: false
         type: boolean
-        default: false 
+        default: false
       deploy-ami:
         description: Whether to deploy an AMI to AWS
         required: false
@@ -281,7 +281,7 @@ jobs:
       # If the test_matrix is empty - it means there are no tests for the DT - so don't check tests, and don't finalise, unless manually done with "force-finalize" input
       - name: Check test results
         # https://docs.github.com/en/actions/learn-github-actions/expressions#functions
-        # this expression checks that the test_matrix input is truthy - there is no test_matrix input provided in the device-repo workflow file, test results won't be checked, and 
+        # this expression checks that the test_matrix input is truthy - there is no test_matrix input provided in the device-repo workflow file, test results won't be checked, and
         # the release can't be finlized
         if: github.event_name == 'push' && inputs.test_matrix && inputs.finalize-on-push-if-tests-passed
         id: merge-test-result
@@ -344,7 +344,7 @@ jobs:
       # A lot of outputs inferred from here are used everywhere else in the workflow
       - name: Set build outputs
         id: balena-lib
-        env: 
+        env:
           CURL: "curl --silent --retry 10 --location --compressed"
           TRANSLATION: "v6"
           BALENAOS_TOKEN: ${{ secrets.BALENA_API_DEPLOY_KEY }}
@@ -388,6 +388,7 @@ jobs:
           repository: balena-io/private-contracts
           token: ${{ steps.app-token-balena-io.outputs.token }}
           path: ${{ github.workspace }}/private-contracts
+          persist-credentials: false
 
       # Unrolled balena_api_is_dt_private function - https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
       # Had to be unrolled due to this: https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191 function relying on a jenkins env var to select the balena env - so failed
@@ -1133,6 +1134,7 @@ jobs:
           repository: balena-io/private-contracts
           token: ${{ steps.app-token-balena-io.outputs.token }}
           path: ${{ env.LEVIATHAN_ROOT }}/core/private-contracts
+          persist-credentials: false
 
       # Image was uploaded uncompressed and Leviathan test config.js expects the image in a certain place and with a certain name
       # The balena.img file is downloaded to ${WORKSPACE}/image/balena.img
