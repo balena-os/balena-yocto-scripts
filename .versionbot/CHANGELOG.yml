@@ -1,4 +1,20 @@
 - commits:
+    - subject: use genericx86-64-ext image for testing the workflow
+      hash: 20435d215d18aba21502871cd8249437c39914a1
+      body: >
+        Using genericx86-64-ext as its smaller, faster to build and the repo is
+        blocked less often
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+  version: 1.25.46
+  title: ""
+  date: 2024-09-27T15:13:10.481Z
+- commits:
     - subject: fix check of finalize value
       hash: 8d17204120d75bfc6aba1f793163e7deb2008a1f
       body: ""
