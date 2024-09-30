@@ -1,4 +1,16 @@
 - commits:
+    - subject: "patch: Stop persisting credentials in actions/checkout"
+      hash: 0fa90791298e14fa15dbba2b82e0579ed85c41a4
+      body: ""
+      footer:
+        Signed-off-by: Vipul Gupta (@vipulgupta2048) <vipulgupta2048@gmail.com>
+        signed-off-by: Vipul Gupta (@vipulgupta2048) <vipulgupta2048@gmail.com>
+      author: Vipul Gupta (@vipulgupta2048)
+      nested: []
+  version: 1.25.47
+  title: ""
+  date: 2024-09-30T10:53:24.792Z
+- commits:
     - subject: use genericx86-64-ext image for testing the workflow
       hash: 20435d215d18aba21502871cd8249437c39914a1
       body: >
