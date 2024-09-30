@@ -388,6 +388,9 @@ jobs:
           repository: balena-io/private-contracts
           token: ${{ steps.app-token-balena-io.outputs.token }}
           path: ${{ github.workspace }}/private-contracts
+          # Do not persist the token credentials,
+          # and prefer that each step provide credentials where required
+          persist-credentials: false
 
       # Unrolled balena_api_is_dt_private function - https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
       # Had to be unrolled due to this: https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191 function relying on a jenkins env var to select the balena env - so failed
@@ -1133,6 +1136,9 @@ jobs:
           repository: balena-io/private-contracts
           token: ${{ steps.app-token-balena-io.outputs.token }}
           path: ${{ env.LEVIATHAN_ROOT }}/core/private-contracts
+          # Do not persist the token credentials,
+          # and prefer that each step provide credentials where required
+          persist-credentials: false
 
       # Image was uploaded uncompressed and Leviathan test config.js expects the image in a certain place and with a certain name
       # The balena.img file is downloaded to ${WORKSPACE}/image/balena.img
