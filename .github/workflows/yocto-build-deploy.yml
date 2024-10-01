@@ -232,6 +232,8 @@ jobs:
 
       # Generate an app installation token that has access to
       # all repos where the app is installed (usually the whole org)
+      # Owner input to make token valid for all repositories in the org
+      # This behvaiour is required for private submodules
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token
         uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
@@ -240,6 +242,7 @@ jobs:
         with:
           app-id: ${{ vars.FLOWZONE_APP_ID }}
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
 
       # Generate another app token for the balena-io organization
       # so we can checkout private contracts
@@ -1077,6 +1080,8 @@ jobs:
 
     steps:
       # https://github.com/actions/create-github-app-token
+      # Owner input to make token valid for all repositories in the org
+      # This behvaiour is required for private submodules
       - name: Create GitHub App installation token
         uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
         id: app-token
@@ -1084,6 +1089,7 @@ jobs:
         with:
           app-id: ${{ vars.FLOWZONE_APP_ID }}
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
 
       # Generate another app token for the balena-io organization
       # so we can checkout private contracts
