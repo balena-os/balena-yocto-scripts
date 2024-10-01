@@ -32,6 +32,10 @@ on:
       GH_APP_PRIVATE_KEY:
         description: "GPG Private Key for GitHub App to generate ephemeral tokens (used with vars.FLOWZONE_APP_ID)"
         required: false
+      PBDKF2_PASSPHRASE:
+        description: "Passphrase used to encrypt/decrypt balenaOS assets at rest in GitHub."
+        required: false
+
     inputs:
       build-runs-on:
         description: The runner labels to use for the build job(s)
@@ -70,7 +74,7 @@ on:
         required: false
         type: string
         default: balena-cloud.com
-      # This input exists because we want the option to not auto-finalise for some device types, even if they have tests and those tests pass - for example some custom device types, the customer doesn't want new releases published until they green light it 
+      # This input exists because we want the option to not auto-finalise for some device types, even if they have tests and those tests pass - for example some custom device types, the customer doesn't want new releases published until they green light it
       finalize-on-push-if-tests-passed:
         description: Whether to finalize a hostApp container image to a balena environment, if tests pass.
         required: false
@@ -81,7 +85,7 @@ on:
         description: Force deploy a finalized release
         required: false
         type: boolean
-        default: false 
+        default: false
       deploy-ami:
         description: Whether to deploy an AMI to AWS
         required: false
@@ -274,14 +278,14 @@ jobs:
         run: |
           merge_commit=$(git rev-parse :/"^Merge pull request")
           echo "Found merge commit ${merge_commit}"
-          echo "merge_commit=${merge_commit}" >> "$GITHUB_OUTPUT"
+          echo "merge_commit=${merge_commit}" >>"${GITHUB_OUTPUT}"
 
       # This will control the deployment of the hostapp only - it will determine if it is marked as final or not
       # The hostapp being finalised is what determines if the API will present this OS version to user
       # If the test_matrix is empty - it means there are no tests for the DT - so don't check tests, and don't finalise, unless manually done with "force-finalize" input
       - name: Check test results
         # https://docs.github.com/en/actions/learn-github-actions/expressions#functions
-        # this expression checks that the test_matrix input is truthy - there is no test_matrix input provided in the device-repo workflow file, test results won't be checked, and 
+        # this expression checks that the test_matrix input is truthy - there is no test_matrix input provided in the device-repo workflow file, test results won't be checked, and
         # the release can't be finlized
         if: github.event_name == 'push' && inputs.test_matrix && inputs.finalize-on-push-if-tests-passed
         id: merge-test-result
@@ -297,10 +301,10 @@ jobs:
           GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
           # Gets the PR number of the merge commit
-          prid=$(gh api -H "Accept: application/vnd.github+json" /repos/$REPO/commits/$COMMIT --jq '.commit.message' | head -n1 | cut -d "#" -f2 | awk '{ print $1}')
+          prid=$(gh api -H "Accept: application/vnd.github+json" "/repos/${REPO}/commits/$COMMIT" --jq '.commit.message' | head -n1 | cut -d "#" -f2 | awk '{ print $1}')
 
           # Gets the head commit of the PR - needed to fetch workflows ran on that commit
-          head=$(gh api -H "Accept: application/vnd.github+json" /repos/$REPO/pulls/$prid --jq '.head.sha')
+          head=$(gh api -H "Accept: application/vnd.github+json" "/repos/${REPO}/pulls/${prid}" --jq '.head.sha')
 
           # Fetching workflow runs and filtering by the commit of the head of the PR returns the latest attempts of the workflow for that commit
           # Selecting for workflows with the same name as the workflow name ("github.workflow")
@@ -311,7 +315,7 @@ jobs:
           if [[ "${conclusion}" = "success" ]]; then
             passed="true"
           fi
-          echo "finalize=${passed}" >> "$GITHUB_OUTPUT"
+          echo "finalize=${passed}" >>"${GITHUB_OUTPUT}"
 
       # Check if the repository is a yocto device respository
       - name: Device repository check
@@ -344,7 +348,7 @@ jobs:
       # A lot of outputs inferred from here are used everywhere else in the workflow
       - name: Set build outputs
         id: balena-lib
-        env: 
+        env:
           CURL: "curl --silent --retry 10 --location --compressed"
           TRANSLATION: "v6"
           BALENAOS_TOKEN: ${{ secrets.BALENA_API_DEPLOY_KEY }}
@@ -355,31 +359,31 @@ jobs:
           ./balena-yocto-scripts/build/build-device-type-json.sh
 
           device_slug="$(balena_lib_get_slug "${MACHINE}")"
-          echo "device_slug=${device_slug}" >> $GITHUB_OUTPUT
+          echo "device_slug=${device_slug}" >>"${GITHUB_OUTPUT}"
 
           # As we use this to determine the os version from the device repository - when checking out the repo we need enough fetch depth to get tags
           os_version=$(git describe --abbrev=0)
-          echo "os_version=${os_version#v*}" >> $GITHUB_OUTPUT
+          echo "os_version=${os_version#v*}" >>"${GITHUB_OUTPUT}"
 
           meta_balena_version="$(balena_lib_get_meta_balena_base_version)"
-          echo "meta_balena_version=${meta_balena_version}" >> $GITHUB_OUTPUT
+          echo "meta_balena_version=${meta_balena_version}" >>"${GITHUB_OUTPUT}"
 
           yocto_scripts_ref="$(git submodule status balena-yocto-scripts | awk '{print $1}')"
-          echo "yocto_scripts_ref=${yocto_scripts_ref}" >> $GITHUB_OUTPUT
+          echo "yocto_scripts_ref=${yocto_scripts_ref}" >>"${GITHUB_OUTPUT}"
 
           yocto_scripts_version="$(cd balena-yocto-scripts && head -n1 VERSION)"
-          echo "yocto_scripts_version=${yocto_scripts_version}" >> $GITHUB_OUTPUT
+          echo "yocto_scripts_version=${yocto_scripts_version}" >>"${GITHUB_OUTPUT}"
 
           deploy_artifact="$(balena_lib_get_deploy_artifact "${MACHINE}")"
-          echo "deploy_artifact=${deploy_artifact}" >> $GITHUB_OUTPUT
+          echo "deploy_artifact=${deploy_artifact}" >>"${GITHUB_OUTPUT}"
 
           dt_arch="$(balena_lib_get_dt_arch "${MACHINE}")"
-          echo "dt_arch=${dt_arch}" >> $GITHUB_OUTPUT
+          echo "dt_arch=${dt_arch}" >>"${GITHUB_OUTPUT}"
 
           # Unrolled balena_api_is_dt_private function - https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
           # Had to be unrolled due to this: https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191 function relying on a jenkins env var to select the balena env - so failed
           is_private=$(${CURL} -XGET -H "Content-type: application/json" -H "Authorization: bearer ${BALENAOS_TOKEN}" --silent --retry 5 "https://api.${API_ENV}/${TRANSLATION}/device_type?\$filter=slug%20eq%20%27${device_slug}%27&\$select=slug,is_private" | jq -r '.d[0].is_private')
-          echo "is_private=${is_private}" >> $GITHUB_OUTPUT
+          echo "is_private=${is_private}" >>"${GITHUB_OUTPUT}"
 
       - name: Checkout private Contracts
         uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
@@ -433,7 +437,7 @@ jobs:
       #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_PRESSURE_MAX_CPU=${BB_PRESSURE_MAX_CPU}"
       #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_PRESSURE_MAX_IO=${BB_PRESSURE_MAX_IO}"
       #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_PRESSURE_MAX_MEMORY=${BB_PRESSURE_MAX_MEMORY}"
-      #     echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR}" >> $GITHUB_ENV
+      #     echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR}" >>"${GITHUB_ENV}"
 
       - name: Enable signed images
         if: inputs.sign-image == true
@@ -448,7 +452,7 @@ jobs:
           BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_GRUB_KEY_ID=${SIGN_GRUB_KEY_ID}"
           BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_KMOD_KEY_APPEND=${SIGN_KMOD_KEY_APPEND}"
           BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} --bitbake-args --no-setscene"
-          echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR}" >> $GITHUB_ENV
+          echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR}" >>"${GITHUB_ENV}"
 
       # the directory is required even if we don't mount the NFS share
       - name: Create shared cache mount point
@@ -502,7 +506,7 @@ jobs:
           DEVICE_TYPE_SLUG: ${{ steps.balena-lib.outputs.device_slug }}
           VERSION: ${{ steps.balena-lib.outputs.os_version }}
         run: |
-          echo "DEPLOY_PATH=${{ runner.temp }}/deploy/${DEVICE_TYPE_SLUG}/${VERSION}" >> $GITHUB_ENV
+          echo "DEPLOY_PATH=${{ runner.temp }}/deploy/${DEVICE_TYPE_SLUG}/${VERSION}" >>"${GITHUB_ENV}"
 
       # TODO: prepare artifacts manually to replace balena_deploy_artifacts
       - name: Prepare artifacts
@@ -514,7 +518,16 @@ jobs:
           # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-deploy.inc#L23
           balena_deploy_artifacts "${{ inputs.machine }}" "${DEPLOY_PATH}" false
 
-          find "${DEPLOY_PATH}" -exec ls -lh {} \;
+      - name: Encrypt artifacts
+        id: encrypt
+        if: |
+          github.event.repository.private != true &&
+          (inputs.sign-image == true || steps.balena-lib.outputs.is_private == 'true')
+        run: |
+          for artifact in ${{ env.DEPLOY_PATH }}/image/balena.img ${{ env.DEPLOY_PATH }}/balena-image.docker; do
+            openssl enc -v -e -aes-256-cbc -k '${{ secrets.PBDKF2_PASSPHRASE }}' -pbkdf2 -iter 310000 -md sha256 -salt -in "${artifact}" -out "${artifact}.enc"
+          done
+          echo "ENCRYPTED_EXTENSION=.enc" >>"${GITHUB_ENV}"
 
       # https://github.com/actions/upload-artifact
       # We upload only `balena.img` for use with the leviathan tests - this is the artifact that is presented to users
@@ -529,17 +542,17 @@ jobs:
           if-no-files-found: error
           retention-days: 3
           compression-level: 7
+          # ENCRYPTED_EXTENSION may be empty if the artifact is not encrypted
           path: |
-            ${{ env.DEPLOY_PATH }}/image/balena.img
-            ${{ env.DEPLOY_PATH }}/balena-image.docker
-
+            ${{ env.DEPLOY_PATH }}/image/balena.img${{ env.ENCRYPTED_EXTENSION }}
+            ${{ env.DEPLOY_PATH }}/balena-image.docker${{ env.ENCRYPTED_EXTENSION }}
 
       # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
       - name: Evaluate whether to finalize release
         if: steps.merge-test-result.outputs.finalize == 'true' || inputs.force-finalize
         id: should-finalize
         run: |
-          echo "finalize=true" >> $GITHUB_OUTPUT
+          echo "finalize=true" >>"${GITHUB_OUTPUT}"
 
       # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
       # We want to push a hostapp on push events (PR merge) , or dispatch??
@@ -549,7 +562,7 @@ jobs:
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || inputs.force-finalize
         id: should-deploy
         run: |
-          echo "deploy=true" >> $GITHUB_OUTPUT
+          echo "deploy=true" >>"${GITHUB_OUTPUT}"
 
       # TODO: check that github.ref_name actually gives the name of the branch in workflow dispatch: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/contexts#github-context
       # This will work up until we have a rolling v20.x.x release of balenaOS
@@ -559,8 +572,7 @@ jobs:
           (github.event_name == 'workflow_dispatch' && startsWith(github.ref_name, '20'))
         id: esr-check
         run: |
-          echo "is-esr=true" >> $GITHUB_OUTPUT
-
+          echo "is-esr=true" >>"${GITHUB_OUTPUT}"
 
       ##############################
       # S3 Deploy
@@ -577,7 +589,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y s4cmd
           s4cmd --version
-
 
       # login required to pull private balena/balena-img image
       # https://github.com/docker/login-action
@@ -599,29 +610,29 @@ jobs:
           docker run --rm \
             -e BASE_DIR=/host/images \
             -v "${PREPARE_DEPLOY_PATH}:/host/images" \
-            ${HELPER_IMAGE} /usr/src/app/node_modules/.bin/ts-node /usr/src/app/scripts/prepare.ts
+            "${HELPER_IMAGE}" /usr/src/app/node_modules/.bin/ts-node /usr/src/app/scripts/prepare.ts
 
           find "${PREPARE_DEPLOY_PATH}" -exec ls -lh {} \;
 
       - name: Set S3 ACL (private)
         id: s3-acl-private
         if: steps.should-deploy.outputs.deploy && steps.balena-lib.outputs.is_private != 'false'
-        run: echo "string=private" >> $GITHUB_OUTPUT
+        run: echo "string=private" >>"${GITHUB_OUTPUT}"
 
       - name: Set S3 ACL (public-read)
         id: s3-acl-public
         if: steps.should-deploy.outputs.deploy && steps.balena-lib.outputs.is_private == 'false'
-        run: echo "string=public-read" >> $GITHUB_OUTPUT
+        run: echo "string=public-read" >>"${GITHUB_OUTPUT}"
 
       - name: Set S3 destination directory
         id: s3-images-dir
         if: steps.should-deploy.outputs.deploy && !steps.esr-check.outputs.is-esr
-        run: echo "string=images" >> $GITHUB_OUTPUT
+        run: echo "string=images" >>"${GITHUB_OUTPUT}"
 
       - name: Set S3 destination directory (ESR)
         id: s3-esr-images-dir
         if: steps.should-deploy.outputs.deploy && steps.esr-check.outputs.is-esr
-        run: echo "string=esr-images" >> $GITHUB_OUTPUT
+        run: echo "string=esr-images" >>"${GITHUB_OUTPUT}"
 
       # # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
@@ -646,7 +657,7 @@ jobs:
           VERSION: ${{ steps.balena-lib.outputs.os_version }}
           SOURCE_DIR: ${{ runner.temp }}/deploy
         run: |
-          if [ -n "$($S3_CMD ls ${S3_URL}/${SLUG}/${VERSION}/)" ] && [ -z "$($S3_CMD ls ${S3_URL}/${SLUG}/${VERSION}/IGNORE)" ]; then
+          if [ -n "$($S3_CMD ls "${S3_URL}/${SLUG}/${VERSION}/")" ] && [ -z "$($S3_CMD ls "${S3_URL}/${SLUG}/${VERSION}/IGNORE")" ]; then
             echo "::warning::Deployment already exists at ${S3_URL}/${VERSION}"
             exit 0
           fi
@@ -656,6 +667,7 @@ jobs:
 
           $S3_CMD del -rf "${S3_URL}/${SLUG}/${VERSION}"
           $S3_CMD put "${SOURCE_DIR}/${SLUG}/${VERSION}/IGNORE" "${S3_URL}/${SLUG}/${VERSION}/"
+          # shellcheck disable=SC2086
           $S3_CMD ${S3_SYNC_OPTS} dsync "${SOURCE_DIR}/${SLUG}/${VERSION}/" "${S3_URL}/${SLUG}/${VERSION}/"
           $S3_CMD put "${SOURCE_DIR}/${SLUG}/latest" "${S3_URL}/${SLUG}/" --API-ACL=public-read -f
           $S3_CMD del "${S3_URL}/${SLUG}/${VERSION}/IGNORE"
@@ -701,10 +713,10 @@ jobs:
           ## That script was executed from inside a helper image - here we're doing it inline
 
           # load hostapp bundle and get local image reference, needed for `balena deploy`
-          _local_image=$(docker load -i ${DEPLOY_PATH}/balena-image.docker | cut -d: -f1 --complement | tr -d " " )
+          _local_image=$(docker load -i "${DEPLOY_PATH}/balena-image.docker" | cut -d: -f1 --complement | tr -d " " )
 
-          echo "[INFO] Logging into $API_ENV as ${BALENAOS_ACCOUNT}"
-          export BALENARC_BALENA_URL=${API_ENV}
+          echo "[INFO] Logging into ${API_ENV} as ${BALENAOS_ACCOUNT}"
+          export BALENARC_BALENA_URL="${API_ENV}"
           balena login --token "${BALENAOS_TOKEN}"
 
           if [ "$ESR" = "true" ]; then
@@ -720,10 +732,10 @@ jobs:
           fi
 
           #DEBUG: print workspace and balena.yml
-          ls ${WORKSPACE}
-          cat ${WORKSPACE}/balena.yml
+          ls "${WORKSPACE}"
+          cat "${WORKSPACE}/balena.yml"
 
-          echo "[INFO] Deploying  to ${BALENAOS_ACCOUNT}/${APPNAME}"
+          echo "[INFO] Deploying to ${BALENAOS_ACCOUNT}/${APPNAME}"
 
           ## Adapted from https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L373
           # Get the App Id from the name
@@ -736,7 +748,7 @@ jobs:
 
             # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L128
             echo "Creating App"
-            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"app_name": "${BALENAOS_ACCOUNT}/${APPNAME}", "device_type": "${APPNAME}"}')
+            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"app_name\": \"${BALENAOS_ACCOUNT}/${APPNAME}\", \"device_type\": \"${APPNAME}\"}")
             _appID=$(echo "${_json}" | jq --raw-output '.id' || true)
             echo "${_appID}"
 
@@ -756,7 +768,7 @@ jobs:
 
             # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L914
             # Give the team developer access to the app
-            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/team_application_access" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"team": "${_team_id}", "grants_access_to__application": "${_appID}", "application_membership_role": "${_role_id}""}')
+            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/team_application_access" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"team\": \"${_team_id}\", \"grants_access_to__application\": \"${_appID}\", \"application_membership_role\": \"${_role_id}\"\"}")
             _id=$(echo "${_json}" | jq -r '.id')
             if [ "${_id}" = "null" ]; then
               >&2 echo "Failed to add ${HOSTAPP_ACCESS_ROLE} access tole to ${APPNAME}"
@@ -780,7 +792,7 @@ jobs:
             # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L86
             # Set esr policy
             if [ "${ESR}" = true ]; then
-              _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application_tag" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"application": "${_appID}", "tag_key": "release-policy", "value": "esr"}')
+              _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application_tag" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"application\": \"${_appID}\", \"tag_key\": \"release-policy\", \"value\": \"esr\"}")
             fi
           else
             >&2 echo "[${APPNAME}] Application ${_appID} already exists."
@@ -804,9 +816,9 @@ jobs:
 
 
           if [ -n "${_local_image}" ]; then
-            releaseCommit=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" "${_local_image}" --source "${WORKSPACE}" ${status} ${_debug} | sed -n 's/.*Release: //p')
+            releaseCommit=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" "${_local_image}" --source "${WORKSPACE}" "${status}" "${_debug}" | sed -n 's/.*Release: //p')
           else
-            releaseCommit=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" --build --source "${WORKSPACE}" ${status} ${_debug} | sed -n 's/.*Release: //p')
+            releaseCommit=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" --build --source "${WORKSPACE}" "${status}" "${_debug}" | sed -n 's/.*Release: //p')
           fi
           [ -n "${releaseCommit}" ] && >&2 echo "Deployed ${_local_image} to ${BALENAOS_ACCOUNT}/${APPNAME} as ${status##--} at ${releaseCommit}"
           echo "${releaseCommit}"
@@ -823,7 +835,7 @@ jobs:
 
           # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/entry_scripts/balena-deploy-block.sh#L43
           # find assets
-          _assets="$(find ${DEPLOY_PATH} -name licenses.tar.gz) ${DEPLOY_PATH}/CHANGELOG.md"
+          _assets="$(find "${DEPLOY_PATH}" -name licenses.tar.gz) ${DEPLOY_PATH}/CHANGELOG.md"
 
           # Get hostapp release ID - at the moment we only have the commit hash releaseCommit
           _json=$(${CURL} -XGET -H "Content-type: application/json" "https://api.${API_ENV}/${TRANSLATION}/release?\$filter=commit%20eq%20%27${releaseCommit}%27" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
@@ -831,13 +843,13 @@ jobs:
           echo "${_release_id}"
 
           # For use in esr tagging step
-          echo "release_id=${_release_id}" >> $GITHUB_OUTPUT
+          echo "release_id=${_release_id}" >>"${GITHUB_OUTPUT}"
 
           # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L1163
           # attach each asset to release with _release_id
           for _asset in ${_assets}; do
             if [ -f "${_asset}" ]; then
-              _asset_key=$(basename ${_asset})
+              _asset_key=$(basename "${_asset}")
               # note: this uses the "resin" endpoint rather than v6
               _json=$(${CURL} -XPOST "https://api.${API_ENV}/resin/release_asset" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --form "release=${_release_id}" --form "asset_key=${_asset_key}" --form "asset=@${_asset}")
               _aid=$(echo "${_json}" | jq -r '.id')
@@ -931,9 +943,9 @@ jobs:
       #   if: inputs.deploy-ami == true
       #   run: |
       #     if [ "${dt_arch}" = "amd64" ]; then
-      #       echo "string=x86_64" >> $GITHUB_OUTPUT
+      #       echo "string=x86_64" >>"${GITHUB_OUTPUT}"
       #     elif [ "${dt_arch}" = "aarch64" ]; then
-      #       echo "string=arm64" >> $GITHUB_OUTPUT
+      #       echo "string=arm64" >>"${GITHUB_OUTPUT}"
       #     fi
 
       # # AMI name format: balenaOS(-installer?)(-secureboot?)-VERSION-DEVICE_TYPE
@@ -942,9 +954,9 @@ jobs:
       #   if: inputs.deploy-ami == true
       #   run: |
       #     if [ "${{ inputs.sign-image }}" = "true" ]; then
-      #       echo "string=balenaOS-secureboot-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
+      #       echo "string=balenaOS-secureboot-${VERSION}-${MACHINE}" >>"${GITHUB_OUTPUT}"
       #     else
-      #       echo "string=balenaOS-${VERSION}-${MACHINE}" >> $GITHUB_OUTPUT
+      #       echo "string=balenaOS-${VERSION}-${MACHINE}" >>"${GITHUB_OUTPUT}"
       #     fi
 
       # - name: Pull helper image
@@ -963,7 +975,7 @@ jobs:
       #     fi
 
       #     image_id="$(docker images --format "{{.ID}}" "${image_tag}")"
-      #     echo "id=${image_id}" >> $GITHUB_OUTPUT
+      #     echo "id=${image_id}" >>"${GITHUB_OUTPUT}"
 
       # - name: Deploy AMI
       #   if: inputs.deploy-ami == true
@@ -1086,6 +1098,7 @@ jobs:
           owner: balena-io
 
       # Clone the device respository to fetch Leviathan
+      # https://github.com/actions/checkout
       - name: Clone device repository
         uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
         with:
@@ -1093,6 +1106,7 @@ jobs:
           token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
           ref: ${{ inputs.device-repo-ref }}
           submodules: recursive # We need to set this to recursive as leviathan is a submodule nested inside the meta-balena submodule of the device repo
+          fetch-depth: 0
           fetch-tags: true
           # Do not persist the app installation token credentials,
           # and prefer that each step provide credentials where required
@@ -1123,6 +1137,16 @@ jobs:
           name: build-artifacts
           path: ${{ env.WORKSPACE }}
 
+      - name: Decrypt artifacts
+        if: |
+          github.event.repository.private != true &&
+          (inputs.sign-image == true || needs.build.outputs.is_private == 'true')
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          for artifact in *.enc **/*.enc; do
+            openssl enc -v -d -aes-256-cbc -k '${{ secrets.PBDKF2_PASSPHRASE }}' -pbkdf2 -iter 310000 -md sha256 -salt -in "${artifact}" -out "${artifact/.enc/}"
+          done
+
       - name: Install gzip
         run: |
           sudo apt update
@@ -1145,10 +1169,10 @@ jobs:
       # Moving it to where the meta-balena config.js expects
       - name: Prepare workspace
         run: |
-          mv ${WORKSPACE}/image/balena.img ${WORKSPACE}
-          gzip ${WORKSPACE}/balena.img
+          mv "${WORKSPACE}/image/balena.img" "${WORKSPACE}"
+          gzip "${WORKSPACE}/balena.img"
 
-          cp -v ${SUITES}/${TEST_SUITE}/config.js ${WORKSPACE}/config.js
+          cp -v "${SUITES}/${TEST_SUITE}/config.js" "${WORKSPACE}/config.js"
 
           mkdir -p "${REPORTS}"
 
