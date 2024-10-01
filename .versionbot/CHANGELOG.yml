@@ -1,4 +1,40 @@
 - commits:
+    - subject: Only attempt to decrypt if we have encrypted in the build step
+      hash: c3d677008304b4b4744f6cf88e50b2ff65814079
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke<ryan@balena.io>
+        signed-off-by: Ryan Cooke<ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+    - subject: Fetch full depth in order to checkout custom meta-balena-refs
+      hash: e1f1a2fdafe58bd3f87b68fdec3c0bd195671eea
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Encrypt balenaOS artifacts at rest in GitHub
+      hash: 116d81b89cde4f6d99c10c3b32d66e64322258a7
+      body: |
+        Applies symmetric encryption (PBKDF2 hardened) to balenaOS
+        build assets prior to uploading them to GitHub for temporary
+        storage between builds. Decrypts assets after downloading.
+
+        Requires: https://github.com/balena-os/.github/pull/83
+      footer:
+        change-type: patch
+      author: Anton Belodedenko
+      nested: []
+  version: 1.25.49
+  title: ""
+  date: 2024-10-01T17:06:45.014Z
+- commits:
     - subject: Update actions/checkout action to v4.2.0
       hash: 6246fcdbc4e3ba00105aeb6347d60ab01b3deb24
       body: |
