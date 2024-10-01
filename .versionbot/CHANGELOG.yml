@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/checkout action to v4.2.0
+      hash: 6246fcdbc4e3ba00105aeb6347d60ab01b3deb24
+      body: |
+        Update actions/checkout from 4.1.7 to 4.2.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.48
+  title: ""
+  date: 2024-10-01T00:14:17.618Z
+- commits:
     - subject: "patch: Stop persisting credentials in actions/checkout"
       hash: 0fa90791298e14fa15dbba2b82e0579ed85c41a4
       body: ""
