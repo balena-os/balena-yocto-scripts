@@ -1,4 +1,21 @@
 - commits:
+    - subject: use github app installation token for device repository cloning
+      hash: 8eff76f9e8c5b03bf767edde7430bc414af0e028
+      body: >
+        This is required for cloning private submodules - as the default
+        behaviour means the token is scoped only to the repository the workflow
+        is running on
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+  version: 1.25.50
+  title: ""
+  date: 2024-10-02T11:17:01.374Z
+- commits:
     - subject: Only attempt to decrypt if we have encrypted in the build step
       hash: c3d677008304b4b4744f6cf88e50b2ff65814079
       body: ""
