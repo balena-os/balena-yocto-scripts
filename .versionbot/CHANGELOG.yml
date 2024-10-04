@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.50
+      hash: 4c529c17571db19918d36a90903a44128c70bb3d
+      body: |
+        Update balena-os/leviathan from 2.31.44 to 2.31.50
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.51
+  title: ""
+  date: 2024-10-04T11:58:05.434Z
+- commits:
     - subject: use github app installation token for device repository cloning
       hash: 8eff76f9e8c5b03bf767edde7430bc414af0e028
       body: >
