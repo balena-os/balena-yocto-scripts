@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/checkout action to v4.2.1
+      hash: 89821425b164c0dcd1a3a03b5a778774911dc7f9
+      body: |
+        Update actions/checkout from 4.2.0 to 4.2.1
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.54
+  title: ""
+  date: 2024-10-07T19:40:37.283Z
+- commits:
     - subject: fix balena deploy quotes
       hash: aa40859d69147e04b99691028101ce650ccfb568
       body: >
