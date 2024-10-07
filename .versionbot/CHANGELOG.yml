@@ -1,4 +1,21 @@
 - commits:
+    - subject: fix balena deploy quotes
+      hash: aa40859d69147e04b99691028101ce650ccfb568
+      body: >
+        A previous commit added quotes to some of the `balena deploy` command
+        args - when $status or $_debug aren't defined, this means empty quote
+        gets passed as an arg, making the CLI fail.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+  version: 1.25.53
+  title: ""
+  date: 2024-10-07T15:31:38.815Z
+- commits:
     - subject: Update Lock file maintenance
       hash: 4f013e40de21d13746a4224fba0bf0fa63469a12
       body: |
