@@ -819,9 +819,9 @@ jobs:
 
 
           if [ -n "${_local_image}" ]; then
-            releaseCommit=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" "${_local_image}" --source "${WORKSPACE}" "${status}" "${_debug}" | sed -n 's/.*Release: //p')
+            releaseCommit="$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" "${_local_image}" --source "${WORKSPACE}" ${status} ${_debug} | sed -n 's/.*Release: //p')"
           else
-            releaseCommit=$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" --build --source "${WORKSPACE}" "${status}" "${_debug}" | sed -n 's/.*Release: //p')
+            releaseCommit="$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" --build --source "${WORKSPACE}" ${status} ${_debug} | sed -n 's/.*Release: //p')"
           fi
           [ -n "${releaseCommit}" ] && >&2 echo "Deployed ${_local_image} to ${BALENAOS_ACCOUNT}/${APPNAME} as ${status##--} at ${releaseCommit}"
           echo "${releaseCommit}"
