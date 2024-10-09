@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/upload-artifact action to v4.4.3
+      hash: 2cbcd4df35a61e824eeb48407b530d05ddd0f382
+      body: |
+        Update actions/upload-artifact from 4.4.2 to 4.4.3
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.60
+  title: ""
+  date: 2024-10-09T21:12:59.016Z
+- commits:
     - subject: Update actions/upload-artifact action to v4.4.2
       hash: 247e98873b5e53b5cca43c26ec7953faa2ad9d77
       body: |
