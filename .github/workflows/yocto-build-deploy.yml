@@ -134,10 +134,32 @@ on:
         type: string
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
+# https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/control-the-concurrency-of-workflows-and-jobs
+# The following concurrency group cancels in-progress jobs or runs on pull_request events only;
+# if github.head_ref is undefined, the concurrency group will fallback to the run ID,
+# which is guaranteed to be both unique and defined for the run.
+
+# From: https://github.com/orgs/community/discussions/69704#discussioncomment-7803351
+
+# The available contexts for cancel-in-progress expressions are:
+# - github: This context provides access to various GitHub-specific variables,
+#   such as github.event_name, github.ref, and github.workflow.
+# - inputs: This context allows you to access input parameters defined in the workflow.
+#   This is particularly useful for conditional cancellation based on user-specified settings.
+# - vars: This context provides access to workflow-defined variables,
+#   which can be used to store intermediate values or constants.
+# When evaluating expressions for cancel-in-progress, certain parameters may not be available at the time of evaluation.
+# For instance, the github.job context is not accessible, as it's specific to the running job and not the concurrency group.
+
+# Note that we do not use github.ref here, as PRs from forks will have a
+# ref of 'refs/heads/master' and collide with each other. Instead, we use github.head_ref
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}-${{ inputs.machine }}-${{ inputs.deploy-environment}}
-  # cancel jobs in progress for updated PRs, but not merge or tag events
-  cancel-in-progress: ${{ github.event.action == 'synchronize' }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}-${{ inputs.machine }}-${{ inputs.deploy-environment }}
+  # Cancel jobs in-progress for open PRs, but not merged or closed PRs, by checking for the merge ref.
+  # Note that for pull_request_target events (PRs from forks), the github.ref value is
+  # usually 'refs/heads/master' so we can't rely on that to determine if it is a merge event or not.
+  # As a result pull_request_target events will never cancel in-progress jobs and will be queued instead.
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 env:
   WORKSPACE: ${{ github.workspace }}
