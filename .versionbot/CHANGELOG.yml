@@ -1,4 +1,23 @@
 - commits:
+    - subject: Fix concurrency and cancel in progress contexts
+      hash: 912b07647f7d0114d53b5971e653a65ed6fedd67
+      body: |
+        When evaluating expressions for cancel-in-progress, certain
+        parameters may not be available at the time of evaluation.
+
+        For instance, the github.job context is not accessible, as it's
+        specific to the running job and not the concurrency group.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.25.62
+  title: ""
+  date: 2024-10-11T13:09:20.324Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.59
       hash: cd7c9cc85c215a7bc823b0dd6e631b87629ce7b0
       body: |
