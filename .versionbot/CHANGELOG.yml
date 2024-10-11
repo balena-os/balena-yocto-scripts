@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.60
+      hash: 9911262656b19e657578bb97c2e39a7c0580ac97
+      body: |
+        Update balena-os/leviathan from 2.31.59 to 2.31.60
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.25.63
+  title: ""
+  date: 2024-10-11T15:36:10.972Z
+- commits:
     - subject: Fix concurrency and cancel in progress contexts
       hash: 912b07647f7d0114d53b5971e653a65ed6fedd67
       body: |
