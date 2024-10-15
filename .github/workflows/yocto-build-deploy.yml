@@ -103,6 +103,7 @@ on:
       # - worker_fleets: The testbot fleets for finding available Leviathan workers. Not used for QEMU workers. Can accept a list of apps separated by commas, no spaces in between
       # - test_org: The organization to use for testing cloud functionality. This default org is `testbot`
       # - runs_on: A JSON array of runner labels to use for the test job(s). For qemu workers use the labels `["self-hosted", "X64", "kvm"]`.
+      # - secure_boot: (truthy) Enable secure boot testing flags QEMU_SECUREBOOT=1 and FLASHER_SECUREBOOT=1. Default is false.
       # To use specific settings for each test job, create an include array like this...
       # {"include": [
       #   {
@@ -1204,27 +1205,22 @@ jobs:
 
           mkdir -p "${REPORTS}"
 
+      # Two variables are needed for secure boot tests. Check Makefile in Leviathan to trace their usage.
+      - name: Enable secure boot tests
+        # Evaluate as truthy
+        if: matrix.secure_boot
+        run: |
+          echo "QEMU_SECUREBOOT=1" >> "${GITHUB_ENV}"
+          echo "FLASHER_SECUREBOOT=1" >> "${GITHUB_ENV}"
+          echo "QEMU_MEMORY=4G" >> "${GITHUB_ENV}"
+
       # https://github.com/balena-os/leviathan/blob/master/action.yml
       - name: BalenaOS Leviathan Tests
         uses: balena-os/leviathan@8234f44f6581cccd1c6635b55426551ff509a661 # v2.31.60
-        if: inputs.sign-image == false # Ensure we don't run this for non-signed images
         env:
           # BALENA_API_TEST_KEY is a secret that should be specific to the runtime environment
           # It requires permissions to manage autokit workers, and create test fleets
           BALENACLOUD_API_KEY: ${{ secrets.BALENA_API_TEST_KEY }}
-
-      # Only to run when images are signed, have to run secureboot tests
-      # Make sure it has all the same env variables as the job above
-      - name: "[Secureboot] BalenaOS Leviathan Tests"
-        if: inputs.sign-image == true
-        uses: balena-os/leviathan@8234f44f6581cccd1c6635b55426551ff509a661 # v2.31.60
-        env:
-          # BALENA_API_TEST_KEY is a secret that should be specific to the runtime environment
-          # It requires permissions to manage autokit workers, and create test fleets
-          BALENACLOUD_API_KEY: ${{ secrets.BALENA_API_TEST_KEY }}
-          # Two variables are needed for secure boot tests. Check Makefile in Leviathan to trace their usage.
-          QEMU_SECUREBOOT: 1
-          FLASHER_SECUREBOOT: 1
 
   # This job always runs and will fail if any of the builds or tests fail.
   # This way we can mark this job as required for merging PRs.
