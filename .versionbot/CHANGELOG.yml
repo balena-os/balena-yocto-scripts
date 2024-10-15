@@ -1,4 +1,25 @@
 - commits:
+    - subject: Expose secure boot testing features via matrix input
+      hash: 922d1dd1e09c74e393962069bdac0ce69c17e9cb
+      body: |
+        Some device types (generic-armd64) need to run the test
+        suites twice for the same base image, once with secure boot
+        vars enabled in Leviathan, and once without.
+
+        Rather than run the suites in series, or require building the
+        image twice, we can allow the test matrix to define separate runs
+        for the two modes.
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.26.0
+  title: ""
+  date: 2024-10-15T14:38:39.423Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.60
       hash: 9911262656b19e657578bb97c2e39a7c0580ac97
       body: |
