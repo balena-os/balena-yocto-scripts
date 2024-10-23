@@ -264,7 +264,7 @@ jobs:
 
       # https://github.com/actions/checkout
       - name: Clone device repository
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: ${{ inputs.device-repo }}
           token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
@@ -395,7 +395,7 @@ jobs:
           echo "is_private=${is_private}" >>"${GITHUB_OUTPUT}"
 
       - name: Checkout private Contracts
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         if: steps.balena-lib.outputs.is_private == 'true'
         with:
           repository: balena-io/private-contracts
@@ -1113,7 +1113,7 @@ jobs:
       # Clone the device respository to fetch Leviathan
       # https://github.com/actions/checkout
       - name: Clone device repository
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: ${{ inputs.device-repo }}
           token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
@@ -1167,7 +1167,7 @@ jobs:
 
       # Check out private contracts if this is a private device type - as these are required for the tests
       - name: Checkout private Contracts
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         if: needs.build.outputs.is_private == 'true'
         with:
           repository: balena-io/private-contracts
