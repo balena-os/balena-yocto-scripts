@@ -1,4 +1,20 @@
 - commits:
+    - subject: remove CLI check if not deploying
+      hash: 074575784eb9ab6ae67c8b07cb3ce6c4366d85be
+      body: >
+        nitpicky fix, we don't use the CLI when not deploying - so no need to
+        check its version
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: rcooke-warwick
+      nested: []
+  version: 1.27.1
+  title: ""
+  date: 2024-10-23T14:14:50.171Z
+- commits:
     - subject: add review-commit-action to wait for approvals on PRT events
       hash: 8b1271ac548f0d2a8365181561d791a72145ccb8
       body: |
