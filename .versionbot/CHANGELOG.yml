@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update Lock file maintenance
+      hash: 411a89ea7bc3bbd83d112a93f627a7debe5fdc0f
+      body: |
+        Update 
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.27.2
+  title: ""
+  date: 2024-10-23T16:53:51.185Z
+- commits:
     - subject: remove CLI check if not deploying
       hash: 074575784eb9ab6ae67c8b07cb3ce6c4366d85be
       body: >
