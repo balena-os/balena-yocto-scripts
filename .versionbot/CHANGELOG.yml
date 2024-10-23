@@ -1,4 +1,24 @@
 - commits:
+    - subject: add review-commit-action to wait for approvals on PRT events
+      hash: 8b1271ac548f0d2a8365181561d791a72145ccb8
+      body: |
+        The existing method of using labels allows for
+        Actions Time Of Check to Time Of Use (TOCTOU) attacks
+        because we do not associate the label with any commit.
+
+        This action requires approvals via reactions on a unique
+        comment generated for each workflow run.
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+  version: 1.27.0
+  title: ""
+  date: 2024-10-23T09:46:23.415Z
+- commits:
     - subject: Expose secure boot testing features via matrix input
       hash: 922d1dd1e09c74e393962069bdac0ce69c17e9cb
       body: |
