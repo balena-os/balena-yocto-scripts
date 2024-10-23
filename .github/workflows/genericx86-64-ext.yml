@@ -16,10 +16,10 @@ on:
     branches:
       - "main"
       - "master"
-  pull_request_target:
-    branches:
-      - "main"
-      - "master"
+  # pull_request_target:
+  #   branches:
+  #     - "main"
+  #     - "master"
   # Enable this push trigger on device repos
   # push:
   #   tags:
