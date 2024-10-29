@@ -1,4 +1,16 @@
 - commits:
+    - subject: Add pull request write permissions for workflow approvals
+      hash: 5e07998255f053630c5cce03057a64ac6ee27802
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Kyle Harding
+      nested: []
+  version: 1.27.3
+  title: ""
+  date: 2024-10-29T15:54:58.766Z
+- commits:
     - subject: Update Lock file maintenance
       hash: 411a89ea7bc3bbd83d112a93f627a7debe5fdc0f
       body: |
