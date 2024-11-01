@@ -433,28 +433,17 @@ jobs:
           # Move newly generated OS contract to location expected later on in the workflow
           cp "${CONTRACTS_OUTPUT_DIR}/${DEVICE_TYPE_SLUG}/balena-os/balena.yml" "${WORKSPACE}/balena.yml"
 
-      # # https://docs.yoctoproject.org/dev/dev-manual/speeding-up-build.html#speeding-up-a-build
-      # # TODO: Delete  when using properly isolated self-hosted runner resources
-      # - name: Configure bitbake resource limits
-      #   env:
-      #     BB_NUMBER_THREADS: 4
-      #     BB_NUMBER_PARSE_THREADS: 4
-      #     PARALLEL_MAKE: -j4
-      #     PARALLEL_MAKEINST: -j4
-      #     BB_PRESSURE_MAX_CPU: 500
-      #     BB_PRESSURE_MAX_IO: 500
-      #     BB_PRESSURE_MAX_MEMORY: 500
-      #   run: |
-      #     nproc
-      #     free -h
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_NUMBER_THREADS=${BB_NUMBER_THREADS}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_NUMBER_PARSE_THREADS=${BB_NUMBER_PARSE_THREADS}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a PARALLEL_MAKE=${PARALLEL_MAKE}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a PARALLEL_MAKEINST=${PARALLEL_MAKEINST}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_PRESSURE_MAX_CPU=${BB_PRESSURE_MAX_CPU}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_PRESSURE_MAX_IO=${BB_PRESSURE_MAX_IO}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_PRESSURE_MAX_MEMORY=${BB_PRESSURE_MAX_MEMORY}"
-      #     echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR}" >>"${GITHUB_ENV}"
+      # Causes tarballs of the source control repositories (e.g. Git repositories), including metadata, to be placed in the DL_DIR directory.
+      # https://docs.yoctoproject.org/4.0.5/ref-manual/variables.html?highlight=compress#term-BB_GENERATE_MIRROR_TARBALLS
+      # The github-script action is a safer method of writing to outputs and variables, vs a shell step.
+      # https://github.com/actions/github-script
+      - name: Enable mirror tarballs
+        uses: actions/github-script@v7.0.1
+        with:
+          script: |
+            const currentValue = process.env.BARYS_ARGUMENTS_VAR || '';
+            const newValue = `${currentValue} -a BB_GENERATE_MIRROR_TARBALLS=1`;
+            core.exportVariable('BARYS_ARGUMENTS_VAR', newValue);
 
       - name: Enable signed images
         if: inputs.sign-image == true
