@@ -587,18 +587,6 @@ jobs:
       # S3 Deploy
       ##############################
 
-      # TODO: pre-install on self-hosted-runners
-      # Install from debian as using pip like recommended in the repo readme is NOT recommended for externally-managed-environments
-      # Note: s4cmd version in the debian repo and pip is the same (2.1.0)
-      # S4cmd is a command-line utility for accessing Amazon S3
-      # https://github.com/bloomreach/s4cmd
-      - name: Install s4cmd
-        if: steps.should-deploy.outputs.deploy
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y s4cmd
-          s4cmd --version
-
       # login required to pull private balena/balena-img image
       # https://github.com/docker/login-action
       - name: Login to Docker Hub
@@ -623,25 +611,20 @@ jobs:
 
           find "${PREPARE_DEPLOY_PATH}" -exec ls -lh {} \;
 
-      - name: Set S3 ACL (private)
+      - name: Set S3 ACL to private
         id: s3-acl-private
         if: steps.should-deploy.outputs.deploy && steps.balena-lib.outputs.is_private != 'false'
         run: echo "string=private" >>"${GITHUB_OUTPUT}"
 
-      - name: Set S3 ACL (public-read)
-        id: s3-acl-public
-        if: steps.should-deploy.outputs.deploy && steps.balena-lib.outputs.is_private == 'false'
-        run: echo "string=public-read" >>"${GITHUB_OUTPUT}"
-
-      - name: Set S3 destination directory
-        id: s3-images-dir
-        if: steps.should-deploy.outputs.deploy && !steps.esr-check.outputs.is-esr
-        run: echo "string=images" >>"${GITHUB_OUTPUT}"
-
-      - name: Set S3 destination directory (ESR)
+      - name: Set S3 ESR destination directory
         id: s3-esr-images-dir
         if: steps.should-deploy.outputs.deploy && steps.esr-check.outputs.is-esr
         run: echo "string=esr-images" >>"${GITHUB_OUTPUT}"
+
+      # https://github.com/unfor19/install-aws-cli-action
+      - name: Setup awscli
+        if: steps.should-deploy.outputs.deploy
+        uses: unfor19/install-aws-cli-action@e8b481e524a99f37fbd39fdc1dcb3341ab091367 # v1
 
       # # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
@@ -655,18 +638,21 @@ jobs:
           mask-aws-account-id: false
 
       # "If no keys are provided, but an IAM role is associated with the EC2 instance, it will be used transparently".
+      # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/rm.html
+      # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/cp.html
+      # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/sync.html
       - name: Deploy to S3
         if: steps.should-deploy.outputs.deploy && steps.balena-lib.outputs.deploy_artifact != 'docker-image'
         env:
-          S3_CMD: "s4cmd --API-ServerSideEncryption=AES256"
-          S3_SYNC_OPTS: "--recursive --API-ACL=${{ steps.s3-acl-private.outputs.string || steps.s3-acl-public.outputs.string }}"
-          S3_URL: "s3://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}/${{ steps.s3-images-dir.outputs.string || steps.s3-esr-images-dir.outputs.string }}"
+          S3_ACL: ${{ steps.s3-acl-private.outputs.string || 'public-read' }}
+          S3_SSE: AES256
+          S3_URL: "s3://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}/${{ steps.s3-esr-images-dir.outputs.string || 'images' }}"
           S3_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
           SLUG: ${{ steps.balena-lib.outputs.device_slug }}
           VERSION: ${{ steps.balena-lib.outputs.os_version }}
           SOURCE_DIR: ${{ runner.temp }}/deploy
         run: |
-          if [ -n "$($S3_CMD ls "${S3_URL}/${SLUG}/${VERSION}/")" ] && [ -z "$($S3_CMD ls "${S3_URL}/${SLUG}/${VERSION}/IGNORE")" ]; then
+          if [ -n "$(aws s3 ls "${S3_URL}/${SLUG}/${VERSION}/")" ] && [ -z "$($S3_CMD ls "${S3_URL}/${SLUG}/${VERSION}/IGNORE")" ]; then
             echo "::warning::Deployment already exists at ${S3_URL}/${VERSION}"
             exit 0
           fi
@@ -674,12 +660,11 @@ jobs:
           echo "${VERSION}" > "${SOURCE_DIR}/${SLUG}/latest"
           touch "${SOURCE_DIR}/${SLUG}/${VERSION}/IGNORE"
 
-          $S3_CMD del -rf "${S3_URL}/${SLUG}/${VERSION}"
-          $S3_CMD put "${SOURCE_DIR}/${SLUG}/${VERSION}/IGNORE" "${S3_URL}/${SLUG}/${VERSION}/"
-          # shellcheck disable=SC2086
-          $S3_CMD ${S3_SYNC_OPTS} dsync "${SOURCE_DIR}/${SLUG}/${VERSION}/" "${S3_URL}/${SLUG}/${VERSION}/"
-          $S3_CMD put "${SOURCE_DIR}/${SLUG}/latest" "${S3_URL}/${SLUG}/" --API-ACL=public-read -f
-          $S3_CMD del "${S3_URL}/${SLUG}/${VERSION}/IGNORE"
+          aws s3 rm --recursive "${S3_URL}/${SLUG}/${VERSION}"
+          aws s3 cp --no-progress --sse="${S3_SSE}" --acl="${S3_ACL}" "${SOURCE_DIR}/${SLUG}/${VERSION}/IGNORE" "${S3_URL}/${SLUG}/${VERSION}/"
+          aws s3 sync --no-progress --sse="${S3_SSE}" --acl="${S3_ACL}" "${SOURCE_DIR}/${SLUG}/${VERSION}/" "${S3_URL}/${SLUG}/${VERSION}/"
+          aws s3 cp --no-progress --sse="${S3_SSE}" --acl=public-read "${SOURCE_DIR}/${SLUG}/latest" "${S3_URL}/${SLUG}/"
+          aws s3 rm "${S3_URL}/${SLUG}/${VERSION}/IGNORE"
 
       ##############################
       # hostapp Deploy
