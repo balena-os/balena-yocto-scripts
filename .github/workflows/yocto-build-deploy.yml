@@ -193,11 +193,10 @@ jobs:
       automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
       BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || inputs.deploy-environment || 'balena-cloud.com' }}
       API_ENV: ${{ vars.BALENA_HOST || inputs.deploy-environment || 'balena-cloud.com' }}
-
-      # Yocto NFS sstate cache host
-      YOCTO_CACHE_HOST: ${{ vars.YOCTO_CACHE_HOST || 'nfs.product-os.io' }}
-      YOCTO_CACHE_DIR: ${{ github.workspace }}/shared/yocto-cache
       BARYS_ARGUMENTS_VAR: ""
+      # https://docs.yoctoproject.org/3.1.21/overview-manual/overview-manual-concepts.html#user-configuration
+      # Create an autobuilder configuration file that is loaded before local.conf
+      AUTO_CONF_FILE: "${{ github.workspace }}/build/conf/auto.conf"
 
     outputs:
       os_version: ${{ steps.balena-lib.outputs.os_version }}
@@ -460,17 +459,48 @@ jobs:
           BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} --bitbake-args --no-setscene"
           echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR}" >>"${GITHUB_ENV}"
 
-      # the directory is required even if we don't mount the NFS share
-      - name: Create shared cache mount point
-        run: |
-          sudo mkdir -p "${YOCTO_CACHE_DIR}/$(whoami)"
-          sudo chown -R "$(id -u):$(id -g)" "${YOCTO_CACHE_DIR}"
-
       - name: Mount shared NFS cache
-        if: env.YOCTO_CACHE_HOST != '' && contains(fromJSON(inputs.build-runs-on), 'self-hosted')
+        if: vars.YOCTO_CACHE_HOST && contains(fromJSON(inputs.build-runs-on), 'self-hosted')
+        continue-on-error: true
+        id: jenkins-nfs
+        env:
+          YOCTO_CACHE_HOST: ${{ vars.YOCTO_CACHE_HOST }}
+          MOUNTPOINT: ${{ github.workspace}}/nfs/yocto
         run: |
-          sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${YOCTO_CACHE_DIR}" -o fsc,nolock
-          ls -al "${YOCTO_CACHE_DIR}/$(whoami)"
+          sudo mkdir -p "${MOUNTPOINT}"
+          sudo chown -R "$(id -u):$(id -g)" "${MOUNTPOINT}"
+          sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${MOUNTPOINT}" -o fsc,nolock
+  
+      # https://wiki.yoctoproject.org/wiki/Enable_sstate_cache
+      # https://docs.yoctoproject.org/4.0.10/ref-manual/variables.html#term-MIRRORS
+      # https://docs.yoctoproject.org/4.0.10/ref-manual/variables.html#term-PREMIRRORS
+      # https://docs.yoctoproject.org/4.0.10/ref-manual/variables.html#term-SSTATE_MIRRORS
+      # https://docs.yoctoproject.org/4.0.10/overview-manual/concepts.html#source-mirror-s
+      # https://docs.yoctoproject.org/4.0.10/ref-manual/classes.html?highlight=source_mirror#own-mirrors-bbclass
+      # https://github.com/openembedded/openembedded/blob/master/classes/own-mirrors.bbclass
+      # https://github.com/openembedded/openembedded/blob/master/classes/mirrors.bbclass
+      - name: Add NFS shared-downloads to PREMIRRORS
+        if: steps.jenkins-nfs.outcome == 'success'
+        env:
+          # Relative to the build container working dir, not the workspace
+          SOURCE_MIRROR_URL: file:///work/nfs/yocto/runner/shared-downloads/
+          SSTATE_MIRROR_URL: file:///work/nfs/yocto/runner/${{ inputs.machine }}/sstate/PATH
+        run: |
+          mkdir -p "$(dirname "${AUTO_CONF_FILE}")"
+          cat <<EOF >> "${AUTO_CONF_FILE}"
+
+          PREMIRRORS:prepend = "\\
+            cvs://.*/.* ${SOURCE_MIRROR_URL} \\
+            svn://.*/.* ${SOURCE_MIRROR_URL} \\
+            git://.*/.* ${SOURCE_MIRROR_URL} \\
+            hg://.*/.* ${SOURCE_MIRROR_URL} \\
+            bzr://.*/.* ${SOURCE_MIRROR_URL} \\
+            https?$://.*/.* ${SOURCE_MIRROR_URL} \\
+            ftp://.*/.*  ${SOURCE_MIRROR_URL} \\
+          "
+
+          EOF
+          cat "${AUTO_CONF_FILE}"
 
       # All preperation complete before this step
       # Start building balenaOS
@@ -480,6 +510,7 @@ jobs:
         id: build
         env:
           HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
+          SHARED_BUILD_DIR: ${{ github.workspace }}/shared
         run: |
           # When building for non-x86 device types, meson, after building binaries must try to run them via qemu if possible , maybe as some sanity check or test?
           # Therefore qemu must be used - and our runner mmap_min_addr is set to 4096 (default, set here: https://github.com/product-os/github-runner-kernel/blob/ef5a66951599dc64bf2920d896c36c6d9eda8df6/config/5.10/microvm-kernel-x86_64-5.10.config#L858
@@ -489,10 +520,14 @@ jobs:
           sudo sysctl -w vm.mmap_min_addr=65536
           sysctl vm.mmap_min_addr
 
+          mkdir -p "${SHARED_BUILD_DIR}"
+
+          cat "${AUTO_CONF_FILE}"
+
           ./balena-yocto-scripts/build/balena-build.sh \
             -d "${MACHINE}" \
             -t "${{ secrets.BALENA_API_DEPLOY_KEY }}" \
-            -s "${YOCTO_CACHE_DIR}/$(whoami)" \
+            -s "${SHARED_BUILD_DIR}" \
             -g "${BARYS_ARGUMENTS_VAR}"
 
           if grep -R "ERROR: " build/tmp/log/*; then
