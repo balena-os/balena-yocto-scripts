@@ -484,9 +484,7 @@ jobs:
           path: ${{ env.DOWNLOADS_CACHE_DIR }}
           # Caches are scoped to the current branch, with fallback to the default branch
           # See: https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
-          key: yocto-downloads-${{ inputs.machine }}
-          restore-keys: |
-            yocto-downloads-
+          key: yocto-downloads
 
       # https://github.com/actions/cache
       - name: Sync sstate cache
