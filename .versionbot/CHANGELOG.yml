@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/checkout action to v4.2.2
+      hash: d89823d9ca73820021f78f917c383edd4a274407
+      body: |
+        Update actions/checkout from 4.2.1 to 4.2.2
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.27.4
+  title: ""
+  date: 2024-11-01T14:36:07.101Z
+- commits:
     - subject: Add pull request write permissions for workflow approvals
       hash: 5e07998255f053630c5cce03057a64ac6ee27802
       body: ""
