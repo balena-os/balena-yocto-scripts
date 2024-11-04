@@ -502,6 +502,23 @@ jobs:
           EOF
           cat "${AUTO_CONF_FILE}"
 
+      # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+      # https://github.com/actions/cache/blob/main/README.md#creating-a-cache-key
+      # https://github.com/actions/cache
+      # https://github.com/actions/cache/blob/main/restore/README.md
+      # Caches are scoped to the current branch context, with fallback to the default branch context.
+      # GitHub will remove any cache entries that have not been accessed in over 7 days.
+      # There is no limit on the number of caches you can store, but the total size of all caches in a repository is limited to 10 GB.
+      # Once a repository has reached its maximum cache storage, the cache eviction policy will create space by deleting the oldest caches in the repository.
+      - name: Restore sstate cache
+        id: cache-restore
+        uses: actions/cache/restore@v4.0.2
+        with:
+          path: ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
+          key: ${{ inputs.machine }}-sstate-${{ github.sha }}
+          restore-keys: |
+            ${{ inputs.machine }}-sstate-
+
       # All preperation complete before this step
       # Start building balenaOS
       # We use the BALENA_API_DEPLOY_KEY secret to preload the supervisor image
@@ -533,6 +550,25 @@ jobs:
           if grep -R "ERROR: " build/tmp/log/*; then
             exit 1
           fi
+
+      # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+      # https://github.com/actions/cache/blob/main/README.md#creating-a-cache-key
+      # https://github.com/actions/cache
+      # https://github.com/actions/cache/blob/main/save/README.md
+      # Caches are scoped to the current branch context, with fallback to the default branch context.
+      # GitHub will remove any cache entries that have not been accessed in over 7 days.
+      # There is no limit on the number of caches you can store, but the total size of all caches in a repository is limited to 10 GB.
+      # Once a repository has reached its maximum cache storage, the cache eviction policy will create space by deleting the oldest caches in the repository.
+      - name: Save sstate cache
+        uses: actions/cache/save@v4.0.2
+        # Do not save cache for pull_request_target events
+        # as they run in the context of the main branch and would be vulnerable to cache poisoning
+        # https://0xn3va.gitbook.io/cheat-sheets/ci-cd/github/actions#cache-poisoning
+        # https://adnanthekhan.com/2024/05/06/the-monsters-in-your-build-cache-github-actions-cache-poisoning/
+        if: github.event_name != 'pull_request_target'
+        with:
+          path: ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
+          key: ${{ steps.cache-restore.outputs.cache-primary-key }}
 
       # TODO: pre-install on self-hosted-runners
       # Needed by the yocto job to zip artifacts - Don't remove
