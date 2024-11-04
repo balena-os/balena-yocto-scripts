@@ -1,4 +1,20 @@
 - commits:
+    - subject: Use official aws cli binaries and commands
+      hash: 654d96e4746f42065d24d5fe47f0fd3fb54741e1
+      body: |
+        The modern awscli command is optimized for these
+        tasks and better maintained.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.27.6
+  title: ""
+  date: 2024-11-04T17:10:05.029Z
+- commits:
     - subject: Update Lock file maintenance
       hash: 682f9788db9491cbbb583524c1795b9c537c0239
       body: |
