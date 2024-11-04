@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update product-os/review-commit-action action to v0.1.7
+      hash: 004842cbb18903272ec44e4231cb9dc414c97e80
+      body: |
+        Update product-os/review-commit-action from 0.1.4 to 0.1.7
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.27.8
+  title: ""
+  date: 2024-11-04T20:59:02.375Z
+- commits:
     - subject: Update Pin product-os/review-commit-action action to 81db18c
       hash: f8438cfe5656c7c50498dc697252553e4acafec7
       body: |
