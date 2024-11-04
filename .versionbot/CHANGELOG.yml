@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update Pin product-os/review-commit-action action to 81db18c
+      hash: f8438cfe5656c7c50498dc697252553e4acafec7
+      body: |
+        Update product-os/review-commit-action
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.27.7
+  title: ""
+  date: 2024-11-04T18:29:00.633Z
+- commits:
     - subject: Use official aws cli binaries and commands
       hash: 654d96e4746f42065d24d5fe47f0fd3fb54741e1
       body: |
