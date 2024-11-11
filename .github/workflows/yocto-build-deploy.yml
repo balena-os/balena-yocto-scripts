@@ -1008,6 +1008,7 @@ jobs:
           AMI_SECUREBOOT: "${{ inputs.sign-image }}"
           BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ steps.ami-arch.outputs.string }}"
           BALENA_PRELOAD_COMMIT: current
+          BALENA_YOCTO_SCRIPTS_VERSION: ${{ steps.balena-lib.outputs.yocto_scripts_version }}
           IMAGE: ${{ env.DEPLOY_PATH }}/image/balena.img
         run: |
           docker run --rm -t \
@@ -1033,6 +1034,7 @@ jobs:
             -e HOSTOS_VERSION \
             -e AWS_SUBNET_ID \
             -e AWS_SECURITY_GROUP_ID \
+            -e BALENA_YOCTO_SCRIPTS_VERSION \
             -w "${WORKSPACE}" \
             "${{ steps.ami-helper-image.outputs.id }}" /balena-generate-ami.sh
 
