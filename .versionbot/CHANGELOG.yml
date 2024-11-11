@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update Lock file maintenance
+      hash: 271d9ee084c71d4eb128948b15ea3bf9150a0a39
+      body: |
+        Update 
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.27.9
+  title: ""
+  date: 2024-11-11T01:34:43.508Z
+- commits:
     - subject: Update product-os/review-commit-action action to v0.1.7
       hash: 004842cbb18903272ec44e4231cb9dc414c97e80
       body: |
