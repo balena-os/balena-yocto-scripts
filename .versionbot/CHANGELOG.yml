@@ -1,4 +1,20 @@
 - commits:
+    - subject: Set explicit permissions at the job level
+      hash: 9dc5aacccbd5ffdb154df3a1db172736cca36145
+      body: |
+        This is the more secure approach that defaults
+        to lowest possible permissions.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.27.10
+  title: ""
+  date: 2024-11-11T19:16:32.044Z
+- commits:
     - subject: Update Lock file maintenance
       hash: 271d9ee084c71d4eb128948b15ea3bf9150a0a39
       body: |
