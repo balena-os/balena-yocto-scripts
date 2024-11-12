@@ -1023,6 +1023,7 @@ jobs:
             --privileged \
             --network host \
             -v "${WORKSPACE}:${WORKSPACE}" \
+            -v "${DEPLOY_PATH}:${DEPLOY_PATH}" \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -e VERBOSE \
             -e AWS_ACCESS_KEY_ID \
