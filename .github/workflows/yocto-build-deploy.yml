@@ -638,12 +638,16 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         if: steps.should-deploy.outputs.deploy
+        id: aws-creds
         with:
           role-to-assume: ${{ vars.AWS_IAM_ROLE }}
           role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
           # https://github.com/orgs/community/discussions/26636#discussioncomment-3252664
           mask-aws-account-id: false
+          # For use with AMI publishing step - where we must propogate the credentials to the container
+          # https://github.com/aws-actions/configure-aws-credentials/tree/e3dd6a429d7300a6a4c196c26e071d42e0343502/?tab=readme-ov-file#retrieving-credentials-from-step-output-assumerole-with-temporary-credentials
+          output-credentials: true
 
       # "If no keys are provided, but an IAM role is associated with the EC2 instance, it will be used transparently".
       # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/rm.html
@@ -1010,6 +1014,8 @@ jobs:
           BALENA_PRELOAD_COMMIT: current
           BALENA_YOCTO_SCRIPTS_VERSION: ${{ steps.balena-lib.outputs.yocto_scripts_version }}
           IMAGE: ${{ env.DEPLOY_PATH }}/image/balena.img
+          AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
         run: |
           docker run --rm -t \
             --privileged \
