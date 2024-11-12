@@ -961,10 +961,12 @@ jobs:
       - name: Set AMI arch
         id: ami-arch
         if: inputs.deploy-ami == true
+        env:
+            DT_ARCH: ${{ steps.balena-lib.outputs.dt_arch }}
         run: |
-          if [ "${dt_arch}" = "amd64" ]; then
+          if [ "${DT_ARCH}" = "amd64" ]; then
             echo "string=x86_64" >>"${GITHUB_OUTPUT}"
-          elif [ "${dt_arch}" = "aarch64" ]; then
+          elif [ "${DT_ARCH}" = "aarch64" ]; then
             echo "string=arm64" >>"${GITHUB_OUTPUT}"
           fi
 
