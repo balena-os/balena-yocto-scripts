@@ -1004,7 +1004,7 @@ jobs:
         env:
           AWS_DEFAULT_REGION: "${{ vars.AWS_REGION || 'us-east-1' }}"
           S3_BUCKET: "${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}"
-          AWS_SESSION_TOKEN: "" # only required if MFA is enabled
+          AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
           AWS_SUBNET_ID: ${{ vars.AWS_SUBNET || 'subnet-02d18a08ea4058574' }}
           AWS_SECURITY_GROUP_ID: ${{ vars.AWS_SECURITY_GROUP || 'sg-057937f4d89d9d51c' }}
           BALENACLI_TOKEN: ${{ secrets.BALENA_API_DEPLOY_KEY }}
