@@ -978,9 +978,9 @@ jobs:
           VERSION: "${{ steps.balena-lib.outputs.os_version }}"
         run: |
           if [ "${{ inputs.sign-image }}" = "true" ]; then
-            echo "string=balenaOS-secureboot-${VERSION}-${MACHINE}" >>"${GITHUB_OUTPUT}"
+            echo "string=balenaOS-secureboot-${VERSION}-${MACHINE}" | sed 's/+/-/g' >>"${GITHUB_OUTPUT}"
           else
-            echo "string=balenaOS-${VERSION}-${MACHINE}" >>"${GITHUB_OUTPUT}"
+            echo "string=balenaOS-${VERSION}-${MACHINE}" | sed 's/+/-/g' >>"${GITHUB_OUTPUT}"
           fi
 
       - name: Pull helper image
