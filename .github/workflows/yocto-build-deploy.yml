@@ -974,6 +974,8 @@ jobs:
       - name: Set AMI name
         id: ami-name
         if: inputs.deploy-ami == true
+        env: 
+          VERSION: "${{ steps.balena-lib.outputs.os_version }}"
         run: |
           if [ "${{ inputs.sign-image }}" = "true" ]; then
             echo "string=balenaOS-secureboot-${VERSION}-${MACHINE}" >>"${GITHUB_OUTPUT}"
