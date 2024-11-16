@@ -382,6 +382,9 @@ jobs:
           meta_balena_version="$(balena_lib_get_meta_balena_base_version)"
           echo "meta_balena_version=${meta_balena_version}" >>"${GITHUB_OUTPUT}"
 
+          device_repo_revision="$(git rev-parse --short HEAD)"
+          echo "device_repo_revision=${device_repo_revision}" >>"${GITHUB_OUTPUT}"
+
           yocto_scripts_ref="$(git submodule status balena-yocto-scripts | awk '{print $1}')"
           echo "yocto_scripts_ref=${yocto_scripts_ref}" >>"${GITHUB_OUTPUT}"
 
@@ -693,6 +696,7 @@ jobs:
           BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
           SLUG: "${{ steps.balena-lib.outputs.device_slug }}"
           APPNAME: "${{ steps.balena-lib.outputs.device_slug }}"
+          DEVICE_REPO_REV: "${{ steps.balena-lib.outputs.device_repo_revision }}"
           META_BALENA_VERSION: "${{ steps.balena-lib.outputs.meta_balena_version }}"
           RELEASE_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
           BOOTABLE: 1
@@ -814,9 +818,21 @@ jobs:
           fi
           #[ "${VERBOSE}" = "verbose" ] && _debug="--debug"
 
+          # create docker-compose.yml with OS release metadata for the hostapp
+          cat > "${WORKSPACE}/docker-compose.yml" <<EOF
+          version: '2.4'
+          services:
+            hostapp:
+              image: ${_local_image}
+              labels:
+                io.balena.image.store: 'root'
+                io.balena.image.class: 'hostapp'
+                io.balena.update.requires-reboot: '1'
+                io.balena.private.hostapp.board-rev: '${DEVICE_REPO_REV}'
+          EOF
 
           if [ -n "${_local_image}" ]; then
-            releaseCommit="$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" "${_local_image}" --source "${WORKSPACE}" ${status} ${_debug} | sed -n 's/.*Release: //p')"
+            releaseCommit="$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" --source "${WORKSPACE}" ${status} ${_debug} | sed -n 's/.*Release: //p')"
           else
             releaseCommit="$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" --build --source "${WORKSPACE}" ${status} ${_debug} | sed -n 's/.*Release: //p')"
           fi
