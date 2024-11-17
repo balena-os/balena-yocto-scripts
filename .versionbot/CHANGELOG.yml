@@ -1,4 +1,26 @@
 - commits:
+    - subject: "github/workflows/yocto-build-deploy.yml: Add hostapp metadata to OS
+        release"
+      hash: 0c8631cf2d935b139aff85004bb7c41883c355a6
+      body: >
+        This is needed for supervisor managed OS updates. For example, the
+        supervisor
+
+        can check this metadata against the equivalent field from
+        /etc/os-release to
+
+        determine if the device is already running the latest OS release.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Florin Sarbu <florin@balena.io>
+        signed-off-by: Florin Sarbu <florin@balena.io>
+      author: Florin Sarbu
+      nested: []
+  version: 1.27.11
+  title: ""
+  date: 2024-11-17T19:41:07.287Z
+- commits:
     - subject: Set explicit permissions at the job level
       hash: 9dc5aacccbd5ffdb154df3a1db172736cca36145
       body: |
