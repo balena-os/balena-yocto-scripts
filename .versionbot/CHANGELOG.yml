@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update Lock file maintenance
+      hash: da98468af30dee76cdea3934db771b5f7cf4e6e3
+      body: |
+        Update 
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.27.12
+  title: ""
+  date: 2024-11-18T01:34:47.609Z
+- commits:
     - subject: "github/workflows/yocto-build-deploy.yml: Add hostapp metadata to OS
         release"
       hash: 0c8631cf2d935b139aff85004bb7c41883c355a6
