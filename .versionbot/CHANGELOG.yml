@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.62
+      hash: 72364fff1e6bc138bef37a89197bf1db5213c90b
+      body: |
+        Update balena-os/leviathan from 2.31.60 to 2.31.62
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.27.14
+  title: ""
+  date: 2024-11-20T18:43:55.552Z
+- commits:
     - subject: Explicitly set GH_TOKEN permissions
       hash: 389d08cfa7af88eb059f1d56fcf6a0db69598bbb
       body: ""
@@ -1103,14 +1116,8 @@
       nested: []
     - subject: unroll balena_api_is_dt_private function
       hash: cc3102dbb1348ee563b08dfd3afd37daaa0404ca
-      body: >
-        when building + deploying or a private DT , the check to see if the DT
-        is private fails. This is due to
-        https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
-        using this function:
-        https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191
-        - which uses the jenkins deployTo variable to select the correct api url
-        and token.
+      body: |
+        when building + deploying or a private DT , the check to see if the DT is private fails. This is due to https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424 using this function: https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191 - which uses the jenkins deployTo variable to select the correct api url and token.
       footer:
         Change-type: patch
         change-type: patch
@@ -1724,9 +1731,8 @@
 - commits:
     - subject: "automation/balena-deploy: Pin to known working version of balena-img"
       hash: 927310397896f35bd1921202e8b1f30ba3ef47d8
-      body: >
-        As per internal thread
-        https://balena.zulipchat.com/#narrow/stream/345890-balena-io/topic/Jenkins.20build.20failures/near/409602914
+      body: |
+        As per internal thread https://balena.zulipchat.com/#narrow/stream/345890-balena-io/topic/Jenkins.20build.20failures/near/409602914
       footer:
         Change-type: patch
         change-type: patch
@@ -3537,9 +3543,8 @@
 - commits:
     - subject: "Dockerfile_yocto-build-env: Install Honister host deps"
       hash: efc069c609431965394912d3ffd34362a1108852
-      body: >
-        See
-        http://docs.yoctoproject.org/next/migration-guides/migration-3.4.html#new-host-dependencies
+      body: |
+        See http://docs.yoctoproject.org/next/migration-guides/migration-3.4.html#new-host-dependencies
       footer:
         Change-type: patch
         change-type: patch
@@ -5197,11 +5202,9 @@
         change-type: patch
         signed-off-by: Alex Gonzalez <alexg@balena.io>
       subject: 'Revert "esr: Add branch creation automation script"'
-      body: >-
+      body: |-
         This reverts commit 6b6a6b36696d678666ebe67c3dc64d7a1717c422.
-
         This script has now moved to:
-
         https://github.com/balena-os/os-automation/blob/master/new-esr-release/esr_release.py
 - version: 1.9.2
   date: 2021-02-12T17:51:38.000Z
@@ -5453,39 +5456,20 @@
         change-type: patch
         signed-off-by: Gergely Imreh <gergely@balena.io>
       subject: "barys: correctly apply SUPERVISOR_TAG variable in local.conf"
-      body: >-
+      body: |-
         Setting `--supervisor-tag` to enable building for a specific supervisor
-
         tag sets the `SUPERVISOR_TAG` value. That is the correct variable
-
-        to set according to meta-balena (see at
-        https://github.com/balena-os/meta-balena/blob/8d5057b45e1965e6c27c03a95d2211ae47842331/meta-balena-common/recipes-containers/resin-supervisor/resin-supervisor.inc#L20
-        )
-
+        to set according to meta-balena (see at https://github.com/balena-os/meta-balena/blob/8d5057b45e1965e6c27c03a95d2211ae47842331/meta-balena-common/recipes-containers/resin-supervisor/resin-supervisor.inc#L20 )
         but in the device types' `local.conf.sample` the `TARGET_TAG` variable
-
-        was set, see for example
-        https://github.com/balena-os/balena-raspberrypi/blob/078b0add0345e94f27c15d98256f8c7b61b66761/layers/meta-balena-raspberrypi/conf/samples/local.conf.sample#L45-L46
-
+        was set, see for example https://github.com/balena-os/balena-raspberrypi/blob/078b0add0345e94f27c15d98256f8c7b61b66761/layers/meta-balena-raspberrypi/conf/samples/local.conf.sample#L45-L46
         and thus barys' setting was not applied.
-
         Looking at the available recipes, the `SUPERVISOR_TAG` should be set
-
         and in the device types' `local.conf.example` files should be updated
-
         to refer to that instead of `TARGET_TAG`.
-
         With this change this can be implemented in two steps:
-
-        * the current PR updates `SUPERVISOR_TAG` if exists or appends if it
-        doesn't (or the
-
-        update has failed) in local.conf and allows using the relevant barys
-        flag again
-
-        * in other per-device repo PRs then the `local.conf.example` can
-        separately updated,
-
+        * the current PR updates `SUPERVISOR_TAG` if exists or appends if it doesn't (or the
+        update has failed) in local.conf and allows using the relevant barys flag again
+        * in other per-device repo PRs then the `local.conf.example` can separately updated,
         to be less misleading, on its own schedule
 - version: 1.3.7
   date: 2019-09-10T16:08:09.000Z
@@ -6267,13 +6251,10 @@
       footers:
         signed-off-by: Andrei Gherzan <andrei@resin.io>
       subject: "jenkins_build.sh: Make sure the docker registry tags are valid"
-      body: >-
+      body: |-
         The docker registry tags need to satisfy the following regex:
-
         [\w][\w.-]{0,127}.
-
         https://github.com/docker/docker/blob/master/vendor/github.com/docker/distribution/reference/regexp.go#L37
-
         Make sure this is valid for our resinOS tags too.
     - hash: 8998ad66300fe71bb253c725dbc75a13f9415f2b
       author: Andrei Gherzan
