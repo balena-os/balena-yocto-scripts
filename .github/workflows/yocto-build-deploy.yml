@@ -504,7 +504,7 @@ jobs:
             -d "${MACHINE}" \
             -t "${{ secrets.BALENA_API_DEPLOY_KEY }}" \
             -s "${YOCTO_CACHE_DIR}/$(whoami)" \
-            -g "${BARYS_ARGUMENTS_VAR}"
+            -g "${BARYS_ARGUMENTS_VAR} -a OS_DEVELOPMENT=1"
 
           if grep -R "ERROR: " build/tmp/log/*; then
             exit 1
@@ -1201,6 +1201,7 @@ jobs:
           echo "QEMU_SECUREBOOT=1" >> "${GITHUB_ENV}"
           echo "FLASHER_SECUREBOOT=1" >> "${GITHUB_ENV}"
           echo "QEMU_MEMORY=4G" >> "${GITHUB_ENV}"
+          echo "QEMU_DEBUG=1" >> "${GITHUB_ENV}"
 
       # https://github.com/balena-os/leviathan/blob/master/action.yml
       - name: BalenaOS Leviathan Tests
