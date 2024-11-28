@@ -23,6 +23,7 @@ ensure_all_env_variables_are_set() {
                          AWS_DEFAULT_REGION
                          AWS_SECURITY_GROUP_ID
                          AWS_SUBNET_ID
+                         AWS_KMS_KEY_ID
                          S3_BUCKET
                          IMAGE
                          AMI_NAME
@@ -118,7 +119,8 @@ create_aws_ebs_snapshot() {
 
     import_task_id=$(aws ec2 import-snapshot \
       --description "snapshot-${AMI_NAME}" \
-      --disk-container "Description=balenaOs,Format=RAW,UserBucket={S3Bucket=${S3_BUCKET},S3Key=preloaded-images/${s3_key}}" | jq -r .ImportTaskId)
+      --disk-container "Description=balenaOs,Format=RAW,UserBucket={S3Bucket=${S3_BUCKET},S3Key=preloaded-images/${s3_key}}" | jq -r .ImportTaskId \
+      --kms-key-id "${AWS_KMS_KEY_ID}")
 
     echo "* Created a AWS import snapshot task with id ${import_task_id}. Waiting for completition... (Timeout: $IMPORT_SNAPSHOT_TIMEOUT_MINS mins)"
     eval "$__s3_image_url='${s3_url}'"
