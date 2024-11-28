@@ -228,7 +228,13 @@ balena_setup_fleet() {
     _uuid=$(balena device register "${_ami_test_org}/${_ami_test_fleet}" | awk '{print $4}')
     >&2 echo "Pre-registered device with UUID ${_uuid}"
 
-    >&2 balena config generate --network ethernet --version "${_hostos_version}" --device "${_uuid}" --appUpdatePollInterval 5 --output "${_config_json}"
+    if [ "$AMI_TEST_DEV_MODE" = true ]; then 
+        _dev_mode="--dev";
+    else
+        _dev_mode="";
+    fi
+
+    >&2 balena config generate --network ethernet --version "${_hostos_version}" --device "${_uuid}" --appUpdatePollInterval 5 --output "${_config_json}" "${_dev_mode}"
     if [ ! -f "${_config_json}" ]; then
       echo "Unable to generate configuration"
       return 1
