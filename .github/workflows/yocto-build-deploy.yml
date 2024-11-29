@@ -183,10 +183,9 @@ jobs:
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
     # https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect#adding-permissions-settings
     permissions:
+      # Have to explicitly get permission here as not yet supported by gh app tokens
       id-token: write # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
-      actions: read # We are fetching workflow run results of a merge commit when workflow is triggered by new tag, to see if tests pass
-      pull-requests: write # Read is required to fetch the PR that merged, in order to get the test results. Write is required to create PR comments for workflow approvals.
-
+      
     env:
       automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
       BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || inputs.deploy-environment || 'balena-cloud.com' }}
@@ -213,6 +212,28 @@ jobs:
         shell: bash --noprofile --norc -eo pipefail -x {0}
 
     steps:
+      # Generate an app installation token that has access to
+      # all repos where the app is installed (usually the whole org)
+      # Owner input to make token valid for all repositories in the org
+      # This behvaiour is required for private submodules
+      - name: Generate GitHub App installation token
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a
+        id: app_token
+        with:
+          app_id: ${{ vars.FLOWZONE_APP_ID }}
+          installation_retrieval_mode: organization
+          installation_retrieval_payload: ${{ github.repository_owner }}
+          private_key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          # actions:read - We are fetching workflow run results of a merge commit when workflow is triggered by new tag, to see if tests pass
+          # pull-requests:write - # Read is required to fetch the PR that merged, in order to get the test results. Write is required to create PR comments for workflow approvals.
+          # conents:read - required for cloning private submodules
+          permissions: |-
+            {
+              "contents": "read",
+              "actions": "read", 
+              "pull-requests": "write"
+            }
+
       # Combining pull_request_target workflow trigger with an explicit checkout of an
       # untrusted PR is a dangerous practice that may lead to repository compromise.
       # https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
@@ -225,6 +246,7 @@ jobs:
         with:
           poll-interval: '10'
           allow-authors: false
+          github-token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
 
       # this must be done before putting files in the workspace
       # https://github.com/easimon/maximize-build-space
@@ -240,32 +262,21 @@ jobs:
           remove-haskell: "true"
           remove-codeql: "true"
           remove-docker-images: "true"
-
-      # Generate an app installation token that has access to
-      # all repos where the app is installed (usually the whole org)
-      # Owner input to make token valid for all repositories in the org
-      # This behvaiour is required for private submodules
-      # https://github.com/actions/create-github-app-token
-      - name: Create GitHub App installation token
-        uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
-        id: app-token
-        if: vars.FLOWZONE_APP_ID != ''
-        with:
-          app-id: ${{ vars.FLOWZONE_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-
+      
       # Generate another app token for the balena-io organization
       # so we can checkout private contracts
-      # https://github.com/actions/create-github-app-token
-      - name: Create GitHub App installation token (balena-io)
-        uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
+      - name: Generate GitHub App installation token
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a
         id: app-token-balena-io
-        if: vars.FLOWZONE_APP_ID != ''
         with:
-          app-id: ${{ vars.FLOWZONE_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-          owner: balena-io
+          app_id: ${{ vars.FLOWZONE_APP_ID }}
+          installation_retrieval_mode: organization
+          installation_retrieval_payload: balena-io
+          private_key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          permissions: |-
+            {
+              "contents": "read",
+            }
 
       # https://github.com/actions/checkout
       - name: Clone device repository
@@ -289,6 +300,8 @@ jobs:
       - name: "Fetch merge commit"
         id: set-merge-commit
         if: ${{ github.event_name == 'push' }} # Only perform on push event - i.e a new version tag
+        env: 
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
         run: |
           merge_commit=$(git rev-parse :/"^Merge pull request")
           echo "Found merge commit ${merge_commit}"
@@ -312,7 +325,7 @@ jobs:
           GH_PAGER: "cat"
           GH_PROMPT_DISABLED: "true"
           GH_REPO: "${{ github.repository }}"
-          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
         run: |
           # Gets the PR number of the merge commit
           prid=$(gh api -H "Accept: application/vnd.github+json" "/repos/${REPO}/commits/$COMMIT" --jq '.commit.message' | head -n1 | cut -d "#" -f2 | awk '{ print $1}')
@@ -343,6 +356,8 @@ jobs:
       - name: Update meta-balena submodule to ${{ inputs.meta-balena-ref }}
         if: inputs.meta-balena-ref != ''
         working-directory: ./layers/meta-balena
+        env: 
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
         run: |
           git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
           git fetch --all
@@ -353,6 +368,8 @@ jobs:
       - name: Update balena-yocto-scripts submodule to ${{ inputs.yocto-scripts-ref }}
         if: inputs.yocto-scripts-ref != ''
         working-directory: ./balena-yocto-scripts
+        env: 
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
         run: |
           git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
           git fetch --all
@@ -366,6 +383,7 @@ jobs:
           CURL: "curl --silent --retry 10 --location --compressed"
           TRANSLATION: "v6"
           BALENAOS_TOKEN: ${{ secrets.BALENA_API_DEPLOY_KEY }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
         run: |
           source "${automation_dir}/include/balena-api.inc"
           source "${automation_dir}/include/balena-lib.inc"
@@ -1095,26 +1113,36 @@ jobs:
       # https://github.com/actions/create-github-app-token
       # Owner input to make token valid for all repositories in the org
       # This behvaiour is required for private submodules
-      - name: Create GitHub App installation token
-        uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
+      # Generate another app token for the balena-io organization
+      # so we can checkout private contracts
+      - name: Generate GitHub App installation token
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a
         id: app-token
-        if: vars.FLOWZONE_APP_ID != ''
         with:
-          app-id: ${{ vars.FLOWZONE_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
+          app_id: ${{ vars.FLOWZONE_APP_ID }}
+          installation_retrieval_mode: organization
+          installation_retrieval_payload: ${{ github.repository_owner }}
+          private_key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          permissions: |-
+            {
+              "contents": "read",
+            }
 
       # Generate another app token for the balena-io organization
       # so we can checkout private contracts
       # https://github.com/actions/create-github-app-token
-      - name: Create GitHub App installation token (balena-io)
-        uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
+      - name: Generate GitHub App installation token
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a
         id: app-token-balena-io
-        if: vars.FLOWZONE_APP_ID != ''
         with:
-          app-id: ${{ vars.FLOWZONE_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-          owner: balena-io
+          app_id: ${{ vars.FLOWZONE_APP_ID }}
+          installation_retrieval_mode: organization
+          installation_retrieval_payload: balena-io
+          private_key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          permissions: |-
+            {
+              "contents": "read",
+            }
 
       # Clone the device respository to fetch Leviathan
       # https://github.com/actions/checkout

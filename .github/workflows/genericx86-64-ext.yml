@@ -31,6 +31,9 @@ on:
 jobs:
   yocto:
     name: Yocto
+    permissions:
+      # Have to explicitly get permission here as not yet supported by gh app tokens
+      id-token: write # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
     uses: ./.github/workflows/yocto-build-deploy.yml
     # Prevent duplicate workflow executions for pull_request (PR) and pull_request_target (PRT) events.
     # Both PR and PRT will be triggered for the same pull request, whether it is internal or from a fork.
