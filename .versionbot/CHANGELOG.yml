@@ -1,4 +1,20 @@
 - commits:
+    - subject: Set additional github token permissions
+      hash: 41cd691fdad8edfcb6664cd1a2cc8966da7e3475
+      body: >
+        THis is to allow the workflow to function under an org with restricitve
+        github token permissions
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+  version: 1.27.16
+  title: ""
+  date: 2024-11-29T19:18:27.347Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.65
       hash: ae9f251d20e4f473318d92e22fa26866d0a7924d
       body: |
