@@ -500,6 +500,11 @@ jobs:
           sudo sysctl -w vm.mmap_min_addr=65536
           sysctl vm.mmap_min_addr
 
+          mkdir -p layers/meta-balena-generic/recipes-bsp/grub
+          cat > layers/meta-balena-generic/recipes-bsp/grub/grub-conf.bbappend <<EOF
+          OS_KERNEL_CMDLINE="console=ttyS0 shell_debug"
+          EOF
+
           ./balena-yocto-scripts/build/balena-build.sh \
             -d "${MACHINE}" \
             -t "${{ secrets.BALENA_API_DEPLOY_KEY }}" \
