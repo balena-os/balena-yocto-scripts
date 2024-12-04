@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.66
+      hash: d333c32569b0d33bb0e098d5245b6bcc3ca147af
+      body: |
+        Update balena-os/leviathan from 2.31.65 to 2.31.66
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.27.17
+  title: ""
+  date: 2024-12-04T21:45:07.416Z
+- commits:
     - subject: Set additional github token permissions
       hash: 41cd691fdad8edfcb6664cd1a2cc8966da7e3475
       body: >
