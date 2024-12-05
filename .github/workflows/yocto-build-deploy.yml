@@ -1117,6 +1117,7 @@ jobs:
             #AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }} ## shouldn't need
             AWS_KMS_KEY_ID: ${{ vars.AWS_KMS_KEY_ID }}
             AMI_NAME: "${{ steps.ami-name.outputs.string }}"
+            IMPORT_SNAPSHOT_TIMEOUT_MINS: 30
         run: |
           # https://github.com/koalaman/shellcheck/wiki/SC2155#correct-code-1
           # Randomize to lower the chance of parallel builds colliding.
@@ -1135,8 +1136,26 @@ jobs:
             --kms-key-id "${AWS_KMS_KEY_ID}" | jq -r .ImportTaskId)
 
           echo "* Created a AWS import snapshot task with id ${import_task_id}. Waiting for completition..."
-          aws ec2 wait snapshot-imported \
-            --import-task-ids ${import_task_id}
+          
+          ### Using the aws ec2 wait command times out - currently can't find a way to increase the timeout period, so poll "manually" instead
+          # aws ec2 wait snapshot-imported \
+          #   --import-task-ids ${import_task_id}
+          wait_secs=10
+          secs_waited=0
+          while true; do
+            status="$(aws ec2 describe-import-snapshot-tasks --import-task-ids "${import_task_id}" | jq -r ".ImportSnapshotTasks[].SnapshotTaskDetail.Status")"
+            [ "$status" = "completed" ] && break
+            [ "$status" = "deleting" ]  && \
+                error_msg="$(aws ec2 describe-import-snapshot-tasks --import-task-ids "${import_task_id}" | jq -r ".ImportSnapshotTasks[].SnapshotTaskDetail.StatusMessage")" && \
+                echo "ERROR: Error on import task id ${import_task_id}: ${error_msg}" && exit 1
+
+            sleep $wait_secs
+            secs_waited=$((secs_waited + wait_secs))
+            mins_elapsed=$((secs_waited / 60))
+
+            # Show progress every 2 mins (120 secs)
+            [ "$mins_elapsed" -ge "$IMPORT_SNAPSHOT_TIMEOUT_MINS" ] && echo "ERROR: Timeout on import snapshot taksk id ${import_task_id}" && exit 1
+          done
 
           snapshot_id=$(aws ec2 describe-import-snapshot-tasks --import-task-ids "${import_task_id}" | jq -r '.ImportSnapshotTasks[].SnapshotTaskDetail.SnapshotId')
           echo "* AWS import snapshot task complete. SnapshotId: ${snapshot_id}"
