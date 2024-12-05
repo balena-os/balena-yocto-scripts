@@ -1254,6 +1254,7 @@ jobs:
 
           uuid=$(balena device register "${AMI_TEST_ORG}/${ami_test_fleet}" | awk '{print $4}')
           >&2 echo "Pre-registered device with UUID ${uuid}"
+          echo "uuid=${uuid}" >>"${GITHUB_OUTPUT}"
 
           if [ "$AMI_TEST_DEV_MODE" = true ]; then 
               _dev_mode="--dev";
@@ -1322,7 +1323,7 @@ jobs:
           _loops=30
           until echo 'balena ps -q -f name=balena_supervisor | xargs balena inspect | \
               jq -r ".[] | select(.State.Health.Status!=null).Name + \":\" + .State.Health.Status"; exit' | \
-              balena ssh "${UUID}" | grep -q ":healthy"; do
+              balena device ssh "${UUID}" | grep -q ":healthy"; do
                   echo "Waiting for supervisor..."
                   sleep "$(( (RANDOM % 30) + 30 ))s";
                   _loops=$(( _loops - 1 ))
