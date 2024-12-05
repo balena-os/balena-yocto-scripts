@@ -1126,14 +1126,15 @@ jobs:
           echo "* Pushing ${IMAGE} to s3://${S3_BUCKET}"
           s3_url="s3://${S3_BUCKET}/preloaded-images/${s3_key}"
           echo "s3_url=${s3_url}" >>"${GITHUB_OUTPUT}"
-          aws s3 cp --sse AES256 "${IMAGE}" "${s3_url}"
+          aws s3 cp --no-progress --sse AES256 "${IMAGE}" "${s3_url}"
 
           import_task_id=$(aws ec2 import-snapshot \
             --description "snapshot-${AMI_NAME}" \
             --disk-container "Description=balenaOs,Format=RAW,UserBucket={S3Bucket=${S3_BUCKET},S3Key=preloaded-images/${s3_key}}" \
+            --encrypted \
             --kms-key-id "${AWS_KMS_KEY_ID}" | jq -r .ImportTaskId)
 
-          echo "* Created a AWS import snapshot task with id ${import_task_id}. Waiting for completition...
+          echo "* Created a AWS import snapshot task with id ${import_task_id}. Waiting for completition..."
           aws ec2 wait snapshot-imported \
             --import-task-ids ${import_task_id}
 
@@ -1151,6 +1152,7 @@ jobs:
           AWS_KMS_KEY_ID: ${{ vars.AWS_KMS_KEY_ID }}
           AMI_NAME: "${{ steps.ami-name.outputs.string }}"
           AMI_ARCHITECTURE: "${{ steps.ami-arch.outputs.string }}"
+          AMI_SNAPSHOT_ID: "${{ steps.ami-ebs-snapshot.outputs.snapshot_id }}"
           AMI_ROOT_DEVICE_NAME: /dev/sda1
           AMI_EBS_DELETE_ON_TERMINATION: true
           AMI_EBS_VOLUME_SIZE: 8
@@ -1184,7 +1186,7 @@ jobs:
           --boot-mode "${AMI_BOOT_MODE}" \
           --block-device-mappings "DeviceName=${AMI_ROOT_DEVICE_NAME},Ebs={
                                       DeleteOnTermination=${AMI_EBS_DELETE_ON_TERMINATION},
-                                      SnapshotId=${snapshot_id},
+                                      SnapshotId=${AMI_SNAPSHOT_ID},
                                       VolumeSize=${AMI_EBS_VOLUME_SIZE},
                                       VolumeType=${AMI_EBS_VOLUME_TYPE}}" \
           | jq -r .ImageId)
@@ -1295,8 +1297,8 @@ jobs:
 
           echo "instance_id=${_instance_id}" >>"${GITHUB_OUTPUT}"
           
-          aws ec2 wait instance-running --instance-ids "${instance_id}"
-          aws ec2 wait instance-status-ok --instance-ids "${instance_id}"
+          aws ec2 wait instance-running --instance-ids "${_instance_id}"
+          aws ec2 wait instance-status-ok --instance-ids "${_instance_id}"
           
           _loops=30
           until echo 'balena ps -q -f name=balena_supervisor | xargs balena inspect | \
@@ -1437,9 +1439,11 @@ jobs:
               fi
           done
 
-        # Tear down any AMI's created in the case of a failure - to leave a clena slate for the next run
+        # Tear down any AMI's created in the case of a failure - to leave a clean slate for the next run
       - name: Clean up AMI images on failure
         if: inputs.deploy-ami && failure()
+        env: 
+          AMI_NAME: "${{ steps.ami-name.outputs.string }}"
         run: |
           image_id=$(aws ec2 describe-images \
               --filters "Name=name,Values=${AMI_NAME}" \
