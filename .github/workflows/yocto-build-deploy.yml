@@ -732,6 +732,7 @@ jobs:
 
           if [ -f "${WORKSPACE}/balena.yml" ]; then
             echo -e "\nversion: ${VERSION}" >> "${WORKSPACE}/balena.yml"
+            echo "supervisorVersion: `cat ${DEPLOY_PATH}/VERSION`" >> "${WORKSPACE}/balena.yml"
             if [ "${{ inputs.sign-image }}" = "true" ]; then
               sed -i '/provides:/a \  - type: sw.feature\n    slug: secureboot' "/${WORKSPACE}/balena.yml"
             fi
