@@ -1362,14 +1362,7 @@ jobs:
           AMI_ARCHITECTURE: "${{ steps.ami-arch.outputs.string }}"
           AMI_IMAGE_ID: "${{ steps.ami-test.outputs.ami_image_id }}"
           AWS_DEFAULT_REGION: "${{ vars.AWS_REGION || 'us-east-1' }}"
-        run: |
-          if aws_public_quota; then
-                  # Make AMI public
-                  if ! aws_ami_do_public "${_ami_image_id}"; then
-                      exit 1
-                  fi
-              fi
-          
+        run: |  
           # We have x86_64 and aarch64, and want one slot free for customers requests
           AWS_AMI_PUBLIC_ARCH_QUOTA=$(((AWS_AMI_PUBLIC_QUOTA - 1)/2))
           _ami_public_images_count=$(aws ec2 describe-images \
