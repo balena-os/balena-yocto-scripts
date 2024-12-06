@@ -1115,7 +1115,6 @@ jobs:
             AWS_DEFAULT_REGION: "${{ vars.AWS_REGION || 'us-east-1' }}"
             S3_BUCKET: "${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}"
             #AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }} ## shouldn't need
-            AWS_KMS_KEY_ID: ${{ vars.AWS_KMS_KEY_ID }}
             AMI_NAME: "${{ steps.ami-name.outputs.string }}"
             IMPORT_SNAPSHOT_TIMEOUT_MINS: 30
         run: |
@@ -1132,8 +1131,7 @@ jobs:
           import_task_id=$(aws ec2 import-snapshot \
             --description "snapshot-${AMI_NAME}" \
             --disk-container "Description=balenaOs,Format=RAW,UserBucket={S3Bucket=${S3_BUCKET},S3Key=preloaded-images/${s3_key}}" \
-            --encrypted \
-            --kms-key-id "${AWS_KMS_KEY_ID}" | jq -r .ImportTaskId)
+            --no-encrypted | jq -r .ImportTaskId)
 
           echo "* Created a AWS import snapshot task with id ${import_task_id}. Waiting for completition..."
           
