@@ -1349,8 +1349,8 @@ jobs:
         run: |
           [ -z "${FLEET}" ] && exit 0
           balena fleet rm "${FLEET}" --yes || true
-          _key_id=$(balena keys | grep "${_fleet#*/}" | awk '{print $1}')
-          balena key rm "${_key_id}" --yes || true
+          _key_id=$(balena ssh-key list | grep "${_fleet#*/}" | awk '{print $1}')
+          balena ssh-key rm "${_key_id}" --yes || true
         
       - name: Make AMI public
         if: ${{ steps.ami-test.outcome == 'success' }}
@@ -1394,10 +1394,10 @@ jobs:
               fi
           fi
 
-          _ami_snapshot_id=$(aws ec2 describe-images --region="${AMI_REGION}" --image-ids "${AMI_IMAGE_ID}" | jq -r '.Images[].BlockDeviceMappings[].Ebs.SnapshotId')
+          _ami_snapshot_id=$(aws ec2 describe-images --region="${AWS_DEFAULT_REGION}" --image-ids "${AMI_IMAGE_ID}" | jq -r '.Images[].BlockDeviceMappings[].Ebs.SnapshotId')
           if [ -n "${_ami_snapshot_id}" ]; then
-              if aws ec2 modify-snapshot-attribute --region "${AMI_REGION}" --snapshot-id "${_ami_snapshot_id}" --attribute createVolumePermission --operation-type add --group-names all; then
-                  if [ "$(aws ec2 describe-snapshot-attribute --region "${AMI_REGION}" --snapshot-id "${_ami_snapshot_id}" --attribute createVolumePermission | jq -r '.CreateVolumePermissions[].Group')" == "all" ]; then
+              if aws ec2 modify-snapshot-attribute --region "${AWS_DEFAULT_REGION}" --snapshot-id "${_ami_snapshot_id}" --attribute createVolumePermission --operation-type add --group-names all; then
+                  if [ "$(aws ec2 describe-snapshot-attribute --region "${AWS_DEFAULT_REGION}" --snapshot-id "${_ami_snapshot_id}" --attribute createVolumePermission | jq -r '.CreateVolumePermissions[].Group')" == "all" ]; then
                       echo "AMI snapshot ${_ami_snapshot_id} is now publicly accessible"
                   else
                       echo "AMI snapshot ${_ami_snapshot_id} could not be made public"
