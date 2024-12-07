@@ -29,8 +29,8 @@ on:
       SIGN_API_KEY:
         description: balena API key that provides access to the signing server
         required: false
-      GH_APP_PRIVATE_KEY:
-        description: "GPG Private Key for GitHub App to generate ephemeral tokens (used with vars.FLOWZONE_APP_ID)"
+      BALENAOS_CI_APP_PRIVATE_KEY:
+        description: "GPG Private Key for GitHub App to generate ephemeral tokens (used with vars.BALENAOS_CI_APP_ID)"
         required: false
       PBDKF2_PASSPHRASE:
         description: "Passphrase used to encrypt/decrypt balenaOS assets at rest in GitHub."
@@ -251,10 +251,9 @@ jobs:
       - name: Create GitHub App installation token
         uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
         id: app-token
-        if: vars.FLOWZONE_APP_ID != ''
         with:
-          app-id: ${{ vars.FLOWZONE_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          app-id: ${{ vars.BALENAOS_CI_APP_ID }}
+          private-key: ${{ secrets.BALENAOS_CI_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
       # Generate another app token for the balena-io organization
@@ -263,10 +262,9 @@ jobs:
       - name: Create GitHub App installation token (balena-io)
         uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
         id: app-token-balena-io
-        if: vars.FLOWZONE_APP_ID != ''
         with:
-          app-id: ${{ vars.FLOWZONE_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          app-id: ${{ vars.BALENAOS_CI_APP_ID }}
+          private-key: ${{ secrets.BALENAOS_CI_APP_PRIVATE_KEY }}
           owner: balena-io
 
       # https://github.com/actions/checkout
@@ -1100,10 +1098,9 @@ jobs:
       - name: Create GitHub App installation token
         uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
         id: app-token
-        if: vars.FLOWZONE_APP_ID != ''
         with:
-          app-id: ${{ vars.FLOWZONE_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          app-id: ${{ vars.BALENAOS_CI_APP_ID }}
+          private-key: ${{ secrets.BALENAOS_CI_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
       # Generate another app token for the balena-io organization
@@ -1112,10 +1109,9 @@ jobs:
       - name: Create GitHub App installation token (balena-io)
         uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
         id: app-token-balena-io
-        if: vars.FLOWZONE_APP_ID != ''
         with:
-          app-id: ${{ vars.FLOWZONE_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          app-id: ${{ vars.BALENAOS_CI_APP_ID }}
+          private-key: ${{ secrets.BALENAOS_CI_APP_PRIVATE_KEY }}
           owner: balena-io
 
       # Clone the device respository to fetch Leviathan
