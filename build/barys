@@ -33,8 +33,9 @@ LOGFILE=`pwd`/`basename "$0"`.log
 MACHINES=
 BITBAKEARGS=
 EXIT_CODE=0
-USE_OLD_SYNTAX=yes
-NEW_SYNTAX_RELEASES=("honister" "kirkstone")
+USE_OLD_SYNTAX=no
+OLD_SYNTAX_RELEASES=(pyro rocko sumo thud warrior dunfell)
+
 
 function help {
     echo
@@ -430,13 +431,23 @@ if [ "x$REMOVEBUILD" == "xyes" ]; then
     rm -rf $SCRIPTPATH/../../$BUILD_DIR
 fi
 
-BALENA_MACHINE_LAYER=$(ls ${SCRIPTPATH}/../../layers/meta-balena*/conf/samples/bblayers.conf.sample | awk -F'/' '{print $(NF-3)}')
+LAYERSCONF_PATH=$(find "${SCRIPTPATH}/../../layers/meta-balena"* -name bblayers.conf.sample)
+if [ "$(dirname LAYERSCONF_PATH)" = "samples" ]; then
+	BALENA_MACHINE_LAYER=$(echo "${LAYERSCONF_PATH}" | awk -F'/' '{print $(NF-3)}')
+else
+	BALENA_MACHINE_LAYER=$(echo "${LAYERSCONF_PATH}" | awk -F'/' '{print $(NF-4)}')
+fi
 
 # Configure build
 
 $SCRIPTPATH/generate-conf-notes.sh $SCRIPTPATH/../../layers/${BALENA_MACHINE_LAYER}/conf/ ${DEVICE_TYPES_JSONS}
 
-export TEMPLATECONF=${SCRIPTPATH}/../../layers/${BALENA_MACHINE_LAYER}/conf/samples
+export TEMPLATECONF="$(dirname ${LAYERSCONF_PATH})"
+# scarthgap expects templates to be contained in a subdirectory inside templates/
+if [ -d "${TEMPLATECONF}/default" ]; then
+	TEMPLATECONF="${TEMPLATECONF}/default"
+fi
+
 source ${SCRIPTPATH}/../../layers/poky/oe-init-build-env ${SCRIPTPATH}/../../${BUILD_DIR}
 if [ "x$DEVELOPMENT_IMAGE" == "xyes" ]; then
     sed -i "s/.*OS_DEVELOPMENT =.*/OS_DEVELOPMENT = \"1\"/g" conf/local.conf
@@ -474,16 +485,14 @@ for pair in $ADDITIONAL_VARIABLES; do
 done
 
 DEVICE_LAYER_CONF=$(ls ${SCRIPTPATH}/../../layers/meta-balena-*/conf/layer.conf)
-if [[ -d "${SCRIPTPATH}/../../layers/meta-balena/meta-balena-${NEW_SYNTAX_RELEASES[0]}" ]]; then
-    for poky_release in ${NEW_SYNTAX_RELEASES[@]}; do
+if ls "${SCRIPTPATH}/../../layers/meta-balena/meta-*-${OLD_SYNTAX_RELEASES[0]}" >/dev/null 2>&1; then
+    for poky_release in "${OLD_SYNTAX_RELEASES[@]}"; do
         if grep -q -i "LAYERSERIES_COMPAT.*$poky_release" ${DEVICE_LAYER_CONF}; then
-            log "Release $poky_release already supported by device integration layer, will not revert meta-balena-common syntax."
-            USE_OLD_SYNTAX=no
+            log "Release $poky_release not supported by device integration layer, will revert meta-balena-common syntax."
+            USE_OLD_SYNTAX=yes
             break;
         fi
     done
-else
-    USE_OLD_SYNTAX=no
 fi
 
 if [ "$USE_OLD_SYNTAX" == "yes" ]; then
