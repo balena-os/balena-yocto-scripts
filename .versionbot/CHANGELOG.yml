@@ -1,4 +1,20 @@
 - commits:
+    - subject: Update the App Id and Private Key for ephemeral app tokens
+      hash: 583241b9d2ae902b302fd00bb037ef0c844ca289
+      body: |
+        This changes the yocto scripts workflow to use a dedicated
+        balenaOS CI app, rather than the Flowzone app.
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.28.0
+  title: ""
+  date: 2024-12-09T16:21:11.861Z
+- commits:
     - subject: "barys: add support for scarthgap"
       hash: fa730241fc31bf1cda183e4e42f733372948a4fd
       body: ""
