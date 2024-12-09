@@ -35,6 +35,9 @@ on:
       PBDKF2_PASSPHRASE:
         description: "Passphrase used to encrypt/decrypt balenaOS assets at rest in GitHub."
         required: false
+      YOCTO_CACHE_SECRET_KEY:
+        description: "Self-hosted runner S3 secret key for the yocto-svcacct user."
+        required: false
 
     inputs:
       build-runs-on:
@@ -519,20 +522,24 @@ jobs:
           EOF
           cat "${AUTO_CONF_FILE}"
 
+      # Use local S3 cache on self-hosted runners, but allow fallback to the default GitHub cache.
+      # https://github.com/tespkg/actions-cache
       # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
-      # https://github.com/actions/cache/blob/main/README.md#creating-a-cache-key
-      # https://github.com/actions/cache
-      # https://github.com/actions/cache/blob/main/restore/README.md
-      # Caches are scoped to the current branch context, with fallback to the default branch context.
-      # GitHub will remove any cache entries that have not been accessed in over 7 days.
-      # There is no limit on the number of caches you can store, but the total size of all caches in a repository is limited to 10 GB.
-      # Once a repository has reached its maximum cache storage, the cache eviction policy will create space by deleting the oldest caches in the repository.
       - name: Restore sstate cache
         id: cache-restore
-        uses: actions/cache/restore@v4.0.2
+        uses: tespkg/actions-cache/restore@v1.7.1
         with:
-          path: ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
+          endpoint: minio
+          port: 9000
+          insecure: "true"
+          accessKey: yocto-svcacct
+          secretKey: ${{ secrets.YOCTO_CACHE_SECRET_KEY }}
+          bucket: yocto-cache
+          region: local
+          use-fallback: ${{ github.event.repository.private != true }}
           key: ${{ inputs.machine }}-sstate-${{ github.sha }}
+          path: |
+            ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
           restore-keys: |
             ${{ inputs.machine }}-sstate-
 
@@ -572,24 +579,29 @@ jobs:
             exit 1
           fi
 
+      # If there was a cache miss for this key, save a new cache.
+      # Use local S3 cache on self-hosted runners, but allow fallback to the default GitHub cache.
+      # https://github.com/tespkg/actions-cache
       # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
-      # https://github.com/actions/cache/blob/main/README.md#creating-a-cache-key
-      # https://github.com/actions/cache
-      # https://github.com/actions/cache/blob/main/save/README.md
-      # Caches are scoped to the current branch context, with fallback to the default branch context.
-      # GitHub will remove any cache entries that have not been accessed in over 7 days.
-      # There is no limit on the number of caches you can store, but the total size of all caches in a repository is limited to 10 GB.
-      # Once a repository has reached its maximum cache storage, the cache eviction policy will create space by deleting the oldest caches in the repository.
-      - name: Save sstate cache
-        uses: actions/cache/save@v4.0.2
+      - name: Save actions cache
+        uses: tespkg/actions-cache/save@v1.7.1
         # Do not save cache for pull_request_target events
-        # as they run in the context of the main branch and would be vulnerable to cache poisoning
+        # as they run in the context of the main branch and would be vulnerable to cache poisoning.
         # https://0xn3va.gitbook.io/cheat-sheets/ci-cd/github/actions#cache-poisoning
         # https://adnanthekhan.com/2024/05/06/the-monsters-in-your-build-cache-github-actions-cache-poisoning/
-        if: github.event_name != 'pull_request_target'
+        if: steps.cache-restore.outputs.cache-hit != true && github.event_name != 'pull_request_target'
         with:
-          path: ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
-          key: ${{ steps.cache-restore.outputs.cache-primary-key }}
+          endpoint: minio
+          port: 9000
+          insecure: "true"
+          accessKey: yocto-svcacct
+          secretKey: ${{ secrets.YOCTO_CACHE_SECRET_KEY }}
+          bucket: yocto-cache
+          region: local
+          use-fallback: ${{ github.event.repository.private != true }}
+          key: ${{ inputs.machine }}-sstate-${{ github.sha }}
+          path: |
+            ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
 
       # https://github.com/unfor19/install-aws-cli-action
       - name: Setup awscli
