@@ -1,4 +1,30 @@
 - commits:
+    - subject: "barys: add support for scarthgap"
+      hash: fa730241fc31bf1cda183e4e42f733372948a4fd
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Joseph Kogut <joseph@balena.io>
+        signed-off-by: Joseph Kogut <joseph@balena.io>
+      author: Joseph Kogut
+      nested: []
+    - subject: "barys: make honister+ syntax default"
+      hash: 8d9f26fb9f11b32aba1b0c364a093415be90b576
+      body: |
+        Rather than require new Yocto versions to be added to
+        NEW_SYNTAX_RELEASES, make the new syntax the default.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Joseph Kogut <joseph@balena.io>
+        signed-off-by: Joseph Kogut <joseph@balena.io>
+      author: Joseph Kogut
+      nested: []
+  version: 1.27.20
+  title: ""
+  date: 2024-12-09T09:35:53.011Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.68
       hash: f4709be40f4e1530cc8ac71eaf7ea0a81babdb1f
       body: |
