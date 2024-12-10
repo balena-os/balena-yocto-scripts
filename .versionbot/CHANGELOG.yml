@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.69
+      hash: da7a483a6987556af6e663e61477917f5c486fa2
+      body: |
+        Update balena-os/leviathan from 2.31.68 to 2.31.69
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.28.1
+  title: ""
+  date: 2024-12-10T11:34:33.849Z
+- commits:
     - subject: Update the App Id and Private Key for ephemeral app tokens
       hash: 583241b9d2ae902b302fd00bb037ef0c844ca289
       body: |
