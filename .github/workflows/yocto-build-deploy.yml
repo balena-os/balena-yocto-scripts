@@ -1204,7 +1204,7 @@ jobs:
 
       # https://github.com/balena-os/leviathan/blob/master/action.yml
       - name: BalenaOS Leviathan Tests
-        uses: balena-os/leviathan@8010c6e0e543f8e3680b27ebfc8c4e27cbba78f8 # v2.31.68
+        uses: balena-os/leviathan@3a37005d5f47b758c2db4c52f694dd6f2274a0a4 # v2.31.69
         env:
           # BALENA_API_TEST_KEY is a secret that should be specific to the runtime environment
           # It requires permissions to manage autokit workers, and create test fleets
