@@ -23,6 +23,7 @@ ensure_all_env_variables_are_set() {
                          AWS_DEFAULT_REGION
                          AWS_SECURITY_GROUP_ID
                          AWS_SUBNET_ID
+                         AWS_KMS_KEY_ID
                          S3_BUCKET
                          IMAGE
                          AMI_NAME
@@ -118,7 +119,8 @@ create_aws_ebs_snapshot() {
 
     import_task_id=$(aws ec2 import-snapshot \
       --description "snapshot-${AMI_NAME}" \
-      --disk-container "Description=balenaOs,Format=RAW,UserBucket={S3Bucket=${S3_BUCKET},S3Key=preloaded-images/${s3_key}}" | jq -r .ImportTaskId)
+      --disk-container "Description=balenaOs,Format=RAW,UserBucket={S3Bucket=${S3_BUCKET},S3Key=preloaded-images/${s3_key}}" | jq -r .ImportTaskId \
+      --kms-key-id "${AWS_KMS_KEY_ID}")
 
     echo "* Created a AWS import snapshot task with id ${import_task_id}. Waiting for completition... (Timeout: $IMPORT_SNAPSHOT_TIMEOUT_MINS mins)"
     eval "$__s3_image_url='${s3_url}'"
@@ -228,7 +230,13 @@ balena_setup_fleet() {
     _uuid=$(balena device register "${_ami_test_org}/${_ami_test_fleet}" | awk '{print $4}')
     >&2 echo "Pre-registered device with UUID ${_uuid}"
 
-    >&2 balena config generate --network ethernet --version "${_hostos_version}" --device "${_uuid}" --appUpdatePollInterval 5 --output "${_config_json}"
+    if [ "$AMI_TEST_DEV_MODE" = true ]; then 
+        _dev_mode="--dev";
+    else
+        _dev_mode="";
+    fi
+
+    >&2 balena config generate --network ethernet --version "${_hostos_version}" --device "${_uuid}" --appUpdatePollInterval 5 --output "${_config_json}" "${_dev_mode}"
     if [ ! -f "${_config_json}" ]; then
       echo "Unable to generate configuration"
       return 1
