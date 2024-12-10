@@ -35,8 +35,8 @@ on:
       PBDKF2_PASSPHRASE:
         description: "Passphrase used to encrypt/decrypt balenaOS assets at rest in GitHub."
         required: false
-      YOCTO_CACHE_SECRET_KEY:
-        description: "Self-hosted runner S3 secret key for the yocto-svcacct user."
+      ACTIONS_CACHE_SECRET_KEY:
+        description: "Self-hosted runner S3 secret key for the actions-svcacct user."
         required: false
 
     inputs:
@@ -521,6 +521,22 @@ jobs:
 
           EOF
           cat "${AUTO_CONF_FILE}"
+  
+      # https://github.com/tespkg/actions-cache
+      - name: Save actions cache
+        uses: tespkg/actions-cache/save@cba095d7af782a955b8f4fa13396fbf0ab62bd4b # v1.7.1
+        with:
+          endpoint: minio
+          port: 9000
+          insecure: "true"
+          accessKey: actions-svcacct
+          secretKey: ${{ secrets.ACTIONS_CACHE_SECRET_KEY }}
+          bucket: actions-cache
+          region: local
+          use-fallback: false
+          key: test-${{ runner.os }}-${{ github.run_id }}
+          path: |
+            ${{ env.AUTO_CONF_FILE }}
 
       # Use local S3 cache on self-hosted runners, but allow fallback to the default GitHub cache.
       # https://github.com/tespkg/actions-cache
@@ -532,11 +548,11 @@ jobs:
           endpoint: minio
           port: 9000
           insecure: "true"
-          accessKey: yocto-svcacct
-          secretKey: ${{ secrets.YOCTO_CACHE_SECRET_KEY }}
-          bucket: yocto-cache
+          accessKey: actions-svcacct
+          secretKey: ${{ secrets.ACTIONS_CACHE_SECRET_KEY }}
+          bucket: actions-cache
           region: local
-          use-fallback: true
+          use-fallback: ${{ github.event.repository.private != true }}
           key: ${{ inputs.machine }}-sstate-${{ github.sha }}
           path: |
             ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
@@ -594,11 +610,11 @@ jobs:
           endpoint: minio
           port: 9000
           insecure: "true"
-          accessKey: yocto-svcacct
-          secretKey: ${{ secrets.YOCTO_CACHE_SECRET_KEY }}
-          bucket: yocto-cache
+          accessKey: actions-svcacct
+          secretKey: ${{ secrets.ACTIONS_CACHE_SECRET_KEY }}
+          bucket: actions-cache
           region: local
-          use-fallback: true
+          use-fallback: ${{ github.event.repository.private != true }}
           key: ${{ inputs.machine }}-sstate-${{ github.sha }}
           path: |
             ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
