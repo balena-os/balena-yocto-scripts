@@ -1160,10 +1160,10 @@ jobs:
       #     git checkout --force 9317cd8b5d6318244e5c4b5cbf4c060830710a0a
       #     git submodule update --init --recursive
 
-      - name: Manually patch leviathan worker ref
-        working-directory: ./layers/meta-balena/tests/leviathan
-        run: |
-          yq '.services.worker.image = "bh.cr/balena/leviathan-worker-${BALENA_ARCH:-amd64}/d632cec96de4c397d4bc83b82888515e"' -i docker-compose.qemu.yml
+      # - name: Manually patch leviathan worker ref
+      #   working-directory: ./layers/meta-balena/tests/leviathan
+      #   run: |
+      #     yq '.services.worker.image = "bh.cr/balena/leviathan-worker-${BALENA_ARCH:-amd64}/d632cec96de4c397d4bc83b82888515e"' -i docker-compose.qemu.yml
 
       # Images need to end up in workspace folder and need to have correct names
       - name: Fetch artifacts from build job
