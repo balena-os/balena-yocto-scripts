@@ -505,28 +505,30 @@ jobs:
           EOF
           cat "${AUTO_CONF_FILE}"
 
-      # https://docs.yoctoproject.org/4.0.10/ref-manual/classes.html?highlight=source_mirror#own-mirrors-bbclass
-      # https://github.com/openembedded/openembedded/blob/master/classes/own-mirrors.bbclass
-      # The own-mirrors class makes it easier to set up your own PREMIRRORS from which to first fetch source before
-      # attempting to fetch it from the upstream specified in SRC_URI within each recipe.
-      - name: Add S3 shared-downloads to PREMIRRORS
-        env:
-          SOURCE_MIRROR_URL: https://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}.s3.${{ vars.AWS_REGION || 'us-east-1' }}.amazonaws.com/shared-downloads/
-        run: |
-          mkdir -p "$(dirname "${AUTO_CONF_FILE}")"
-          cat <<EOF >> "${AUTO_CONF_FILE}"
+      # # FIXME: We should probably change this to MIRRORS:append instead of PREMIRRORS:prepend
+      # # to avoid using our S3 egress as much as possible?
+      # # https://docs.yoctoproject.org/4.0.10/ref-manual/classes.html?highlight=source_mirror#own-mirrors-bbclass
+      # # https://github.com/openembedded/openembedded/blob/master/classes/own-mirrors.bbclass
+      # # The own-mirrors class makes it easier to set up your own PREMIRRORS from which to first fetch source before
+      # # attempting to fetch it from the upstream specified in SRC_URI within each recipe.
+      # - name: Add S3 shared-downloads to PREMIRRORS
+      #   env:
+      #     SOURCE_MIRROR_URL: https://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}.s3.${{ vars.AWS_REGION || 'us-east-1' }}.amazonaws.com/shared-downloads/
+      #   run: |
+      #     mkdir -p "$(dirname "${AUTO_CONF_FILE}")"
+      #     cat <<EOF >> "${AUTO_CONF_FILE}"
 
-          INHERIT += "own-mirrors"
-          SOURCE_MIRROR_URL = "${SOURCE_MIRROR_URL}"
+      #     INHERIT += "own-mirrors"
+      #     SOURCE_MIRROR_URL = "${SOURCE_MIRROR_URL}"
 
-          EOF
-          cat "${AUTO_CONF_FILE}"
+      #     EOF
+      #     cat "${AUTO_CONF_FILE}"
 
-      # Use local S3 cache on self-hosted runners, but allow fallback to the default GitHub cache.
+      # Use local S3 cache on self-hosted runners
       # https://github.com/tespkg/actions-cache
       # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
       - name: Restore sstate cache
-        id: cache-restore
+        id: sstate-restore
         uses: tespkg/actions-cache/restore@v1.7.1
         with:
           endpoint: minio
@@ -538,10 +540,13 @@ jobs:
           region: local
           use-fallback: ${{ github.event.repository.private != true }}
           key: ${{ inputs.machine }}-sstate-${{ github.sha }}
-          path: |
-            ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
           restore-keys: |
             ${{ inputs.machine }}-sstate-
+          # FIXME: Include the shared-downloads directory with the sstate cache for now until
+          # we fully switch to AWS S3 for shared-downloads
+          path: |
+            ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
+            ${{ github.workspace }}/shared/shared-downloads
 
       # All preperation complete before this step
       # Start building balenaOS
@@ -580,16 +585,16 @@ jobs:
           fi
 
       # If there was a cache miss for this key, save a new cache.
-      # Use local S3 cache on self-hosted runners, but allow fallback to the default GitHub cache.
+      # Use local S3 cache on self-hosted runners.
       # https://github.com/tespkg/actions-cache
       # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
-      - name: Save actions cache
+      - name: Save sstate cache
         uses: tespkg/actions-cache/save@v1.7.1
         # Do not save cache for pull_request_target events
         # as they run in the context of the main branch and would be vulnerable to cache poisoning.
         # https://0xn3va.gitbook.io/cheat-sheets/ci-cd/github/actions#cache-poisoning
         # https://adnanthekhan.com/2024/05/06/the-monsters-in-your-build-cache-github-actions-cache-poisoning/
-        if: steps.cache-restore.outputs.cache-hit != true && github.event_name != 'pull_request_target'
+        if: steps.sstate-restore.outputs.cache-hit != true && github.event_name != 'pull_request_target'
         with:
           endpoint: minio
           port: 9000
@@ -600,8 +605,11 @@ jobs:
           region: local
           use-fallback: ${{ github.event.repository.private != true }}
           key: ${{ inputs.machine }}-sstate-${{ github.sha }}
+          # FIXME: Include the shared-downloads directory with the sstate cache for now until
+          # we fully switch to AWS S3 for shared-downloads
           path: |
             ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
+            ${{ github.workspace }}/shared/shared-downloads
 
       # https://github.com/unfor19/install-aws-cli-action
       - name: Setup awscli
@@ -617,29 +625,29 @@ jobs:
           # https://github.com/orgs/community/discussions/26636#discussioncomment-3252664
           mask-aws-account-id: false
 
-      # Sync shared downloads to S3 to use as a sources mirror in case original sources are not available.
-      # Exlude all directories and temp files as we only want the content and the .done files.
-      # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/sync.html
-      - name: Sync shared downloads to S3
-        # Do not publish shared downloads for pull_request_target events to prevent cache poisoning
-        # Do not publish shared downloads for private device-types as the mirror is public-read
-        if: github.event_name != 'pull_request_target' && steps.balena-lib.outputs.is_private == 'false'
-        # Ignore errors for now, as we may have upload conflicts with other jobs
-        continue-on-error: true
-        env:
-          SHARED_DOWNLOADS_DIR: ${{ github.workspace }}/shared/shared-downloads
-          S3_ACL: public-read
-          S3_SSE: AES256
-          # FIXME: This should be a public bucket that does not differ between production and staging deploys
-          S3_URL: "s3://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}/shared-downloads"
-          S3_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-        # Create a symlink to the from the relative container path to the workspace in order to resolve symlinks
-        # created in the build container runtime.
-        run: |
-          sudo ln -sf "${{ github.workspace }}" /work
-          ls -al "${SHARED_DOWNLOADS_DIR}/"
-          aws s3 sync --sse="${S3_SSE}" --acl="${S3_ACL}" "${SHARED_DOWNLOADS_DIR}/" "${S3_URL}/" \
-            --exclude "*/*" --exclude "*.tmp" --size-only --follow-symlinks --no-progress
+      # # Sync shared downloads to S3 to use as a sources mirror in case original sources are not available.
+      # # Exlude all directories and temp files as we only want the content and the .done files.
+      # # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/sync.html
+      # - name: Sync shared downloads to S3
+      #   # Do not publish shared downloads for pull_request_target events to prevent cache poisoning
+      #   # Do not publish shared downloads for private device-types as the mirror is public-read
+      #   if: github.event_name != 'pull_request_target' && steps.balena-lib.outputs.is_private == 'false'
+      #   # Ignore errors for now, as we may have upload conflicts with other jobs
+      #   continue-on-error: true
+      #   env:
+      #     SHARED_DOWNLOADS_DIR: ${{ github.workspace }}/shared/shared-downloads
+      #     S3_ACL: public-read
+      #     S3_SSE: AES256
+      #     # FIXME: This should be a a new bucket used only for shared-downloads (one for staging, one for production)
+      #     S3_URL: "s3://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}/shared-downloads"
+      #     S3_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      #   # Create a symlink to the from the relative container path to the workspace in order to resolve symlinks
+      #   # created in the build container runtime.
+      #   run: |
+      #     sudo ln -sf "${{ github.workspace }}" /work
+      #     ls -al "${SHARED_DOWNLOADS_DIR}/"
+      #     aws s3 sync --sse="${S3_SSE}" --acl="${S3_ACL}" "${SHARED_DOWNLOADS_DIR}/" "${S3_URL}/" \
+      #       --exclude "*/*" --exclude "*.tmp" --size-only --follow-symlinks --no-progress
 
       # TODO: pre-install on self-hosted-runners
       # Needed by the yocto job to zip artifacts - Don't remove
