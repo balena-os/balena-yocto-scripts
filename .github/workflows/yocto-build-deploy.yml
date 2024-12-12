@@ -750,9 +750,14 @@ jobs:
           # Check if app already exists if it doesn't then create a new one
           if [ -z "${_appID}" ] || [ "${_appID}" = "null" ]; then
 
+            echo "Fetching ${BALENAOS_ACCOUNT} organization id"
+            _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/organization(handle='${BALENAOS_ACCOUNT}')?\$select=id" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
+            _orgID=$(echo "${_json}" | jq --raw-output '.d[0].id' || true)
+            echo "${_orgID}"
+
             # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L128
             echo "Creating App"
-            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"app_name\": \"${BALENAOS_ACCOUNT}/${APPNAME}\", \"device_type\": \"${APPNAME}\"}")
+            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"organization\": \"${_orgID}\", \"app_name\": \"${APPNAME}\", \"device_type\": \"${SLUG}\"}")
             _appID=$(echo "${_json}" | jq --raw-output '.id' || true)
             echo "${_appID}"
 
