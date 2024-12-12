@@ -364,7 +364,7 @@ jobs:
         id: balena-lib
         env:
           CURL: "curl --silent --retry 10 --location --compressed"
-          TRANSLATION: "v6"
+          TRANSLATION: "v7"
           BALENAOS_TOKEN: ${{ secrets.BALENA_API_DEPLOY_KEY }}
         run: |
           source "${automation_dir}/include/balena-api.inc"
@@ -700,7 +700,7 @@ jobs:
           META_BALENA_VERSION: "${{ steps.balena-lib.outputs.meta_balena_version }}"
           RELEASE_VERSION: "${{ steps.balena-lib.outputs.os_version }}"
           BOOTABLE: 1
-          TRANSLATION: "v6"
+          TRANSLATION: "v7"
           FINAL: ${{ steps.should-finalize.outputs.finalize }}
           ESR: "${{ steps.esr-check.outputs.is-esr }}"
           balenaCloudEmail: # TODO: currently trying to use named API key only, its possible email/pw auth no longer has the additional privileges that it used to
@@ -755,9 +755,14 @@ jobs:
             _orgID=$(echo "${_json}" | jq --raw-output '.d[0].id' || true)
             echo "${_orgID}"
 
+            echo "Fetching ${SLUG} device type id"
+            _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/device_type(slug='${SLUG}')?\$select=id" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
+            _deviceTypeID=$(echo "${_json}" | jq --raw-output '.d[0].id' || true)
+            echo "${_deviceTypeID}"
+
             # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L128
             echo "Creating App"
-            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"organization\": \"${_orgID}\", \"app_name\": \"${APPNAME}\", \"device_type\": \"${SLUG}\"}")
+            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"organization\": \"${_orgID}\", \"app_name\": \"${APPNAME}\", \"is_of__device_type\": \"${_deviceTypeID}\"}")
             _appID=$(echo "${_json}" | jq --raw-output '.id' || true)
             echo "${_appID}"
 
@@ -871,7 +876,7 @@ jobs:
           for _asset in ${_assets}; do
             if [ -f "${_asset}" ]; then
               _asset_key=$(basename "${_asset}")
-              # note: this uses the "resin" endpoint rather than v6
+              # note: this uses the "resin" endpoint rather than v7
               _json=$(${CURL} -XPOST "https://api.${API_ENV}/resin/release_asset" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --form "release=${_release_id}" --form "asset_key=${_asset_key}" --form "asset=@${_asset}")
               _aid=$(echo "${_json}" | jq -r '.id')
               echo "${_aid}"
@@ -891,7 +896,7 @@ jobs:
           SLUG: "${{ steps.balena-lib.outputs.device_slug }}"
           APPNAME: "${{ steps.balena-lib.outputs.device_slug }}-esr"
           META_BALENA_VERSION: "${{ steps.balena-lib.outputs.meta_balena_version }}"
-          TRANSLATION: "v6"
+          TRANSLATION: "v7"
           CURL: "curl --silent --retry 10 --location --compressed"
           VERSION: ${{ steps.balena-lib.outputs.os_version }}
           HOSTAPP_RELEASE_ID: ${{ steps.deploy-hostapp.outputs.release_id }}
