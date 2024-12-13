@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update Pin dependencies
+      hash: fc31531088f22db582ed6c45a6127d172e59ff6a
+      body: |
+        Update actions/github-script
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.29.3
+  title: ""
+  date: 2024-12-13T23:23:55.009Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.70
       hash: 6adf4bd6777747e2644800175f6b36ba996169dc
       body: |
