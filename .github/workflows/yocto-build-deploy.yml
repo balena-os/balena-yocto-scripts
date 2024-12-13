@@ -672,18 +672,32 @@ jobs:
 
           source "${automation_dir}/include/balena-deploy.inc"
           # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-deploy.inc#L23
-          balena_deploy_artifacts "${{ inputs.machine }}" "${DEPLOY_PATH}" false
+          balena_deploy_artifacts "${{ inputs.machine }}" "${DEPLOY_PATH}" false         
+
+      # gzip the image as that's what the leviathan tests expect
+      # and compress the artifacts with tar and zstd to save space
+      - name: Compress GHA artifacts
+        env:
+          OUTFILE: "${{ runner.temp }}/artifacts.tar.zst"
+        working-directory: ${{ runner.temp }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gzip
+
+          gzip -9 -c "${DEPLOY_PATH}/image/balena.img" >balena.img.gz
+          cp "${DEPLOY_PATH}/balena-image.docker" balena-image.docker
+          tar -I zstd -cf "${OUTFILE}" balena.img.gz balena-image.docker
+          echo "UPLOAD_ARTIFACT_PATH=${OUTFILE}" >>"${GITHUB_ENV}"
 
       - name: Encrypt artifacts
-        id: encrypt
-        if: |
-          github.event.repository.private != true &&
-          (inputs.sign-image == true || steps.balena-lib.outputs.is_private == 'true')
+        if: inputs.sign-image || steps.balena-lib.outputs.is_private
+        env:
+          INFILE: "${{ runner.temp }}/artifacts.tar.zst"
+          OUTFILE: "${{ runner.temp }}/artifacts.tar.zst.enc"
+          PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
         run: |
-          for artifact in ${{ env.DEPLOY_PATH }}/image/balena.img ${{ env.DEPLOY_PATH }}/balena-image.docker; do
-            openssl enc -v -e -aes-256-cbc -k '${{ secrets.PBDKF2_PASSPHRASE }}' -pbkdf2 -iter 310000 -md sha256 -salt -in "${artifact}" -out "${artifact}.enc"
-          done
-          echo "ENCRYPTED_EXTENSION=.enc" >>"${GITHUB_ENV}"
+          openssl enc -v -e -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${INFILE}" -out "${OUTFILE}"
+          echo "UPLOAD_ARTIFACT_PATH=${OUTFILE}" >>"${GITHUB_ENV}"
 
       # https://github.com/actions/upload-artifact
       # We upload only `balena.img` for use with the leviathan tests - this is the artifact that is presented to users
@@ -698,10 +712,8 @@ jobs:
           if-no-files-found: error
           retention-days: 3
           compression-level: 7
-          # ENCRYPTED_EXTENSION may be empty if the artifact is not encrypted
           path: |
-            ${{ env.DEPLOY_PATH }}/image/balena.img${{ env.ENCRYPTED_EXTENSION }}
-            ${{ env.DEPLOY_PATH }}/balena-image.docker${{ env.ENCRYPTED_EXTENSION }}
+            ${{ env.UPLOAD_ARTIFACT_PATH }}
 
       # Separate this evaluation into its own step + output, as we use this logic in several places and its easier to manage this way
       - name: Evaluate whether to finalize release
@@ -1648,22 +1660,23 @@ jobs:
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
         with:
           name: build-artifacts
-          path: ${{ env.WORKSPACE }}
+          path: ${{ runner.temp }}
 
       - name: Decrypt artifacts
-        if: |
-          github.event.repository.private != true &&
-          (inputs.sign-image == true || needs.build.outputs.is_private == 'true')
-        working-directory: ${{ env.WORKSPACE }}
+        if: inputs.sign-image || needs.build.outputs.is_private
+        env:
+          INFILE: "${{ runner.temp }}/artifacts.tar.zst.enc"
+          OUTFILE: "${{ runner.temp }}/artifacts.tar.zst"
+          PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
         run: |
-          for artifact in *.enc **/*.enc; do
-            openssl enc -v -d -aes-256-cbc -k '${{ secrets.PBDKF2_PASSPHRASE }}' -pbkdf2 -iter 310000 -md sha256 -salt -in "${artifact}" -out "${artifact/.enc/}"
-          done
+          openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${INFILE}" -out "${OUTFILE}"
 
-      - name: Install gzip
+      - name: Decompress artifacts
+        env:
+          INFILE: "${{ runner.temp }}/artifacts.tar.zst"
         run: |
-          sudo apt update
-          sudo apt install -y --no-install-recommends gzip
+          mkdir -p "${WORKSPACE}"
+          tar -I zstd -xvf "${INFILE}" -C "${WORKSPACE}"
 
       # Check out private contracts if this is a private device type - as these are required for the tests
       - name: Checkout private Contracts
@@ -1682,9 +1695,6 @@ jobs:
       # Moving it to where the meta-balena config.js expects
       - name: Prepare workspace
         run: |
-          mv "${WORKSPACE}/image/balena.img" "${WORKSPACE}"
-          gzip "${WORKSPACE}/balena.img"
-
           cp -v "${SUITES}/${TEST_SUITE}/config.js" "${WORKSPACE}/config.js"
 
           mkdir -p "${REPORTS}"
