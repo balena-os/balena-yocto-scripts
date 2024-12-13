@@ -1,4 +1,18 @@
 - commits:
+    - subject: re-enable AMI deploys
+      hash: 6b951a1ef76da4896e676477a8f550b3186b7e55
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+  version: 1.29.1
+  title: ""
+  date: 2024-12-13T18:55:49.988Z
+- commits:
     - subject: Use S3 sstate cache on self-hosted runners
       hash: 3cd0f501bd49dd0979a3cc5202781aef638d2da1
       body: ""
