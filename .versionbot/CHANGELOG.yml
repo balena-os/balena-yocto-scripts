@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.70
+      hash: 6adf4bd6777747e2644800175f6b36ba996169dc
+      body: |
+        Update balena-os/leviathan from 2.31.69 to 2.31.70
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.29.2
+  title: ""
+  date: 2024-12-13T21:17:34.042Z
+- commits:
     - subject: re-enable AMI deploys
       hash: 6b951a1ef76da4896e676477a8f550b3186b7e55
       body: ""
