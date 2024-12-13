@@ -1,4 +1,72 @@
 - commits:
+    - subject: Use S3 sstate cache on self-hosted runners
+      hash: 3cd0f501bd49dd0979a3cc5202781aef638d2da1
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Sync shared downloads to S3 to use as a sources mirror
+      hash: edfa5f6d89b9ced619b54d060af1ce7ae4290b62
+      body: ""
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Sync the shared sstate to github actions cache
+      hash: d4e300f5a562b7a033673041d2f3192fedee6e3d
+      body: |
+        This allows the per-device sstate to be ephemeral
+        and best effort, with automatic size and expiry limits
+        enforced by GitHub and scoped to the repository and branch.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Use legacy yocto NFS cache as a source mirror
+      hash: d98d44c587bc6d6e8dc7b7c661e56a0719e56f14
+      body: |
+        This change makes the legacy NFS cache mount
+        optional, and will not fail the build if unset
+        or unreachable.
+
+        Instead, if the NFS is available it will be used
+        as a read-only mirror for shared downloads,
+        but will not be updated with new files.
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Enable mirror tarballs bitbake feature
+      hash: 2cfb433fd6511cd3b182187a21507c81e1c73ae6
+      body: >
+        Causes tarballs of the source control repositories (e.g. Git
+        repositories),
+
+        including metadata, to be placed in the DL_DIR directory
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.29.0
+  title: ""
+  date: 2024-12-13T11:01:47.680Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.69
       hash: da7a483a6987556af6e663e61477917f5c486fa2
       body: |
