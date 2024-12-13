@@ -35,6 +35,9 @@ on:
       PBDKF2_PASSPHRASE:
         description: "Passphrase used to encrypt/decrypt balenaOS assets at rest in GitHub."
         required: false
+      YOCTO_CACHE_SECRET_KEY:
+        description: "Self-hosted runner S3 secret key for the yocto-svcacct user."
+        required: false
 
     inputs:
       build-runs-on:
@@ -193,11 +196,10 @@ jobs:
       automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
       BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || inputs.deploy-environment || 'balena-cloud.com' }}
       API_ENV: ${{ vars.BALENA_HOST || inputs.deploy-environment || 'balena-cloud.com' }}
-
-      # Yocto NFS sstate cache host
-      YOCTO_CACHE_HOST: ${{ vars.YOCTO_CACHE_HOST || 'nfs.product-os.io' }}
-      YOCTO_CACHE_DIR: ${{ github.workspace }}/shared/yocto-cache
       BARYS_ARGUMENTS_VAR: ""
+      # https://docs.yoctoproject.org/3.1.21/overview-manual/overview-manual-concepts.html#user-configuration
+      # Create an autobuilder configuration file that is loaded before local.conf
+      AUTO_CONF_FILE: "${{ github.workspace }}/build/conf/auto.conf"
 
     outputs:
       os_version: ${{ steps.balena-lib.outputs.os_version }}
@@ -225,7 +227,7 @@ jobs:
         timeout-minutes: 90
         uses: product-os/review-commit-action@cddebf4cec8e40ea8f698b6dcce8cd70e38b7320 # v0.1.7
         with:
-          poll-interval: '10'
+          poll-interval: "10"
           allow-authors: false
 
       # this must be done before putting files in the workspace
@@ -433,28 +435,17 @@ jobs:
           # Move newly generated OS contract to location expected later on in the workflow
           cp "${CONTRACTS_OUTPUT_DIR}/${DEVICE_TYPE_SLUG}/balena-os/balena.yml" "${WORKSPACE}/balena.yml"
 
-      # # https://docs.yoctoproject.org/dev/dev-manual/speeding-up-build.html#speeding-up-a-build
-      # # TODO: Delete  when using properly isolated self-hosted runner resources
-      # - name: Configure bitbake resource limits
-      #   env:
-      #     BB_NUMBER_THREADS: 4
-      #     BB_NUMBER_PARSE_THREADS: 4
-      #     PARALLEL_MAKE: -j4
-      #     PARALLEL_MAKEINST: -j4
-      #     BB_PRESSURE_MAX_CPU: 500
-      #     BB_PRESSURE_MAX_IO: 500
-      #     BB_PRESSURE_MAX_MEMORY: 500
-      #   run: |
-      #     nproc
-      #     free -h
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_NUMBER_THREADS=${BB_NUMBER_THREADS}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_NUMBER_PARSE_THREADS=${BB_NUMBER_PARSE_THREADS}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a PARALLEL_MAKE=${PARALLEL_MAKE}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a PARALLEL_MAKEINST=${PARALLEL_MAKEINST}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_PRESSURE_MAX_CPU=${BB_PRESSURE_MAX_CPU}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_PRESSURE_MAX_IO=${BB_PRESSURE_MAX_IO}"
-      #     BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a BB_PRESSURE_MAX_MEMORY=${BB_PRESSURE_MAX_MEMORY}"
-      #     echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR}" >>"${GITHUB_ENV}"
+      # Causes tarballs of the source control repositories (e.g. Git repositories), including metadata, to be placed in the DL_DIR directory.
+      # https://docs.yoctoproject.org/4.0.5/ref-manual/variables.html?highlight=compress#term-BB_GENERATE_MIRROR_TARBALLS
+      # The github-script action is a safer method of writing to outputs and variables, vs a shell step.
+      # https://github.com/actions/github-script
+      - name: Enable mirror tarballs
+        uses: actions/github-script@v7.0.1
+        with:
+          script: |
+            const currentValue = process.env.BARYS_ARGUMENTS_VAR || '';
+            const newValue = `${currentValue} -a BB_GENERATE_MIRROR_TARBALLS=1`;
+            core.exportVariable('BARYS_ARGUMENTS_VAR', newValue);
 
       - name: Enable signed images
         if: inputs.sign-image == true
@@ -471,17 +462,91 @@ jobs:
           BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} --bitbake-args --no-setscene"
           echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR}" >>"${GITHUB_ENV}"
 
-      # the directory is required even if we don't mount the NFS share
-      - name: Create shared cache mount point
-        run: |
-          sudo mkdir -p "${YOCTO_CACHE_DIR}/$(whoami)"
-          sudo chown -R "$(id -u):$(id -g)" "${YOCTO_CACHE_DIR}"
-
       - name: Mount shared NFS cache
-        if: env.YOCTO_CACHE_HOST != '' && contains(fromJSON(inputs.build-runs-on), 'self-hosted')
+        if: vars.YOCTO_CACHE_HOST && contains(fromJSON(inputs.build-runs-on), 'self-hosted')
+        continue-on-error: true
+        id: jenkins-nfs
+        env:
+          YOCTO_CACHE_HOST: ${{ vars.YOCTO_CACHE_HOST }}
+          MOUNTPOINT: ${{ github.workspace}}/nfs/yocto
         run: |
-          sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${YOCTO_CACHE_DIR}" -o fsc,nolock
-          ls -al "${YOCTO_CACHE_DIR}/$(whoami)"
+          sudo mkdir -p "${MOUNTPOINT}"
+          sudo chown -R "$(id -u):$(id -g)" "${MOUNTPOINT}"
+          sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${MOUNTPOINT}" -o fsc,nolock
+
+      # https://wiki.yoctoproject.org/wiki/Enable_sstate_cache
+      # https://docs.yoctoproject.org/4.0.10/ref-manual/variables.html#term-MIRRORS
+      # https://docs.yoctoproject.org/4.0.10/ref-manual/variables.html#term-PREMIRRORS
+      # https://docs.yoctoproject.org/4.0.10/ref-manual/variables.html#term-SSTATE_MIRRORS
+      # https://docs.yoctoproject.org/4.0.10/overview-manual/concepts.html#source-mirror-s
+      # https://docs.yoctoproject.org/4.0.10/ref-manual/classes.html?highlight=source_mirror#own-mirrors-bbclass
+      # https://github.com/openembedded/openembedded/blob/master/classes/own-mirrors.bbclass
+      # https://github.com/openembedded/openembedded/blob/master/classes/mirrors.bbclass
+      - name: Add NFS shared-downloads to PREMIRRORS
+        if: steps.jenkins-nfs.outcome == 'success'
+        env:
+          # Relative to the build container working dir, not the workspace
+          SOURCE_MIRROR_URL: file:///work/nfs/yocto/runner/shared-downloads/
+          SSTATE_MIRROR_URL: file:///work/nfs/yocto/runner/${{ inputs.machine }}/sstate/PATH
+        run: |
+          mkdir -p "$(dirname "${AUTO_CONF_FILE}")"
+          cat <<EOF >> "${AUTO_CONF_FILE}"
+
+          PREMIRRORS:prepend = "\\
+            cvs://.*/.* ${SOURCE_MIRROR_URL} \\
+            svn://.*/.* ${SOURCE_MIRROR_URL} \\
+            git://.*/.* ${SOURCE_MIRROR_URL} \\
+            hg://.*/.* ${SOURCE_MIRROR_URL} \\
+            bzr://.*/.* ${SOURCE_MIRROR_URL} \\
+            https?$://.*/.* ${SOURCE_MIRROR_URL} \\
+            ftp://.*/.*  ${SOURCE_MIRROR_URL} \\
+          "
+
+          EOF
+          cat "${AUTO_CONF_FILE}"
+
+      # # FIXME: We should probably change this to MIRRORS:append instead of PREMIRRORS:prepend
+      # # to avoid using our S3 egress as much as possible?
+      # # https://docs.yoctoproject.org/4.0.10/ref-manual/classes.html?highlight=source_mirror#own-mirrors-bbclass
+      # # https://github.com/openembedded/openembedded/blob/master/classes/own-mirrors.bbclass
+      # # The own-mirrors class makes it easier to set up your own PREMIRRORS from which to first fetch source before
+      # # attempting to fetch it from the upstream specified in SRC_URI within each recipe.
+      # - name: Add S3 shared-downloads to PREMIRRORS
+      #   env:
+      #     SOURCE_MIRROR_URL: https://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}.s3.${{ vars.AWS_REGION || 'us-east-1' }}.amazonaws.com/shared-downloads/
+      #   run: |
+      #     mkdir -p "$(dirname "${AUTO_CONF_FILE}")"
+      #     cat <<EOF >> "${AUTO_CONF_FILE}"
+
+      #     INHERIT += "own-mirrors"
+      #     SOURCE_MIRROR_URL = "${SOURCE_MIRROR_URL}"
+
+      #     EOF
+      #     cat "${AUTO_CONF_FILE}"
+
+      # Use local S3 cache on self-hosted runners
+      # https://github.com/tespkg/actions-cache
+      # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+      - name: Restore sstate cache
+        id: sstate-restore
+        uses: tespkg/actions-cache/restore@v1.7.1
+        with:
+          endpoint: minio
+          port: 9000
+          insecure: "true"
+          accessKey: yocto-svcacct
+          secretKey: ${{ secrets.YOCTO_CACHE_SECRET_KEY }}
+          bucket: yocto-cache
+          region: local
+          use-fallback: ${{ github.event.repository.private != true }}
+          key: ${{ inputs.machine }}-sstate-${{ github.sha }}
+          restore-keys: |
+            ${{ inputs.machine }}-sstate-
+          # FIXME: Include the shared-downloads directory with the sstate cache for now until
+          # we fully switch to AWS S3 for shared-downloads
+          path: |
+            ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
+            ${{ github.workspace }}/shared/shared-downloads
 
       # All preperation complete before this step
       # Start building balenaOS
@@ -491,6 +556,7 @@ jobs:
         id: build
         env:
           HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
+          SHARED_BUILD_DIR: ${{ github.workspace }}/shared
         run: |
           # When building for non-x86 device types, meson, after building binaries must try to run them via qemu if possible , maybe as some sanity check or test?
           # Therefore qemu must be used - and our runner mmap_min_addr is set to 4096 (default, set here: https://github.com/product-os/github-runner-kernel/blob/ef5a66951599dc64bf2920d896c36c6d9eda8df6/config/5.10/microvm-kernel-x86_64-5.10.config#L858
@@ -500,15 +566,88 @@ jobs:
           sudo sysctl -w vm.mmap_min_addr=65536
           sysctl vm.mmap_min_addr
 
+          mkdir -p "${SHARED_BUILD_DIR}"
+
+          cat "${AUTO_CONF_FILE}"
+
           ./balena-yocto-scripts/build/balena-build.sh \
             -d "${MACHINE}" \
             -t "${{ secrets.BALENA_API_DEPLOY_KEY }}" \
-            -s "${YOCTO_CACHE_DIR}/$(whoami)" \
-            -g "${BARYS_ARGUMENTS_VAR}"
+            -s "${SHARED_BUILD_DIR}" \
+            -g "${BARYS_ARGUMENTS_VAR}" | tee balena-build.log
 
           if grep -R "ERROR: " build/tmp/log/*; then
             exit 1
           fi
+
+          if ! grep -q "Build for ${{ inputs.machine }} suceeded" balena-build.log; then
+            exit 1
+          fi
+
+      # If there was a cache miss for this key, save a new cache.
+      # Use local S3 cache on self-hosted runners.
+      # https://github.com/tespkg/actions-cache
+      # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+      - name: Save sstate cache
+        uses: tespkg/actions-cache/save@v1.7.1
+        # Do not save cache for pull_request_target events
+        # as they run in the context of the main branch and would be vulnerable to cache poisoning.
+        # https://0xn3va.gitbook.io/cheat-sheets/ci-cd/github/actions#cache-poisoning
+        # https://adnanthekhan.com/2024/05/06/the-monsters-in-your-build-cache-github-actions-cache-poisoning/
+        if: steps.sstate-restore.outputs.cache-hit != true && github.event_name != 'pull_request_target'
+        with:
+          endpoint: minio
+          port: 9000
+          insecure: "true"
+          accessKey: yocto-svcacct
+          secretKey: ${{ secrets.YOCTO_CACHE_SECRET_KEY }}
+          bucket: yocto-cache
+          region: local
+          use-fallback: ${{ github.event.repository.private != true }}
+          key: ${{ inputs.machine }}-sstate-${{ github.sha }}
+          # FIXME: Include the shared-downloads directory with the sstate cache for now until
+          # we fully switch to AWS S3 for shared-downloads
+          path: |
+            ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
+            ${{ github.workspace }}/shared/shared-downloads
+
+      # https://github.com/unfor19/install-aws-cli-action
+      - name: Setup awscli
+        uses: unfor19/install-aws-cli-action@e8b481e524a99f37fbd39fdc1dcb3341ab091367 # v1
+
+      # https://github.com/aws-actions/configure-aws-credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          role-to-assume: ${{ vars.AWS_IAM_ROLE }}
+          role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          # https://github.com/orgs/community/discussions/26636#discussioncomment-3252664
+          mask-aws-account-id: false
+
+      # # Sync shared downloads to S3 to use as a sources mirror in case original sources are not available.
+      # # Exlude all directories and temp files as we only want the content and the .done files.
+      # # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/sync.html
+      # - name: Sync shared downloads to S3
+      #   # Do not publish shared downloads for pull_request_target events to prevent cache poisoning
+      #   # Do not publish shared downloads for private device-types as the mirror is public-read
+      #   if: github.event_name != 'pull_request_target' && steps.balena-lib.outputs.is_private == 'false'
+      #   # Ignore errors for now, as we may have upload conflicts with other jobs
+      #   continue-on-error: true
+      #   env:
+      #     SHARED_DOWNLOADS_DIR: ${{ github.workspace }}/shared/shared-downloads
+      #     S3_ACL: public-read
+      #     S3_SSE: AES256
+      #     # FIXME: This should be a a new bucket used only for shared-downloads (one for staging, one for production)
+      #     S3_URL: "s3://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}/shared-downloads"
+      #     S3_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      #   # Create a symlink to the from the relative container path to the workspace in order to resolve symlinks
+      #   # created in the build container runtime.
+      #   run: |
+      #     sudo ln -sf "${{ github.workspace }}" /work
+      #     ls -al "${SHARED_DOWNLOADS_DIR}/"
+      #     aws s3 sync --sse="${S3_SSE}" --acl="${S3_ACL}" "${SHARED_DOWNLOADS_DIR}/" "${S3_URL}/" \
+      #       --exclude "*/*" --exclude "*.tmp" --size-only --follow-symlinks --no-progress
 
       # TODO: pre-install on self-hosted-runners
       # Needed by the yocto job to zip artifacts - Don't remove
@@ -628,22 +767,6 @@ jobs:
         id: s3-esr-images-dir
         if: steps.should-deploy.outputs.deploy && steps.esr-check.outputs.is-esr
         run: echo "string=esr-images" >>"${GITHUB_OUTPUT}"
-
-      # https://github.com/unfor19/install-aws-cli-action
-      - name: Setup awscli
-        if: steps.should-deploy.outputs.deploy
-        uses: unfor19/install-aws-cli-action@e8b481e524a99f37fbd39fdc1dcb3341ab091367 # v1
-
-      # # https://github.com/aws-actions/configure-aws-credentials
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
-        if: steps.should-deploy.outputs.deploy
-        with:
-          role-to-assume: ${{ vars.AWS_IAM_ROLE }}
-          role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
-          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
-          # https://github.com/orgs/community/discussions/26636#discussioncomment-3252664
-          mask-aws-account-id: false
 
       # "If no keys are provided, but an IAM role is associated with the EC2 instance, it will be used transparently".
       # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/rm.html
