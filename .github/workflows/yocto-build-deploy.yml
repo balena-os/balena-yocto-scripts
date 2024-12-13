@@ -1175,7 +1175,7 @@ jobs:
     # https://docs.github.com/en/actions/learn-github-actions/expressions#functions
     # this expression checks to make sure at least one test suite was provided via either matrix syntax
     if: |
-      github.event_name != 'push' &&
+      github.event_name != 'push' && github.event_name != 'workflow_dispatch' &&
       (
         join(fromJSON(inputs.test_matrix).test_suite) != '' ||
         join(fromJSON(inputs.test_matrix).include.*.test_suite) != ''
