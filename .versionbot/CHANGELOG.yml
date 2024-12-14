@@ -1,4 +1,21 @@
 - commits:
+    - subject: Compress artifacts with gzip and zstd before encrypting
+      hash: b838c5782722dba194d1d6ff56d8986f5f918ec9
+      body: |
+        Otherwise encrypted images are unable to be compressed.
+        This saves a lot of space and time on uploading/downloading
+        artifacts.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.29.4
+  title: ""
+  date: 2024-12-14T00:35:39.056Z
+- commits:
     - subject: Update Pin dependencies
       hash: fc31531088f22db582ed6c45a6127d172e59ff6a
       body: |
