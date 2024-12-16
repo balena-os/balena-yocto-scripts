@@ -1,4 +1,20 @@
 - commits:
+    - subject: Remove hostapp creation step
+      hash: 5f273a9350d826c9cd24bbcbceb0937b5cb3b535
+      body: >
+        This functionality never worked for various reasons - and shouldn't be
+        in this workflow anyway
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+  version: 1.29.5
+  title: ""
+  date: 2024-12-16T15:26:57.997Z
+- commits:
     - subject: Compress artifacts with gzip and zstd before encrypting
       hash: b838c5782722dba194d1d6ff56d8986f5f918ec9
       body: |
