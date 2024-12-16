@@ -429,7 +429,7 @@ jobs:
           if [ -f "${CONTRACTS_OUTPUT_DIR}/${DEVICE_TYPE_SLUG}/balena-os/balena.yml" ]; then
             echo "${CONTRACTS_OUTPUT_DIR}/${DEVICE_TYPE_SLUG}/balena-os/balena.yml"
           else
-            >&2 echo "[balena_lib_build_contracts]: Failed to build OS contract for ${DEVICE_TYPE_SLUG}"
+            >&2 echo "[balena_lib_build_contracts]: Failed to build OS contract for ${DEVICE_TYPE_SLUG}. Ensure a hw.deviceType contract is in the appropriate repo"
             return 1
           fi
           # Move newly generated OS contract to location expected later on in the workflow
@@ -882,59 +882,10 @@ jobs:
           _appID=$(echo "${_json}" | jq --raw-output '.d[0].id')
           echo "${_appID}"
 
-          # Check if app already exists if it doesn't then create a new one
+          # Check if app already exists if it doesn't throw an error
           if [ -z "${_appID}" ] || [ "${_appID}" = "null" ]; then
-
-            # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L128
-            echo "Creating App"
-            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"app_name\": \"${BALENAOS_ACCOUNT}/${APPNAME}\", \"device_type\": \"${APPNAME}\"}")
-            _appID=$(echo "${_json}" | jq --raw-output '.id' || true)
-            echo "${_appID}"
-
-            # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L882
-            # This gives the relevant users access to these host apps
-            echo "Creating role access"
-
-            # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L835
-            # Get the ID of the team
-            _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/team?\$select=id&\$filter=(name%20eq%20'${HOSTAPP_ACCESS_TEAM}')%20and%20(belongs_to__organization/any(o:o/handle%20eq%20'${BALENAOS_ACCOUNT}'))" -H "Content-Type:application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
-            _team_id=$(echo "${_json}" | jq -r '.d[0].id')
-
-            # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L858
-            # Get the ID of the role
-            _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application_membership_role?\$select=id&\$filter=name%20eq%20'${HOSTAPP_ACCESS_ROLE}'" -H "Content-Type:application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
-            _role_id=$(echo "${_json}" | jq -r '.d[0].id')
-
-            # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L914
-            # Give the team developer access to the app
-            _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/team_application_access" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"team\": \"${_team_id}\", \"grants_access_to__application\": \"${_appID}\", \"application_membership_role\": \"${_role_id}\"\"}")
-            _id=$(echo "${_json}" | jq -r '.id')
-            if [ "${_id}" = "null" ]; then
-              >&2 echo "Failed to add ${HOSTAPP_ACCESS_ROLE} access tole to ${APPNAME}"
-            fi
-
-            # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L207
-            # Set it to public
-            _json=$(${CURL} -XPATCH "https://api.${API_ENV}/${TRANSLATION}/application(${_appID})" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"is_public": true, "is_stored_at__repository_url": "${{ inputs.device-repo }}"}')
-
-            # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L166
-            # Mark is as class "app"
-            _json=$(${CURL} -XPATCH "https://api.${API_ENV}/${TRANSLATION}/application(${_appID})" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"is_of__class": "app"}')
-
-            # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L248
-            # Mark as host
-            # NOTE: this -might- be why we used the email auth in the original yocto scripts - does the API key we use have the privileges to do this?
-            if [ "${BOOTABLE}" = 1 ]; then
-              _json=$(${CURL} -XPATCH "https://api.${API_ENV}/${TRANSLATION}/application(${_appID})" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data '{"is_host": true}')
-            fi
-
-            # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L86
-            # Set esr policy
-            if [ "${ESR}" = true ]; then
-              _json=$(${CURL} -XPOST "https://api.${API_ENV}/${TRANSLATION}/application_tag" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --data "{\"application\": \"${_appID}\", \"tag_key\": \"release-policy\", \"value\": \"esr\"}")
-            fi
-          else
-            >&2 echo "[${APPNAME}] Application ${_appID} already exists."
+            echo "[ERROR] No hostapp found for ${SLUG} - ensure that a publicly available hostapp is created with `is_host: true`"
+            exit 1
           fi
           echo "${_appID}"
 
