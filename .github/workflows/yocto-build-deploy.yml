@@ -505,24 +505,24 @@ jobs:
           EOF
           cat "${AUTO_CONF_FILE}"
 
-      # # FIXME: We should probably change this to MIRRORS:append instead of PREMIRRORS:prepend
-      # # to avoid using our S3 egress as much as possible?
-      # # https://docs.yoctoproject.org/4.0.10/ref-manual/classes.html?highlight=source_mirror#own-mirrors-bbclass
-      # # https://github.com/openembedded/openembedded/blob/master/classes/own-mirrors.bbclass
-      # # The own-mirrors class makes it easier to set up your own PREMIRRORS from which to first fetch source before
-      # # attempting to fetch it from the upstream specified in SRC_URI within each recipe.
-      # - name: Add S3 shared-downloads to PREMIRRORS
-      #   env:
-      #     SOURCE_MIRROR_URL: https://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}.s3.${{ vars.AWS_REGION || 'us-east-1' }}.amazonaws.com/shared-downloads/
-      #   run: |
-      #     mkdir -p "$(dirname "${AUTO_CONF_FILE}")"
-      #     cat <<EOF >> "${AUTO_CONF_FILE}"
+      # FIXME: We should probably change this to MIRRORS:append instead of PREMIRRORS:prepend
+      # to avoid using our S3 egress as much as possible?
+      # https://docs.yoctoproject.org/4.0.10/ref-manual/classes.html?highlight=source_mirror#own-mirrors-bbclass
+      # https://github.com/openembedded/openembedded/blob/master/classes/own-mirrors.bbclass
+      # The own-mirrors class makes it easier to set up your own PREMIRRORS from which to first fetch source before
+      # attempting to fetch it from the upstream specified in SRC_URI within each recipe.
+      - name: Add S3 shared-downloads to PREMIRRORS
+        env:
+          SOURCE_MIRROR_URL: https://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}.s3.${{ vars.AWS_REGION || 'us-east-1' }}.amazonaws.com/shared-downloads/
+        run: |
+          mkdir -p "$(dirname "${AUTO_CONF_FILE}")"
+          cat <<EOF >> "${AUTO_CONF_FILE}"
 
-      #     INHERIT += "own-mirrors"
-      #     SOURCE_MIRROR_URL = "${SOURCE_MIRROR_URL}"
+          INHERIT += "own-mirrors"
+          SOURCE_MIRROR_URL = "${SOURCE_MIRROR_URL}"
 
-      #     EOF
-      #     cat "${AUTO_CONF_FILE}"
+          EOF
+          cat "${AUTO_CONF_FILE}"
 
       # Use local S3 cache on self-hosted runners
       # https://github.com/tespkg/actions-cache
@@ -639,29 +639,29 @@ jobs:
           # https://github.com/orgs/community/discussions/26636#discussioncomment-3252664
           mask-aws-account-id: false
 
-      # # Sync shared downloads to S3 to use as a sources mirror in case original sources are not available.
-      # # Exlude all directories and temp files as we only want the content and the .done files.
-      # # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/sync.html
-      # - name: Sync shared downloads to S3
-      #   # Do not publish shared downloads for pull_request_target events to prevent cache poisoning
-      #   # Do not publish shared downloads for private device-types as the mirror is public-read
-      #   if: github.event_name != 'pull_request_target' && steps.balena-lib.outputs.is_private == 'false'
-      #   # Ignore errors for now, as we may have upload conflicts with other jobs
-      #   continue-on-error: true
-      #   env:
-      #     SHARED_DOWNLOADS_DIR: ${{ github.workspace }}/shared/shared-downloads
-      #     S3_ACL: public-read
-      #     S3_SSE: AES256
-      #     # FIXME: This should be a a new bucket used only for shared-downloads (one for staging, one for production)
-      #     S3_URL: "s3://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}/shared-downloads"
-      #     S3_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-      #   # Create a symlink to the from the relative container path to the workspace in order to resolve symlinks
-      #   # created in the build container runtime.
-      #   run: |
-      #     sudo ln -sf "${{ github.workspace }}" /work
-      #     ls -al "${SHARED_DOWNLOADS_DIR}/"
-      #     aws s3 sync --sse="${S3_SSE}" --acl="${S3_ACL}" "${SHARED_DOWNLOADS_DIR}/" "${S3_URL}/" \
-      #       --exclude "*/*" --exclude "*.tmp" --size-only --follow-symlinks --no-progress
+      # Sync shared downloads to S3 to use as a sources mirror in case original sources are not available.
+      # Exlude all directories and temp files as we only want the content and the .done files.
+      # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/sync.html
+      - name: Sync shared downloads to S3
+        # Do not publish shared downloads for pull_request_target events to prevent cache poisoning
+        # Do not publish shared downloads for private device-types as the mirror is public-read
+        if: github.event_name != 'pull_request_target' && steps.balena-lib.outputs.is_private == 'false'
+        # Ignore errors for now, as we may have upload conflicts with other jobs
+        continue-on-error: true
+        env:
+          SHARED_DOWNLOADS_DIR: ${{ github.workspace }}/shared/shared-downloads
+          S3_ACL: public-read
+          S3_SSE: AES256
+          # FIXME: This should be a a new bucket used only for shared-downloads (one for staging, one for production)
+          S3_URL: "s3://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}/shared-downloads"
+          S3_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+        # Create a symlink to the from the relative container path to the workspace in order to resolve symlinks
+        # created in the build container runtime.
+        run: |
+          sudo ln -sf "${{ github.workspace }}" /work
+          ls -al "${SHARED_DOWNLOADS_DIR}/"
+          aws s3 sync --sse="${S3_SSE}" --acl="${S3_ACL}" "${SHARED_DOWNLOADS_DIR}/" "${S3_URL}/" \
+            --exclude "*/*" --exclude "*.tmp" --size-only --follow-symlinks --no-progress
 
       # TODO: pre-install on self-hosted-runners
       # Needed by the yocto job to zip artifacts - Don't remove
