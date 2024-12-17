@@ -549,11 +549,8 @@ jobs:
           key: ${{ inputs.machine }}-sstate-${{ github.sha }}
           restore-keys: |
             ${{ inputs.machine }}-sstate-
-          # FIXME: Include the shared-downloads directory with the sstate cache for now until
-          # we fully switch to AWS S3 for shared-downloads
           path: |
             ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
-            ${{ github.workspace }}/shared/shared-downloads
 
       # All preperation complete before this step
       # Start building balenaOS
@@ -619,11 +616,8 @@ jobs:
           region: local
           use-fallback: ${{ github.event.repository.private != true }}
           key: ${{ inputs.machine }}-sstate-${{ github.sha }}
-          # FIXME: Include the shared-downloads directory with the sstate cache for now until
-          # we fully switch to AWS S3 for shared-downloads
           path: |
             ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
-            ${{ github.workspace }}/shared/shared-downloads
 
       # https://github.com/unfor19/install-aws-cli-action
       - name: Setup awscli
