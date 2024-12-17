@@ -644,7 +644,6 @@ jobs:
         continue-on-error: true
         env:
           SHARED_DOWNLOADS_DIR: ${{ github.workspace }}/shared/shared-downloads
-          S3_ACL: public-read
           S3_SSE: AES256
           # FIXME: This should be a a new bucket used only for shared-downloads (one for staging, one for production)
           S3_URL: "s3://${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}/shared-downloads"
@@ -653,8 +652,8 @@ jobs:
         # created in the build container runtime.
         run: |
           sudo ln -sf "${{ github.workspace }}" /work
-          ls -al "${SHARED_DOWNLOADS_DIR}/"
-          aws s3 sync --sse="${S3_SSE}" --acl="${S3_ACL}" "${SHARED_DOWNLOADS_DIR}/" "${S3_URL}/" \
+          du -cksh "${SHARED_DOWNLOADS_DIR}/*"
+          aws s3 sync --sse="${S3_SSE}" "${SHARED_DOWNLOADS_DIR}/" "${S3_URL}/" \
             --exclude "*/*" --exclude "*.tmp" --size-only --follow-symlinks --no-progress
 
       # TODO: pre-install on self-hosted-runners
