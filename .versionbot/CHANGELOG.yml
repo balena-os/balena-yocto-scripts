@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.71
+      hash: 14cd7de41709395ce2c947d8edcf352f213eed01
+      body: |
+        Update balena-os/leviathan from 2.31.70 to 2.31.71
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.29.6
+  title: ""
+  date: 2024-12-17T13:20:52.856Z
+- commits:
     - subject: Remove hostapp creation step
       hash: 5f273a9350d826c9cd24bbcbceb0937b5cb3b535
       body: >
