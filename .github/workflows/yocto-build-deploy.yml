@@ -530,6 +530,13 @@ jobs:
       - name: Restore sstate cache
         id: sstate-restore
         uses: tespkg/actions-cache/restore@cba095d7af782a955b8f4fa13396fbf0ab62bd4b # v1.7.1
+        # Unset AWS credentials so they don't override the minio credentials
+        env:
+          AWS_ACCESS_KEY_ID: yocto-svcacct
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YOCTO_CACHE_SECRET_KEY }}
+          AWS_SESSION_TOKEN: ''
+          AWS_DEFAULT_REGION: local
+          AWS_REGION: local
         with:
           endpoint: minio
           port: 9000
@@ -595,6 +602,13 @@ jobs:
         # https://0xn3va.gitbook.io/cheat-sheets/ci-cd/github/actions#cache-poisoning
         # https://adnanthekhan.com/2024/05/06/the-monsters-in-your-build-cache-github-actions-cache-poisoning/
         if: steps.sstate-restore.outputs.cache-hit != true && github.event_name != 'pull_request_target'
+        # Unset AWS credentials so they don't override the minio credentials
+        env:
+          AWS_ACCESS_KEY_ID: yocto-svcacct
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YOCTO_CACHE_SECRET_KEY }}
+          AWS_SESSION_TOKEN: ''
+          AWS_DEFAULT_REGION: local
+          AWS_REGION: local
         with:
           endpoint: minio
           port: 9000
