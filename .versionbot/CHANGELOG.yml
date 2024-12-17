@@ -1,4 +1,18 @@
 - commits:
+    - subject: Unset AWS credentials to avoid overriding MinIO credentials
+      hash: 2d574e36504c57f8c0c4f9a68d5cc2a9993261f2
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.29.7
+  title: ""
+  date: 2024-12-17T19:29:24.417Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.71
       hash: 14cd7de41709395ce2c947d8edcf352f213eed01
       body: |
