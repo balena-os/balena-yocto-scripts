@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.72
+      hash: 0478ef558f8ef7809816f78987c5fd327adc77bc
+      body: |
+        Update balena-os/leviathan from 2.31.71 to 2.31.72
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.29.8
+  title: ""
+  date: 2024-12-18T01:52:57.687Z
+- commits:
     - subject: Unset AWS credentials to avoid overriding MinIO credentials
       hash: 2d574e36504c57f8c0c4f9a68d5cc2a9993261f2
       body: ""
