@@ -510,13 +510,11 @@ jobs:
           EOF
           cat "${AUTO_CONF_FILE}"
 
-      # FIXME: We should probably change this to MIRRORS:append instead of PREMIRRORS:prepend
-      # to avoid using our S3 egress as much as possible?
       # https://docs.yoctoproject.org/4.0.10/ref-manual/classes.html?highlight=source_mirror#own-mirrors-bbclass
       # https://github.com/openembedded/openembedded/blob/master/classes/own-mirrors.bbclass
       # The own-mirrors class makes it easier to set up your own PREMIRRORS from which to first fetch source before
       # attempting to fetch it from the upstream specified in SRC_URI within each recipe.
-      - name: Add S3 shared-downloads to PREMIRRORS
+      - name: Add S3 shared-downloads to MIRRORS
         if: env.SOURCE_MIRROR_URL
         env:
           SOURCE_MIRROR_URL: ${{ env.SOURCE_MIRROR_URL }}
@@ -524,8 +522,15 @@ jobs:
           mkdir -p "$(dirname "${AUTO_CONF_FILE}")"
           cat <<EOF >> "${AUTO_CONF_FILE}"
 
-          INHERIT += "own-mirrors"
-          SOURCE_MIRROR_URL = "${SOURCE_MIRROR_URL}"
+          MIRRORS:append = "\\
+            cvs://.*/.* ${SOURCE_MIRROR_URL} \\
+            svn://.*/.* ${SOURCE_MIRROR_URL} \\
+            git://.*/.* ${SOURCE_MIRROR_URL} \\
+            hg://.*/.* ${SOURCE_MIRROR_URL} \\
+            bzr://.*/.* ${SOURCE_MIRROR_URL} \\
+            https?$://.*/.* ${SOURCE_MIRROR_URL} \\
+            ftp://.*/.*  ${SOURCE_MIRROR_URL} \\
+          "
 
           EOF
           cat "${AUTO_CONF_FILE}"
