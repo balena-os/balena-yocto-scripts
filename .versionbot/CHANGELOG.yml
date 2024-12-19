@@ -1,4 +1,34 @@
 - commits:
+    - subject: Append to MIRRORS instead of PREMIRRORS to limit egress
+      hash: 345cdbbf64575fc39bca4251353e823e1bcec741
+      body: |
+        For the first deployment of the S3 download mirror we will
+        err on the side of cost savings, and use the mirror as a
+        fallback not the primary source of downloads.
+
+        Revert this if we want the benefits of using our own mirrors
+        as the primary source, like download speed and no rate limits.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Use dedicated AWS S3 buckets for download mirrors
+      hash: 07e02aef5af44f7d96e4f491ba8331a42214f654
+      body: ""
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.30.0
+  title: ""
+  date: 2024-12-19T18:57:58.502Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.75
       hash: c46284511b0d50db46b8aa2af97d910304bf620a
       body: |
