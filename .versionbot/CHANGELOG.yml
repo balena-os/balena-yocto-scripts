@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/upload-artifact action to v4.5.0
+      hash: 40437f4f3947dd6c3e481729c180f3a03abe99eb
+      body: |
+        Update actions/upload-artifact from 4.4.3 to 4.5.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.30.2
+  title: ""
+  date: 2024-12-20T01:46:01.464Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.76
       hash: 8a3222a6e18b0398f1e1dc2b5e662f4ea514f97a
       body: |
