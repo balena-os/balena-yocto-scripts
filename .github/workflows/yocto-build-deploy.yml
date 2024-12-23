@@ -458,7 +458,7 @@ jobs:
         env:
           SIGN_API: "${{ vars.SIGN_API_URL || 'https://sign.balena-cloud.com' }}"
           SIGN_API_KEY: "${{ secrets.SIGN_API_KEY }}"
-          SIGN_GRUB_KEY_ID: 2EB29B4CE0132F6337897F5FB8A88D1C62FCC729
+          SIGN_GRUB_KEY_ID: "${{ vars.SIGN_GRUB_KEY_ID || '2EB29B4CE0132F6337897F5FB8A88D1C62FCC729' }}"
           SIGN_KMOD_KEY_APPEND: "${{ secrets.SIGN_KMOD_KEY_APPEND }}"
           SIGN_HAB_PKI_ID: "${{ vars.SIGN_HAB_PKI_ID || '6d74b15cbc5df27fdc8d470a7c71edb3' }}"
         run: |
