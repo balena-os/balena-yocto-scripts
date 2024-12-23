@@ -38,6 +38,9 @@ on:
       YOCTO_CACHE_SECRET_KEY:
         description: "Self-hosted runner S3 secret key for the yocto-svcacct user."
         required: false
+      YOCTO_SSH_PRIVATE_KEY_B64:
+        description: "SSH key to access balena-os private repositories."
+        required: false
 
     inputs:
       build-runs-on:
@@ -563,6 +566,12 @@ jobs:
           path: |
             ${{ github.workspace }}/shared/${{ inputs.machine }}/sstate
 
+      # Install openssh-client to use the ssh-agent
+      - name: Install openssh-client package
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openssh-client
+
       # All preperation complete before this step
       # Start building balenaOS
       # We use the BALENA_API_DEPLOY_KEY secret to preload the supervisor image
@@ -572,6 +581,7 @@ jobs:
         env:
           HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
           SHARED_BUILD_DIR: ${{ github.workspace }}/shared
+          YOCTO_SSH_PRIVATE_KEY_B64: ${{ secrets.YOCTO_SSH_PRIVATE_KEY_B64 }}
         run: |
           # When building for non-x86 device types, meson, after building binaries must try to run them via qemu if possible , maybe as some sanity check or test?
           # Therefore qemu must be used - and our runner mmap_min_addr is set to 4096 (default, set here: https://github.com/product-os/github-runner-kernel/blob/ef5a66951599dc64bf2920d896c36c6d9eda8df6/config/5.10/microvm-kernel-x86_64-5.10.config#L858
@@ -584,6 +594,9 @@ jobs:
           mkdir -p "${SHARED_BUILD_DIR}"
 
           cat "${AUTO_CONF_FILE}"
+
+          >&2 eval "$(ssh-agent)"
+          echo "${{ secrets.YOCTO_SSH_PRIVATE_KEY_B64 }}" | base64 -d | ssh-add - >&2
 
           ./balena-yocto-scripts/build/balena-build.sh \
             -d "${MACHINE}" \
