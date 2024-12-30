@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/create-github-app-token action to v1.11.1
+      hash: fc1026a4f2d10420675588efc291b9482185cb05
+      body: |
+        Update actions/create-github-app-token from 1.11.0 to 1.11.1
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.30.4
+  title: ""
+  date: 2024-12-30T16:17:06.869Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.77
       hash: 287ef1316d58e2b9bf4798296f839329fcb27eb6
       body: |
