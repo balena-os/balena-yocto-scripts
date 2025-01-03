@@ -245,7 +245,7 @@ jobs:
       yocto_scripts_version: ${{ steps.balena-lib.outputs.yocto_scripts_version }}
       deploy_artifact: ${{ steps.balena-lib.outputs.deploy_artifact }}
       dt_arch: ${{ steps.balena-lib.outputs.dt_arch }}
-      is_private: ${{ steps.balena-lib.outputs.is_private }}
+      is_private: ${{ steps.is-private.outputs.result }}
       should_finalize: ${{ steps.merge-test-result.outputs.finalize == 'true' || inputs.force-finalize }}
       is_esr: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v20')) || (github.event_name == 'workflow_dispatch' && startsWith(github.ref_name, '20')) }}
       deploy_path: ${{ github.workspace }}/deploy/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}
@@ -369,10 +369,29 @@ jobs:
           dt_arch="$(balena_lib_get_dt_arch "${SLUG}")"
           echo "dt_arch=${dt_arch}" >>"${GITHUB_OUTPUT}"
 
-          # Unrolled balena_api_is_dt_private function - https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
-          # Had to be unrolled due to this: https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191 function relying on a jenkins env var to select the balena env - so failed
-          is_private=$(${CURL} -XGET -H "Content-type: application/json" -H "Authorization: bearer ${BALENAOS_TOKEN}" --silent --retry 5 "https://api.${API_ENV}/${TRANSLATION}/device_type?\$filter=slug%20eq%20%27${device_slug}%27&\$select=slug,is_private" | jq -r '.d[0].is_private')
-          echo "is_private=${is_private}" >>"${GITHUB_OUTPUT}"
+      # Unrolled balena_api_is_dt_private function - https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
+      # Had to be unrolled due to this: https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191 function relying on a jenkins env var to select the balena env - so failed
+      # is_private=$(${CURL} -XGET -H "Content-type: application/json" -H "Authorization: bearer ${BALENAOS_TOKEN}" --silent --retry 5 "https://api.${API_ENV}/${TRANSLATION}/device_type?\$filter=slug%20eq%20%27${device_slug}%27&\$select=slug,is_private" | jq -r '.d[0].is_private')
+      # echo "is_private=${is_private}" >>"${GITHUB_OUTPUT}"
+      - name: Check if device-type is private
+        uses: actions/github-script@v7
+        id: is-private
+        env:
+          API_ENV: ${{ env.BALENARC_BALENA_URL }}
+          TRANSLATION: "v6"
+          DEVICE_SLUG: ${{ steps.balena-lib.outputs.device_slug }}
+        with:
+          result-encoding: json
+          script: |
+            const result = await fetch(`https://api.${process.env.API_ENV}/${process.env.TRANSLATION}/device_type?\$filter=slug%20eq%20%27${process.env.DEVICE_SLUG}%27&\$select=slug,is_private`, {
+              headers: {
+                'Content-type': 'application/json',
+                'Authorization': `Bearer ${{ secrets.BALENA_API_DEPLOY_KEY }}`
+              }
+            })
+            const data = await result.json()
+            console.log(JSON.stringify(data, null, 2))
+            return data.d[0].is_private
 
       # In the old workflow we had to fetch the merge commit, get the check runs from the PR, and check if a device type passed or failed
       # reference: https://github.com/balena-os/github-workflows/blob/master/.github/workflows/build_and_deploy.yml#L89
@@ -852,7 +871,7 @@ jobs:
 
       # Encrypt artifacts and remove the original tarball so it doesn't get uploaded
       - name: Encrypt artifacts
-        if: inputs.sign-image || needs.balena-lib.outputs.is_private
+        if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
         env:
           ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
           ARTIFACTS_ENC: "${{ runner.temp }}/artifacts.tar.zst.enc"
@@ -914,7 +933,7 @@ jobs:
           path: ${{ runner.temp }}
 
       - name: Decrypt artifacts
-        if: inputs.sign-image || needs.balena-lib.outputs.is_private
+        if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
         env:
           ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
           ARTIFACTS_ENC: "${{ runner.temp }}/artifacts.tar.zst.enc"
@@ -1089,7 +1108,7 @@ jobs:
           done
 
       - name: Tag ESR release
-        if: needs.balena-lib.outputs.is_esr && needs.balena-lib.outputs.should_finalize
+        if: needs.balena-lib.outputs.is_esr == 'true' && needs.balena-lib.outputs.should_finalize
         env:
           BALENAOS_ACCOUNT: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
           SLUG: "${{ needs.balena-lib.outputs.device_slug }}"
@@ -1214,7 +1233,7 @@ jobs:
           path: ${{ runner.temp }}
 
       - name: Decrypt artifacts
-        if: inputs.sign-image || needs.balena-lib.outputs.is_private
+        if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
         env:
           ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
           ARTIFACTS_ENC: "${{ runner.temp }}/artifacts.tar.zst.enc"
@@ -1295,7 +1314,7 @@ jobs:
 
       - name: Set S3 ESR destination directory
         id: s3-esr-images-dir
-        if: needs.balena-lib.outputs.is_esr
+        if: needs.balena-lib.outputs.is_esr == 'true'
         run: echo "string=esr-images" >>"${GITHUB_OUTPUT}"
 
       # "If no keys are provided, but an IAM role is associated with the EC2 instance, it will be used transparently".
@@ -1379,7 +1398,7 @@ jobs:
           path: ${{ runner.temp }}
 
       - name: Decrypt artifacts
-        if: inputs.sign-image || needs.balena-lib.outputs.is_private
+        if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
         env:
           ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
           ARTIFACTS_ENC: "${{ runner.temp }}/artifacts.tar.zst.enc"
@@ -1990,7 +2009,7 @@ jobs:
           path: ${{ runner.temp }}
 
       - name: Decrypt artifacts
-        if: inputs.sign-image || needs.balena-lib.outputs.is_private
+        if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
         env:
           ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
           ARTIFACTS_ENC: "${{ runner.temp }}/artifacts.tar.zst.enc"
