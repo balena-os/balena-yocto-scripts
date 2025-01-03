@@ -236,6 +236,7 @@ jobs:
       is_private: ${{ steps.balena-lib.outputs.is_private }}
       should_finalize: ${{ steps.merge-test-result.outputs.finalize == 'true' || inputs.force-finalize }}
       is_esr: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v20')) || (github.event_name == 'workflow_dispatch' && startsWith(github.ref_name, '20')) }}
+      deploy_path: ${{ github.workspace }}/deploy/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}
 
     steps:
       # Combining pull_request_target workflow trigger with an explicit checkout of an
@@ -833,20 +834,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zip
 
-      # DEPLOY_PATH is the path that all build artifacts get exported to by "balena_deploy_artifacts"
-      - name: Export prepare artifacts deploy path to env
-        env:
-          DEVICE_TYPE_SLUG: ${{ needs.balena-lib.outputs.device_slug }}
-          VERSION: ${{ needs.balena-lib.outputs.os_version }}
-        run: |
-          echo "DEPLOY_PATH=${{ runner.temp }}/deploy/${DEVICE_TYPE_SLUG}/${VERSION}" >>"${GITHUB_ENV}"
-
       # TODO: prepare artifacts manually to replace balena_deploy_artifacts
       - name: Prepare artifacts
         run: |
-          # DEBUG: check deploy path
-          echo "DEPLOY_PATH = ${DEPLOY_PATH}"
-
           source "${automation_dir}/include/balena-deploy.inc"
           # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-deploy.inc#L23
           balena_deploy_artifacts "${{ inputs.machine }}" "${DEPLOY_PATH}" false         
@@ -1182,7 +1172,9 @@ jobs:
       AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}
       AWS_S3_SSE_ALGORITHM: ${{ vars.SOURCE_MIRROR_S3_SSE_ALGORITHM || vars.AWS_S3_SSE_ALGORITHM || vars.S3_SSE_ALGORITHM || vars.SSE_ALGORITHM || vars.SSE || 'AES256' }}
 
-      DEPLOY_PATH: ${{ github.workspace }}
+      DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}
+      # Same as DEPLOY_PATH but used by prepare.ts which expects the structure "/host/images/${device_slug}/${version}/..."
+      PREPARE_DEPLOY_PATH: ${{ github.workspace }}/deploy
 
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
@@ -1249,8 +1241,7 @@ jobs:
         if: needs.balena-lib.outputs.deploy_artifact != 'docker-image'
         env:
           HELPER_IMAGE: balena/balena-img:6.20.26
-          # This path is different from DEPLOY_PATH due to the structure the prepare.ts expects: "/host/image/${device_slug}/${version}/..."
-          PREPARE_DEPLOY_PATH: ${{ runner.temp }}/deploy
+          PREPARE_DEPLOY_PATH: ${{ env.PREPARE_DEPLOY_PATH }}
         run: |
           docker run --rm \
             -e BASE_DIR=/host/images \
@@ -1282,7 +1273,7 @@ jobs:
           S3_REGION: ${{ env.AWS_REGION }}
           SLUG: ${{ needs.balena-lib.outputs.device_slug }}
           VERSION: ${{ needs.balena-lib.outputs.os_version }}
-          SOURCE_DIR: ${{ runner.temp }}/deploy
+          SOURCE_DIR: ${{ env.PREPARE_DEPLOY_PATH }}
         run: |
           if [ -n "$(aws s3 ls "${S3_URL}/${SLUG}/${VERSION}/")" ] && [ -z "$($S3_CMD ls "${S3_URL}/${SLUG}/${VERSION}/IGNORE")" ]; then
             echo "::warning::Deployment already exists at ${S3_URL}/${VERSION}"
