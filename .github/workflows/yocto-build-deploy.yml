@@ -477,11 +477,9 @@ jobs:
     # - SIGN_API_URL
     # - SIGN_GRUB_KEY_ID
     # - SIGN_HAB_PKI_ID
-    # - BALENA_HOST: used to call the API to get the supervisor image name and version
     # This environment also supports the following secrets:
     # - SIGN_API_KEY
     # - SIGN_KMOD_KEY_APPEND
-    # - BALENA_API_DEPLOY_KEY: used to call the API to get the supervisor image name and version
     # - YOCTO_SSH_PRIVATE_KEY_B64: used to pull private yocto sources from within the same organization
     environment: ${{ inputs.build-environment || inputs.deploy-environment }}
 
@@ -700,8 +698,6 @@ jobs:
 
       # All preperation complete before this step
       # Start building balenaOS
-      # We use the BALENA_API_DEPLOY_KEY secret to preload the supervisor image
-      # with a call to the API to get the image name and version
       - name: Build
         id: build
         env:
@@ -726,7 +722,6 @@ jobs:
 
           ./balena-yocto-scripts/build/balena-build.sh \
             -d "${MACHINE}" \
-            -t "${{ secrets.BALENA_API_DEPLOY_KEY }}" \
             -s "${SHARED_BUILD_DIR}" \
             -g "${BARYS_ARGUMENTS_VAR}" | tee balena-build.log
 
