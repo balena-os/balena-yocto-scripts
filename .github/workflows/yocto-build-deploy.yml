@@ -201,7 +201,7 @@ jobs:
   # It is responsible for setting up the device-type and fetching the necessary information
   # to build and deploy the device-type.
   balena-lib:
-    name: Device-type setup
+    name: Collect device info
     runs-on: ubuntu-24.04
 
     # This environment requires the following variables:
@@ -510,6 +510,7 @@ jobs:
       # Create an autobuilder configuration file that is loaded before local.conf
       AUTO_CONF_FILE: "${{ github.workspace }}/build/conf/auto.conf"
       BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || 'balena-cloud.com' }}
+      DEPLOY_PATH: ${{ github.workspace }}/deploy
 
     defaults:
       run:
@@ -876,8 +877,9 @@ jobs:
           sudo apt-get install -y --no-install-recommends gzip
 
           gzip -9 -c "${DEPLOY_PATH}/image/balena.img" >balena.img.gz
-          cp "${DEPLOY_PATH}/balena-image.docker" balena-image.docker
-          tar -I zstd -cf "${OUTFILE}" balena.img.gz balena-image.docker
+          cp -v "${DEPLOY_PATH}/balena-image.docker" balena-image.docker
+          cp -v "${WORKSPACE}/balena.yml" balena.yml
+          tar -I zstd -cf "${OUTFILE}" balena.img.gz balena-image.docker balena.yml
           echo "UPLOAD_ARTIFACT_PATH=${OUTFILE}" >>"${GITHUB_ENV}"
 
       - name: Encrypt artifacts
@@ -929,8 +931,31 @@ jobs:
 
     env:
       BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || vars.BALENARC_BALENA_URL || 'balena-cloud.com' }}
+      DEPLOY_PATH: ${{ github.workspace }}
 
     steps:
+
+      # https://github.com/actions/download-artifact
+      - name: Fetch build artifacts
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          name: build-artifacts
+          path: ${{ runner.temp }}
+
+      - name: Decrypt artifacts
+        if: inputs.sign-image || needs.balena-lib.outputs.is_private
+        env:
+          INFILE: "${{ runner.temp }}/artifacts.tar.zst.enc"
+          OUTFILE: "${{ runner.temp }}/artifacts.tar.zst"
+          PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
+        run: |
+          openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${INFILE}" -out "${OUTFILE}"
+
+      - name: Decompress artifacts
+        env:
+          INFILE: "${{ runner.temp }}/artifacts.tar.zst"
+        run: |
+          tar -I zstd -xvf "${INFILE}" -C "${DEPLOY_PATH}"
 
       - name: Setup balena CLI
         uses: balena-io-examples/setup-balena-action@v0.0.6
@@ -994,10 +1019,6 @@ jobs:
               sed -i '/provides:/a \  - type: sw.feature\n    slug: secureboot' "/${WORKSPACE}/balena.yml"
             fi
           fi
-
-          #DEBUG: print workspace and balena.yml
-          ls "${WORKSPACE}"
-          cat "${WORKSPACE}/balena.yml"
 
           echo "[INFO] Deploying to ${BALENAOS_ACCOUNT}/${APPNAME}"
 
@@ -1196,7 +1217,7 @@ jobs:
       AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}
       AWS_S3_SSE_ALGORITHM: ${{ vars.SOURCE_MIRROR_S3_SSE_ALGORITHM || vars.AWS_S3_SSE_ALGORITHM || vars.S3_SSE_ALGORITHM || vars.SSE_ALGORITHM || vars.SSE || 'AES256' }}
 
-      DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}
+      DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}/image
       # Same as DEPLOY_PATH but used by prepare.ts which expects the structure "/host/images/${device_slug}/${version}/..."
       PREPARE_DEPLOY_PATH: ${{ github.workspace }}/deploy
 
@@ -1229,8 +1250,8 @@ jobs:
           INFILE: "${{ runner.temp }}/artifacts.tar.zst"
         run: |
           mkdir -p "${DEPLOY_PATH}"
-          tar -I zstd -xvf "${INFILE}" -C "${DEPLOY_PATH}"
-          gzip -d "${DEPLOY_PATH}/balena.img.gz"
+          tar -I zstd -xvf "${INFILE}" -C "${DEPLOY_PATH}" balena.img.gz
+          gzip -d "${DEPLOY_PATH}/balena.img.gz" >"${DEPLOY_PATH}/balena.img"
 
       # https://github.com/unfor19/install-aws-cli-action
       # https://github.com/aws/aws-cli/tags
