@@ -468,11 +468,9 @@ jobs:
     # - SIGN_API_URL
     # - SIGN_GRUB_KEY_ID
     # - SIGN_HAB_PKI_ID
-    # - BALENA_HOST: used to call the API to get the supervisor image name and version
     # This environment also supports the following secrets:
     # - SIGN_API_KEY
     # - SIGN_KMOD_KEY_APPEND
-    # - BALENA_API_DEPLOY_KEY: used to call the API to get the supervisor image name and version
     environment: ${{ inputs.build-environment || inputs.deploy-environment }}
 
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
@@ -734,14 +732,11 @@ jobs:
 
       # All preperation complete before this step
       # Start building balenaOS
-      # We use the BALENA_API_DEPLOY_KEY secret to preload the supervisor image
-      # with a call to the API to get the image name and version
       - name: Build
         id: build
         env:
           HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
           SHARED_BUILD_DIR: ${{ github.workspace }}/shared
-          YOCTO_SSH_PRIVATE_KEY_B64: ${{ secrets.YOCTO_SSH_PRIVATE_KEY_B64 }}
         run: |
           # When building for non-x86 device types, meson, after building binaries must try to run them via qemu if possible , maybe as some sanity check or test?
           # Therefore qemu must be used - and our runner mmap_min_addr is set to 4096 (default, set here: https://github.com/product-os/github-runner-kernel/blob/ef5a66951599dc64bf2920d896c36c6d9eda8df6/config/5.10/microvm-kernel-x86_64-5.10.config#L858
@@ -760,7 +755,6 @@ jobs:
 
           ./balena-yocto-scripts/build/balena-build.sh \
             -d "${MACHINE}" \
-            -t "${{ secrets.BALENA_API_DEPLOY_KEY }}" \
             -s "${SHARED_BUILD_DIR}" \
             -g "${BARYS_ARGUMENTS_VAR}" | tee balena-build.log
 
