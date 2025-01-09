@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.81
+      hash: 9a18246f33764d1f4230eea27aff479fa652e677
+      body: |
+        Update balena-os/leviathan from 2.31.79 to 2.31.81
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.30.9
+  title: ""
+  date: 2025-01-09T11:28:16.539Z
+- commits:
     - subject: Upload yocto build logs even on failure
       hash: 30bb89951d31c27d579a936cce5c9d862bce9e66
       body: ""
