@@ -599,6 +599,23 @@ jobs:
             exit 1
           fi
 
+      # We don't need to encrypt these as they are not sensitive if the repo is public anyway.
+      # https://github.com/actions/upload-artifact
+      - name: Upload build logs
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        # always upload build logs, even if the build fails
+        if: always()
+        with:
+          name: build-logs
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 7
+          path: |
+            balena-build.log
+            build/tmp/log/**/*.log
+            build/tmp/work/**/run.*
+            build/tmp/work/**/log.*
+
       # If there was a cache miss for this key, save a new cache.
       # Use local S3 cache on self-hosted runners.
       # https://github.com/tespkg/actions-cache
