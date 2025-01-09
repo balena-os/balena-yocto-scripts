@@ -1,4 +1,18 @@
 - commits:
+    - subject: Upload yocto build logs even on failure
+      hash: 30bb89951d31c27d579a936cce5c9d862bce9e66
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.30.8
+  title: ""
+  date: 2025-01-09T08:59:28.305Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.79
       hash: 57ef02559c9c4ecaf03c66e3220faf35cbea5cbf
       body: |
