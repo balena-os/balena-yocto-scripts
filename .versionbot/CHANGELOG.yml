@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/upload-artifact action to v4.6.0
+      hash: a6cb60d3992222abd94be272afec3c3e40e79262
+      body: |
+        Update actions/upload-artifact from 4.5.0 to 4.6.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.30.14
+  title: ""
+  date: 2025-01-10T17:38:19.093Z
+- commits:
     - subject: "workflows: yocto-build-deploy: add SSH key to environment"
       hash: 1e3c0f31112ae807ea675ab6e3116acbde039719
       body: |
