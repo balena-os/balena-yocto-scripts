@@ -615,7 +615,7 @@ jobs:
       # We don't need to encrypt these as they are not sensitive if the repo is public anyway.
       # https://github.com/actions/upload-artifact
       - name: Upload build logs
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         # always upload build logs, even if the build fails
         if: always()
         with:
@@ -752,7 +752,7 @@ jobs:
       # Only upload if tests will be running - i.e on PR's only, and only on devices that tests are defined for
       # Separate "flasher" and "raw" variants are not used in the testing flow
       - name: Upload artifacts
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         if: github.event_name != 'push' && inputs.test_matrix
         with:
           name: build-artifacts
