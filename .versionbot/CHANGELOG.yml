@@ -1,4 +1,19 @@
 - commits:
+    - subject: "workflows: yocto-build-deploy: add SSH key to environment"
+      hash: 1e3c0f31112ae807ea675ab6e3116acbde039719
+      body: |
+        This allows the build step to access private repositories via SSH.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.30.13
+  title: ""
+  date: 2025-01-10T16:01:29.836Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.83
       hash: 5c395d5818670f8bb736c7ce5167a7b9dd5e5507
       body: |
