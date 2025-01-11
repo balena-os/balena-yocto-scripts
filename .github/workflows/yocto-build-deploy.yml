@@ -102,6 +102,10 @@ on:
         required: false
         type: boolean
         default: false # Always false by default, override on specific device types which this is relevant in the device repo
+      build-args:
+        description: Extra barys build arguments
+        required: false
+        type: string
       # Supported fields for the test matrix:
       # - test_suite: (required) The test suite to run. The valid test suites are `os`, `hup`, and `cloud`
       # - environment: (required) The balenaCloud environment to use for testing, e.g. `bm.balena-dev.com` or `balena-cloud.com`
@@ -199,7 +203,7 @@ jobs:
       automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
       BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || inputs.deploy-environment || 'balena-cloud.com' }}
       API_ENV: ${{ vars.BALENA_HOST || inputs.deploy-environment || 'balena-cloud.com' }}
-      BARYS_ARGUMENTS_VAR: ""
+      BARYS_ARGUMENTS_VAR: ${{ inputs.build-args || '' }}
       # https://docs.yoctoproject.org/3.1.21/overview-manual/overview-manual-concepts.html#user-configuration
       # Create an autobuilder configuration file that is loaded before local.conf
       AUTO_CONF_FILE: "${{ github.workspace }}/build/conf/auto.conf"
