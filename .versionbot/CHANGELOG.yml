@@ -1,4 +1,32 @@
 - commits:
+    - subject: "workflows: yocto-build-deploy: allow to pass barys arguments"
+      hash: 71b8b94141a41c70bc551d43be425502d30d6afe
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "barys: allow for custom templates"
+      hash: 2169419b13d4d6985d386292a4294e90a446d426
+      body: |
+        By default barys assumes there is only one integration layers and looks
+        for the custom sample templates in there. This might not be the case
+        if there are feature layers like adding secure boot support, so this
+        commit allows to specify which layer to look the sample templates from.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.30.16
+  title: ""
+  date: 2025-01-13T20:38:41.835Z
+- commits:
     - subject: revert to building secure boot with cache
       hash: cad0b71d6a2b26ff90d6ae5b0f8247c4b3237479
       body: |
