@@ -1,4 +1,53 @@
 - commits:
+    - subject: revert to building secure boot with cache
+      hash: cad0b71d6a2b26ff90d6ae5b0f8247c4b3237479
+      body: |
+        Secure boots builds used to end up with a mismatch between the kernel
+        and modules signatures because of the use of cache - to avoid this we
+        temporarily forced builds without cache.
+
+        With the fix in meta-balena 389054e84c0b1fd382d737c39fb2bb02c2b3e9b2,
+        kernel modules are always set not to use cache and this problem should
+        no longer happen.
+
+        At least during the i.MX secure boot local builds with cache never hit
+        the problem.
+
+        Remove the setting not to use cache.
+      footer:
+        Changelog-entry: revert to building secure boot with cache
+        changelog-entry: revert to building secure boot with cache
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "workflows: yocto-build-deploy: allow to override SIGN_GRUB_KEY_ID"
+      hash: 4368f04773413f56547548c3c1e46d3b80b79120
+      body: |
+        This allows to set specific environments for custom secrets support.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "workflows: yocto-build-deploy: add PKI signing key ID"
+      hash: 43164296785261490c9c69873ecb1598436908eb
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.30.15
+  title: ""
+  date: 2025-01-13T17:06:53.149Z
+- commits:
     - subject: Update actions/upload-artifact action to v4.6.0
       hash: a6cb60d3992222abd94be272afec3c3e40e79262
       body: |
