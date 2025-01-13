@@ -116,6 +116,12 @@ function help {
     echo -e "\t\t able to run bitbake commands."
     echo -e "\t\t Default: no."
 
+    echo -e "\t-t | --templates-path"
+    echo -e "\t\t Provide a custom absolute path to the layer containing custom sample templates."
+    echo -e "\t\t For example, if local.conf.sample and bblayers.conf.sample"
+    echo -e "\t\t are in a /path/to/layer/conf/samples directory, the template path would be /path/to/layer."
+    echo -e "\t\t Default: Use the ones in the integration BSP layer."
+
     echo -e "\t--rm-work"
     echo -e "\t\t Inherit rm_work in local.conf."
     echo -e "\t\t Default: no."
@@ -289,6 +295,15 @@ while [[ $# -ge 1 ]]; do
             SHARED_SSTATE=$2
             shift
             ;;
+        -t|--templates-path)
+            # Argument needs to be non-empty
+            if [ -z "$2" ]; then
+                log ERROR "\"$1\" argument is invalid."
+            fi
+            LAYERSCONF_PATH=$2
+            log WARN "LAYERSCONF_PATH: $LAYERSCONF_PATH"
+            shift
+            ;;
         -l|--log)
             LOG=yes
             ;;
@@ -371,6 +386,16 @@ while [[ $# -ge 1 ]]; do
                     ;;
             esac
 
+            read -p "Custom templates path? yes/[no] " yn
+            case $yn in
+                [Yy]* )
+                    read -p "Templated path? " LAYERSCONF_PATH
+                    if [ -z "$LAYERSCONF_PATH" ]; then
+                        log ERROR "Provided path is invalid."
+                    fi
+                    ;;
+            esac
+
             read -p "Generate log? yes/[no] " yn
             case $yn in
                 [Yy]* ) LOG=yes;;
@@ -418,6 +443,7 @@ if [ "z$LOG" == "zyes" ]; then
     echo "Compressed image? $COMPRESS" >> $LOGFILE
     echo "Shared downloads directory: $SHARED_DOWNLOADS" >> $LOGFILE
     echo "Shared sstate directory: $SHARED_SSTATE" >> $LOGFILE
+    echo "Custom templates path: $LAYERSCONF_PATH" >> $LOGFILE
     echo "Development image? $DEVELOPMENT_IMAGE" >> $LOGFILE
     echo "Forced supervisor image release version: $SUPERVISOR_VERSION" >> $LOGFILE
     echo "Inherit rm_work? $RM_WORK" >> $LOGFILE
@@ -431,18 +457,27 @@ if [ "x$REMOVEBUILD" == "xyes" ]; then
     rm -rf $SCRIPTPATH/../../$BUILD_DIR
 fi
 
-LAYERSCONF_PATH=$(find "${SCRIPTPATH}/../../layers/meta-balena"* -name bblayers.conf.sample)
-if [ "$(dirname LAYERSCONF_PATH)" = "samples" ]; then
-	BALENA_MACHINE_LAYER=$(echo "${LAYERSCONF_PATH}" | awk -F'/' '{print $(NF-3)}')
+if [ -z "${LAYERSCONF_PATH}" ] ; then
+    # Look on the BSP integration layer meta-balena-*
+    LAYERSCONF_PATH="${SCRIPTPATH}/../../layers/meta-balena"*
 else
-	BALENA_MACHINE_LAYER=$(echo "${LAYERSCONF_PATH}" | awk -F'/' '{print $(NF-4)}')
+    if [ "${LAYERSCONF_PATH#/}" = "${LAYERSCONF_PATH}" ]; then
+        if [ "${LAYERSCONF_PATH#layers/}" != "${LAYERSCONF_PATH}" ]; then
+            LAYERSCONF_PATH="${SCRIPTPATH}/../../${LAYERSCONF_PATH}"
+        else
+            log ERROR "The custom templates layer path needs to be either absolute or relative to the build directoty, i.e layers/meta-custom. "
+        fi
+    fi
+fi
+TEMPLATECONF_PATH=$(dirname $(find ${LAYERSCONF_PATH} -name bblayers.conf.sample))
+if [ "$(echo "${TEMPLATECONF_PATH}" | wc -w)" -gt "1" ]; then
+    log ERROR "Multiple bblayers.conf.sample files found in BSP integration layer. Please provide a custom path."
 fi
 
 # Configure build
+$SCRIPTPATH/generate-conf-notes.sh "${TEMPLATECONF_PATH%/samples}" ${DEVICE_TYPES_JSONS}
 
-$SCRIPTPATH/generate-conf-notes.sh $SCRIPTPATH/../../layers/${BALENA_MACHINE_LAYER}/conf/ ${DEVICE_TYPES_JSONS}
-
-export TEMPLATECONF="$(dirname ${LAYERSCONF_PATH})"
+export TEMPLATECONF="${TEMPLATECONF_PATH}"
 # scarthgap expects templates to be contained in a subdirectory inside templates/
 if [ -d "${TEMPLATECONF}/default" ]; then
 	TEMPLATECONF="${TEMPLATECONF}/default"
