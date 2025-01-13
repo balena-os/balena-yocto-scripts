@@ -209,12 +209,37 @@ env:
 permissions: {}
 
 jobs:
+  approved-commit:
+    name: Approved commit
+    runs-on: ubuntu-24.04
+
+    permissions:
+      pull-requests: write # Write is required to create PR comments for workflow approvals.
+      contents: read
+
+    steps:
+      # Combining pull_request_target workflow trigger with an explicit checkout of an
+      # untrusted PR is a dangerous practice that may lead to repository compromise.
+      # https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
+      # This action requires approvals via reactions for each workflow run.
+      # https://github.com/product-os/review-commit-action
+      - name: Wait for approval on pull_request_target events
+        if: github.event_name == 'pull_request_target' && github.event.pull_request.merged != true
+        timeout-minutes: 90
+        uses: product-os/review-commit-action@b31c9e8292b08d0e0eead0a261edddf293e7e430 # v0.1.12
+        with:
+          poll-interval: "10"
+          allow-authors: false
+
   # This job runs first and all other jobs depend on it.
   # It is responsible for setting up the device-type and fetching the necessary information
   # to build and deploy the device-type.
   balena-lib:
-    name: Collect device info
+    name: Device info
     runs-on: ubuntu-24.04
+    # Depend on approved-commit just so we don't run without approvals
+    needs:
+      - approved-commit
 
     # This environment requires the following variables:
     # - BALENA_HOST
@@ -228,7 +253,7 @@ jobs:
 
     permissions:
       actions: read # We are fetching workflow run results of a merge commit when workflow is triggered by new tag, to see if tests pass
-      pull-requests: write # Read is required to fetch the PR that merged, in order to get the test results. Write is required to create PR comments for workflow approvals.
+      pull-requests: write # Read is required to fetch the PR that merged, in order to get the test results.
       contents: read
 
     defaults:
@@ -251,19 +276,6 @@ jobs:
       deploy_path: ${{ github.workspace }}/deploy/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}
 
     steps:
-      # Combining pull_request_target workflow trigger with an explicit checkout of an
-      # untrusted PR is a dangerous practice that may lead to repository compromise.
-      # https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
-      # This action requires approvals via reactions for each workflow run.
-      # https://github.com/product-os/review-commit-action
-      - name: Wait for approval on pull_request_target events
-        if: github.event_name == 'pull_request_target' && github.event.pull_request.merged != true
-        timeout-minutes: 90
-        uses: product-os/review-commit-action@b31c9e8292b08d0e0eead0a261edddf293e7e430 # v0.1.12
-        with:
-          poll-interval: "10"
-          allow-authors: false
-
       # Generate an app installation token that has access to
       # all repos where the app is installed (usually the whole org)
       # Owner input to make token valid for all repositories in the org
@@ -446,10 +458,11 @@ jobs:
   # This job is used to separate the AWS environment from the build environment,
   # but still allow authentication to the AWS environment at build time.
   source-mirror-setup:
-    name: Source mirror setup
+    name: Source mirror IAM role
     runs-on: ubuntu-24.04
-    # Depend on balena-lib just so we don't run without approvals
-    needs: balena-lib
+    # Depend on approved-commit just so we don't run without approvals
+    needs:
+      - approved-commit
 
     # This environment should contain the following variables:
     # - AWS_IAM_ROLE: AWS IAM role to assume
@@ -490,6 +503,7 @@ jobs:
     name: Build
     runs-on: ${{ fromJSON(inputs.build-runs-on) }}
     needs:
+      - approved-commit
       - balena-lib
       - source-mirror-setup
 
@@ -908,6 +922,7 @@ jobs:
     # Force finlize will finalize no matter what - so we want to make sure there is something to finlize - so it will always trigger this if true
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || inputs.force-finalize
     needs:
+      - approved-commit
       - build
       - balena-lib
 
@@ -1190,6 +1205,7 @@ jobs:
     # Force finlize will finalize no matter what - so we want to make sure there is something to finlize - so it will always trigger this if true
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || inputs.force-finalize
     needs:
+      - approved-commit
       - build
       - balena-lib
 
@@ -1355,6 +1371,7 @@ jobs:
     runs-on: ${{ fromJSON(inputs.build-runs-on) }}
     if: inputs.deploy-ami && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs:
+      - approved-commit
       - build
       - balena-lib
 
@@ -1893,6 +1910,7 @@ jobs:
   test:
     name: Test
     needs:
+      - approved-commit
       - balena-lib
       - build
     # Specify the runner type in the test_matrix input.
@@ -2085,6 +2103,7 @@ jobs:
     name: All jobs
     runs-on: ubuntu-24.04
     needs:
+      - approved-commit
       - balena-lib
       - build
       - s3-deploy
