@@ -75,6 +75,10 @@ on:
         description: yocto board name
         required: true
         type: string
+      slug:
+        description: Device type slug to deploy to - defaults to machine name
+        required: false
+        type: string
       deploy-environment:
         description: The GitHub environment to deploy to - includes the balena Cloud environment and related vars
         required: false
@@ -175,6 +179,7 @@ concurrency:
 env:
   WORKSPACE: ${{ github.workspace }}
   MACHINE: ${{ inputs.machine }}
+  SLUG: ${{ inputs.slug || inputs.machine }}
   VERBOSE: verbose
   WORKFLOW_NAME: ${{ github.workflow }}
 
@@ -384,7 +389,7 @@ jobs:
 
           ./balena-yocto-scripts/build/build-device-type-json.sh
 
-          device_slug="$(balena_lib_get_slug "${MACHINE}")"
+          device_slug="$(balena_lib_get_slug "${SLUG}")"
           echo "device_slug=${device_slug}" >>"${GITHUB_OUTPUT}"
 
           # As we use this to determine the os version from the device repository - when checking out the repo we need enough fetch depth to get tags
@@ -403,10 +408,10 @@ jobs:
           yocto_scripts_version="$(cd balena-yocto-scripts && head -n1 VERSION)"
           echo "yocto_scripts_version=${yocto_scripts_version}" >>"${GITHUB_OUTPUT}"
 
-          deploy_artifact="$(balena_lib_get_deploy_artifact "${MACHINE}")"
+          deploy_artifact="$(balena_lib_get_deploy_artifact "${SLUG}")"
           echo "deploy_artifact=${deploy_artifact}" >>"${GITHUB_OUTPUT}"
 
-          dt_arch="$(balena_lib_get_dt_arch "${MACHINE}")"
+          dt_arch="$(balena_lib_get_dt_arch "${SLUG}")"
           echo "dt_arch=${dt_arch}" >>"${GITHUB_OUTPUT}"
 
           # Unrolled balena_api_is_dt_private function - https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
@@ -724,7 +729,7 @@ jobs:
 
           source "${automation_dir}/include/balena-deploy.inc"
           # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-deploy.inc#L23
-          balena_deploy_artifacts "${{ inputs.machine }}" "${DEPLOY_PATH}" false         
+          balena_deploy_artifacts "${SLUG}" "${DEPLOY_PATH}" false
 
       # gzip the image as that's what the leviathan tests expect
       # and compress the artifacts with tar and zstd to save space
@@ -1121,9 +1126,9 @@ jobs:
           VERSION: "${{ steps.balena-lib.outputs.os_version }}"
         run: |
           if [ "${{ inputs.sign-image }}" = "true" ]; then
-            echo "AMI_NAME=balenaOS-secureboot-${VERSION}-${MACHINE}" | sed 's/+/-/g' >>"${GITHUB_ENV}"
+            echo "AMI_NAME=balenaOS-secureboot-${VERSION}-${SLUG}" | sed 's/+/-/g' >>"${GITHUB_ENV}"
           else
-            echo "AMI_NAME=balenaOS-${VERSION}-${MACHINE}" | sed 's/+/-/g' >>"${GITHUB_ENV}"
+            echo "AMI_NAME=balenaOS-${VERSION}-${SLUG}" | sed 's/+/-/g' >>"${GITHUB_ENV}"
           fi
 
       - name: Login with CLI
@@ -1145,7 +1150,7 @@ jobs:
           config_json=$(mktemp)
           cat << EOF > "${config_json}"
           {
-              "deviceType": "${MACHINE}",
+              "deviceType": "${SLUG}",
               "installer": {
                   "secureboot": true
               }
@@ -1162,7 +1167,7 @@ jobs:
             --fleet "${BALENA_PRELOAD_APP}" \
             --config-network ethernet \
             --version "${HOSTOS_VERSION}"\
-            --device-type "${MACHINE}"\
+            --device-type "${SLUG}"\
             --config "${config_json}"
           rm -rf "${config_json}"
 
@@ -1313,7 +1318,7 @@ jobs:
 
           # Create test fleet
           >&2 echo "Creating ${AMI_TEST_ORG}/${ami_test_fleet}"
-          >&2 balena fleet create "${ami_test_fleet}" --organization "${AMI_TEST_ORG}" --type "${MACHINE}"
+          >&2 balena fleet create "${ami_test_fleet}" --organization "${AMI_TEST_ORG}" --type "${SLUG}"
 
           # Register a key
           mkdir -p "$(dirname "${_key_file}")"

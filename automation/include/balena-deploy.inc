@@ -35,6 +35,7 @@ balena_deploy_artifacts () {
 	local _yocto_build_deploy
 	local _yocto_licenses_deploy
 	local _slug
+	local _machine
 
 
 	[ ! -f "${_device_type_json}" ] && echo "[balena_deploy_artifacts] Device type JSON not found" && return
@@ -45,7 +46,8 @@ balena_deploy_artifacts () {
 	_deploy_raw_artifact=$(jq --raw-output '.yocto.deployRawArtifact // empty' "${_device_type_json}")
 	_compressed=$(jq --raw-output '.yocto.compressed' "${_device_type_json}")
 	_archive=$(jq --raw-output '.yocto.archive' "$_device_type_json")
-	_yocto_build_deploy="${device_dir}/build/tmp/deploy/images/${_device_type}"
+	_machine=$(jq --raw-output '.yocto.machine' "${_device_type_json}")
+	_yocto_build_deploy="${device_dir}/build/tmp/deploy/images/${_machine}"
 	_yocto_licenses_deploy="${device_dir}/build/tmp/deploy/licenses/"
 	_slug=$(jq --raw-output '.slug' "${_device_type_json}")
 
@@ -56,8 +58,8 @@ balena_deploy_artifacts () {
 
 	cp -v "$_yocto_build_deploy/VERSION" "$_deploy_dir"
 	cp -v "$_yocto_build_deploy/VERSION_HOSTOS" "$_deploy_dir"
-	cp -v "$(readlink --canonicalize "$_yocto_build_deploy/$_image-${_device_type}.manifest")" "$_deploy_dir/$_image-$_device_type.manifest"
-	cp -v "$(readlink --canonicalize "$_yocto_build_deploy/balena-image-$_device_type.docker")" "$_deploy_dir/balena-image.docker"
+	cp -v "$(readlink --canonicalize "$_yocto_build_deploy/$_image-${_machine}.manifest")" "$_deploy_dir/$_image-$_machine.manifest"
+	cp -v "$(readlink --canonicalize "$_yocto_build_deploy/balena-image-$_machine.docker")" "$_deploy_dir/balena-image.docker"
 
 	if [ -d "${_yocto_licenses_deploy}" ]; then
 		tar -czf "${_deploy_dir}/licenses.tar.gz" -C $(dirname "${_yocto_licenses_deploy}") $(basename "${_yocto_licenses_deploy}")
