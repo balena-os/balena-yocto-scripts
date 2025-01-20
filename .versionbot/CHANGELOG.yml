@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update Lock file maintenance
+      hash: ce685e56f5f770ef0a9fa0e3241813443efbdd66
+      body: |
+        Update 
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.30.17
+  title: ""
+  date: 2025-01-20T01:26:41.076Z
+- commits:
     - subject: "workflows: yocto-build-deploy: allow to pass barys arguments"
       hash: 71b8b94141a41c70bc551d43be425502d30d6afe
       body: ""
