@@ -198,7 +198,10 @@ fi
 # Get the list of the supported machines out of all the available machine json files
 # (we may have multiple json files describing different machines based on the same balena layers; i.e. imx6 fsl based machines)
 for json in ${DEVICE_TYPES_JSONS}; do
-    SUPPORTED_MACHINES="${SUPPORTED_MACHINES} `jq -r "[.yocto.machine] | sort | .[] | select(. != null)" ${json} 2>/dev/null`" || log ERROR "Please install the 'jq' package before running this script."
+    SUPPORTED_MACHINE="$(jq -r "[.yocto.machine] | sort | .[] | select(. != null)" ${json} 2>/dev/null)" || log ERROR "Please install the 'jq' package before running this script."
+    if ! [[ " ${SUPPORTED_MACHINES} " =~ " ${SUPPORTED_MACHINE} " ]]; then
+        SUPPORTED_MACHINES="${SUPPORTED_MACHINE} ${SUPPORTED_MACHINES}"
+    fi
 done
 
 # Parse arguments
@@ -583,9 +586,11 @@ else
         env MACHINE=$machine bitbake ${IMAGE} $BITBAKEARGS
         if [ $? -eq 0 ]; then
           log "Build for $machine suceeded."
+          break
         else
           log "Build for $machine failed. Check failed log in $BUILD_DIR/tmp/log/cooker/$machine ."
           EXIT_CODE=2 # Fail at the end
+          break
         fi
       done
   done
@@ -605,6 +610,7 @@ else
             log "If build for $machine succeeded, final image should have been generated here:"
             log "   $BUILD_DIR/tmp/deploy/images/$machine/$IMAGE-$machine.$FSTYPE"
         fi
+        break
     done
   done
 fi
