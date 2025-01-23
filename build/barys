@@ -117,9 +117,9 @@ function help {
     echo -e "\t\t Default: no."
 
     echo -e "\t-t | --templates-path"
-    echo -e "\t\t Provide a custom absolute path to the layer containing custom sample templates."
-    echo -e "\t\t For example, if local.conf.sample and bblayers.conf.sample"
-    echo -e "\t\t are in a /path/to/layer/conf/samples directory, the template path would be /path/to/layer."
+    echo -e "\t\t Provide a custom path to the local.conf.sample"
+    echo -e "\t\t and bblayers.conf.sample templates directory."
+    echo -e "\t\t For example, /path/to/layer/conf/samples/mytemplate"
     echo -e "\t\t Default: Use the ones in the integration BSP layer."
 
     echo -e "\t--rm-work"
@@ -303,8 +303,8 @@ while [[ $# -ge 1 ]]; do
             if [ -z "$2" ]; then
                 log ERROR "\"$1\" argument is invalid."
             fi
-            LAYERSCONF_PATH=$2
-            log WARN "LAYERSCONF_PATH: $LAYERSCONF_PATH"
+            TEMPLATECONF_PATH=$2
+            log WARN "TEMPLATECONF_PATH: $TEMPLATECONF_PATH"
             shift
             ;;
         -l|--log)
@@ -392,8 +392,8 @@ while [[ $# -ge 1 ]]; do
             read -p "Custom templates path? yes/[no] " yn
             case $yn in
                 [Yy]* )
-                    read -p "Templated path? " LAYERSCONF_PATH
-                    if [ -z "$LAYERSCONF_PATH" ]; then
+                    read -p "Templates path? " TEMPLATECONF_PATH
+                    if [ -z "$TEMPLATECONF_PATH" ]; then
                         log ERROR "Provided path is invalid."
                     fi
                     ;;
@@ -446,7 +446,7 @@ if [ "z$LOG" == "zyes" ]; then
     echo "Compressed image? $COMPRESS" >> $LOGFILE
     echo "Shared downloads directory: $SHARED_DOWNLOADS" >> $LOGFILE
     echo "Shared sstate directory: $SHARED_SSTATE" >> $LOGFILE
-    echo "Custom templates path: $LAYERSCONF_PATH" >> $LOGFILE
+    echo "Custom templates path: $TEMPLATECONF_PATH" >> $LOGFILE
     echo "Development image? $DEVELOPMENT_IMAGE" >> $LOGFILE
     echo "Forced supervisor image release version: $SUPERVISOR_VERSION" >> $LOGFILE
     echo "Inherit rm_work? $RM_WORK" >> $LOGFILE
@@ -460,25 +460,29 @@ if [ "x$REMOVEBUILD" == "xyes" ]; then
     rm -rf $SCRIPTPATH/../../$BUILD_DIR
 fi
 
-if [ -z "${LAYERSCONF_PATH}" ] ; then
+if [ -z "${TEMPLATECONF_PATH}" ] ; then
     # Look on the BSP integration layer meta-balena-*
-    LAYERSCONF_PATH="${SCRIPTPATH}/../../layers/meta-balena"*
+    TEMPLATECONF_PATH=$(dirname $(find "${SCRIPTPATH}/../../layers/meta-balena"* -name bblayers.conf.sample))
 else
-    if [ "${LAYERSCONF_PATH#/}" = "${LAYERSCONF_PATH}" ]; then
-        if [ "${LAYERSCONF_PATH#layers/}" != "${LAYERSCONF_PATH}" ]; then
-            LAYERSCONF_PATH="${SCRIPTPATH}/../../${LAYERSCONF_PATH}"
+    if [ "${TEMPLATECONF_PATH#/}" = "${TEMPLATECONF_PATH}" ]; then
+        # Does not start with /
+        if [ "${TEMPLATECONF_PATH#layers/}" != "${TEMPLATECONF_PATH}" ]; then
+            # starts with layers/
+            TEMPLATECONF_PATH="${SCRIPTPATH}/../../${TEMPLATECONF_PATH}"
         else
-            log ERROR "The custom templates layer path needs to be either absolute or relative to the build directoty, i.e layers/meta-custom. "
+            log ERROR "The custom templates path needs to be either absolute or relative to the build directoty, i.e layers/meta-custom/conf/samples/mytemplate. "
         fi
     fi
 fi
-TEMPLATECONF_PATH=$(dirname $(find ${LAYERSCONF_PATH} -name bblayers.conf.sample))
+
+# make sure it contains templates
+TEMPLATECONF_PATH=$(dirname $(find ${TEMPLATECONF_PATH} -name bblayers.conf.sample))
 if [ "$(echo "${TEMPLATECONF_PATH}" | wc -w)" -gt "1" ]; then
     log ERROR "Multiple bblayers.conf.sample files found in BSP integration layer. Please provide a custom path."
 fi
 
 # Configure build
-$SCRIPTPATH/generate-conf-notes.sh "${TEMPLATECONF_PATH%/samples}" ${DEVICE_TYPES_JSONS}
+$SCRIPTPATH/generate-conf-notes.sh "${TEMPLATECONF_PATH}" ${DEVICE_TYPES_JSONS}
 
 export TEMPLATECONF="${TEMPLATECONF_PATH}"
 # scarthgap expects templates to be contained in a subdirectory inside templates/
