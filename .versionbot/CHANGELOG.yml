@@ -1,4 +1,63 @@
 - commits:
+    - subject: "barys: allow to specify custom templates paths directly"
+      hash: 8f1cf78e5b073a1f9c03c3f302dc539eba09baae
+      body: |
+        This simplifies the logic, adds flexibility and is easier to understand
+        as it works in the same way as the Yocto documentation for the
+        TEMPLATECONF variable.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "generate-conf-notes: simplify arguments"
+      hash: b56c2847e4c6fb627f2a62f7408050acdb2b98ba
+      body: |
+        The input directory just needs to contain the template files, no need
+        to force a format on it.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "barys: do not build duplicated machines"
+      hash: 7318e7e8d7179cb749758d3d74aee5004cf500ac
+      body: |
+        The same machine could build OS variants, like with secure boot support,
+        that end up being deployed to different slugs but only need to be built
+        once.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "workflows: yocto-build-deploy: distinguish machine from slug"
+      hash: cb5b49e5c728617a242770aab2407977d114b974
+      body: >
+        Machine refers to the Yocto machine configuration, while slug refers to
+
+        the balenaCloud device type.
+
+
+        This allows to build the same machine but deploy to a different device
+        type.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.30.18
+  title: ""
+  date: 2025-01-23T17:46:30.038Z
+- commits:
     - subject: Update Lock file maintenance
       hash: ce685e56f5f770ef0a9fa0e3241813443efbdd66
       body: |
