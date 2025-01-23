@@ -13,7 +13,7 @@ CONF=$1             # CONFNAME file directory location
 CONFNAME="conf-notes.txt"
 
 # The conf directory is yocto version specific
-CONF=$CONF/samples
+CONF="$(dirname $(find "$CONF" -name "bblayers.conf.sample"))"
 
 # Checks
 
