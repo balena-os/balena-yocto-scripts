@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.85
+      hash: b07be91b6f5f5edc2b135056f72827b1158e6c5c
+      body: |
+        Update balena-os/leviathan from 2.31.83 to 2.31.85
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.30.19
+  title: ""
+  date: 2025-01-24T21:18:58.111Z
+- commits:
     - subject: "barys: allow to specify custom templates paths directly"
       hash: 8f1cf78e5b073a1f9c03c3f302dc539eba09baae
       body: |
