@@ -1,6 +1,5 @@
 selector:
   sw.os: 1
-  sw.os-image: 1
   hw.device-type: 1
   arch.sw: 1
 output:
