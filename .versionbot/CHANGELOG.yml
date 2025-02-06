@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/create-github-app-token action to v1.11.3
+      hash: 8149f57c433a17c56fd2357baee0d77333ad196b
+      body: |
+        Update actions/create-github-app-token from 1.11.2 to 1.11.3
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.30.26
+  title: ""
+  date: 2025-02-06T13:36:56.062Z
+- commits:
     - subject: "generate-oscontracts: remove sw.os-image selector"
       hash: 2810bd63cae25862e3d31c385c02216efa15982c
       body: |
