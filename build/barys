@@ -253,7 +253,11 @@ while [[ $# -ge 1 ]]; do
             if [ -z "$2" ]; then
                 log ERROR "\"$1\" argument needs a value."
             fi
-            BITBAKE_TARGET="${BITBAKE_TARGET} $2"
+            if [ -z "${BITBAKE_TARGET}" ]; then
+                BITBAKE_TARGET="$2"
+            else
+                BITBAKE_TARGET="${BITBAKE_TARGET} $2"
+            fi
 	    _cnt=1
 	    for k in $(eval "echo {3..$#}"); do
 		    case ${!k} in
@@ -578,23 +582,29 @@ else
           continue
         fi
         if [ -z "$BITBAKE_TARGET" ]; then
-            IMAGE=`jq -r '.yocto | select(.machine == '\"${machine}\"').image' $json`
+            IMAGE=`jq -r '.yocto.image' $json`
         else
             IMAGE="$BITBAKE_TARGET"
         fi
         if [ -z "$IMAGE" ] || [ "z$IMAGE" == "znull" ]; then
           log ERROR "No target image defined for $machine."
         fi
+        # Multi target builds
+        for image in ${IMAGE}; do
+            if [[ " ${BUILT_TARGETS} " =~ " ${machine}-${image} " ]]; then
+                log "Build for $machine-$image already done."
+                continue 2
+            fi
+            BUILT_TARGETS="${BUILT_TARGETS} ${machine}-${image}"
+        done
         log "Run build for $machine: MACHINE=$machine bitbake $IMAGE $BITBAKEARGS"
         log "This might take a while ..."
         env MACHINE=$machine bitbake ${IMAGE} $BITBAKEARGS
         if [ $? -eq 0 ]; then
           log "Build for $machine suceeded."
-          break
         else
           log "Build for $machine failed. Check failed log in $BUILD_DIR/tmp/log/cooker/$machine ."
           EXIT_CODE=2 # Fail at the end
-          break
         fi
       done
   done
@@ -606,6 +616,12 @@ else
           continue
         fi
         [ -n "$BITBAKE_TARGET" ] && continue
+        for image in $IMAGE; do
+            if [[ " ${DONE_TARGETS} " =~ " ${machine}-${image} " ]]; then
+                continue 2
+            fi
+            DONE_TARGETS="${DONE_TARGETS} ${machine}-${image}"
+        done
         IMAGE=`jq -r '.yocto | select(.machine == '\"${machine}\"').image' $json`
         FSTYPE=`jq -r '.yocto | select(.machine == '\"${machine}\"').fstype' $json`
         if [ -z "$IMAGE" ] || [ -z "$FSTYPE" ] || [ "z$IMAGE" == "znull" ] || [ "z$FSTYPE" == "znull" ]; then
@@ -614,7 +630,6 @@ else
             log "If build for $machine succeeded, final image should have been generated here:"
             log "   $BUILD_DIR/tmp/deploy/images/$machine/$IMAGE-$machine.$FSTYPE"
         fi
-        break
     done
   done
 fi
