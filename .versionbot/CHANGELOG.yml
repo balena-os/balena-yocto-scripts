@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws-actions/configure-aws-credentials action to v4.1.0
+      hash: a811a8a4edf18d59290a0eeff0c55255f5a570ad
+      body: |
+        Update aws-actions/configure-aws-credentials from 4.0.3 to 4.1.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.30.28
+  title: ""
+  date: 2025-02-11T02:36:10.282Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.89
       hash: 337bd8bd83d751a9cc4adc4341e7d7955666c749
       body: |
