@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update Lock file maintenance
+      hash: 8e7c1a346f5014efb14fd4d7cb5072861cce4087
+      body: |
+        Update 
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.30.30
+  title: ""
+  date: 2025-02-17T01:26:27.806Z
+- commits:
     - subject: Update actions/create-github-app-token action to v1.11.5
       hash: 4230aee42ff2b813084cbdea6b25652900e7decb
       body: |
