@@ -54,7 +54,10 @@ jobs:
     secrets: inherit
     with:
       machine: genericx86-64-ext
-      deploy-environment: balena-staging.com
+      build-environment: balena-staging.com
+      hostapp-deploy-environment: balena-staging.com
+      s3-deploy-environment: balena-staging.com
+      source-mirror-environment: balena-staging.com
       # device-repo and device-repo-ref inputs should not be provided on device repos
       device-repo: balena-os/balena-intel
       device-repo-ref: master
