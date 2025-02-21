@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/upload-artifact action to v4.6.1
+      hash: 037fd9d652c03dd37eaa24ec1babddb24556457f
+      body: |
+        Update actions/upload-artifact from 4.6.0 to 4.6.1
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.30.32
+  title: ""
+  date: 2025-02-21T22:28:54.769Z
+- commits:
     - subject: "barys: build unique machine-image combinations"
       hash: 290992af63811118ef49a1059f78c1395066a279
       body: |
