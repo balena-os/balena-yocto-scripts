@@ -478,51 +478,6 @@ jobs:
           BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_HAB_PKI_ID=${SIGN_HAB_PKI_ID}"
           echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR}" >>"${GITHUB_ENV}"
 
-      # FIXME: Remove this when we shut down the NFS server in early 2025
-      - name: Mount shared NFS cache
-        if: vars.YOCTO_CACHE_HOST && contains(fromJSON(inputs.build-runs-on), 'self-hosted')
-        continue-on-error: true
-        id: jenkins-nfs
-        env:
-          YOCTO_CACHE_HOST: ${{ vars.YOCTO_CACHE_HOST }}
-          MOUNTPOINT: ${{ github.workspace}}/nfs/yocto
-        run: |
-          sudo mkdir -p "${MOUNTPOINT}"
-          sudo chown -R "$(id -u):$(id -g)" "${MOUNTPOINT}"
-          sudo mount -t nfs "${YOCTO_CACHE_HOST}:/" "${MOUNTPOINT}" -o fsc,nolock
-
-      # FIXME: Remove this when we shut down the NFS server in early 2025
-      # https://wiki.yoctoproject.org/wiki/Enable_sstate_cache
-      # https://docs.yoctoproject.org/4.0.10/ref-manual/variables.html#term-MIRRORS
-      # https://docs.yoctoproject.org/4.0.10/ref-manual/variables.html#term-PREMIRRORS
-      # https://docs.yoctoproject.org/4.0.10/ref-manual/variables.html#term-SSTATE_MIRRORS
-      # https://docs.yoctoproject.org/4.0.10/overview-manual/concepts.html#source-mirror-s
-      # https://docs.yoctoproject.org/4.0.10/ref-manual/classes.html?highlight=source_mirror#own-mirrors-bbclass
-      # https://github.com/openembedded/openembedded/blob/master/classes/own-mirrors.bbclass
-      # https://github.com/openembedded/openembedded/blob/master/classes/mirrors.bbclass
-      - name: Add NFS shared-downloads to PREMIRRORS
-        if: steps.jenkins-nfs.outcome == 'success'
-        env:
-          # Relative to the build container working dir, not the workspace
-          SOURCE_MIRROR_URL: file:///work/nfs/yocto/runner/shared-downloads/
-          SSTATE_MIRROR_URL: file:///work/nfs/yocto/runner/${{ inputs.machine }}/sstate/PATH
-        run: |
-          mkdir -p "$(dirname "${AUTO_CONF_FILE}")"
-          cat <<EOF >> "${AUTO_CONF_FILE}"
-
-          PREMIRRORS:prepend = "\\
-            cvs://.*/.* ${SOURCE_MIRROR_URL} \\
-            svn://.*/.* ${SOURCE_MIRROR_URL} \\
-            git://.*/.* ${SOURCE_MIRROR_URL} \\
-            hg://.*/.* ${SOURCE_MIRROR_URL} \\
-            bzr://.*/.* ${SOURCE_MIRROR_URL} \\
-            https?$://.*/.* ${SOURCE_MIRROR_URL} \\
-            ftp://.*/.*  ${SOURCE_MIRROR_URL} \\
-          "
-
-          EOF
-          cat "${AUTO_CONF_FILE}"
-
       # https://docs.yoctoproject.org/4.0.10/ref-manual/classes.html?highlight=source_mirror#own-mirrors-bbclass
       # https://github.com/openembedded/openembedded/blob/master/classes/own-mirrors.bbclass
       # The own-mirrors class makes it easier to set up your own PREMIRRORS from which to first fetch source before
