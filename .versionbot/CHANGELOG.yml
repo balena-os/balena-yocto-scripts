@@ -1,4 +1,18 @@
 - commits:
+    - subject: Remove legacy yocto NFS cache host setup
+      hash: 3554f19eecca29a7c7af2d73693b1238a787bfb9
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.30.33
+  title: ""
+  date: 2025-02-24T16:35:19.346Z
+- commits:
     - subject: Update actions/upload-artifact action to v4.6.1
       hash: 037fd9d652c03dd37eaa24ec1babddb24556457f
       body: |
