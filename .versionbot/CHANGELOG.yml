@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update product-os/review-commit-action action to v0.1.11
+      hash: 9a175c1e8d4e95ab7a17a8dbe495da529d956ee3
+      body: |
+        Update product-os/review-commit-action from 0.1.7 to 0.1.11
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.30.34
+  title: ""
+  date: 2025-02-25T22:51:33.890Z
+- commits:
     - subject: Remove legacy yocto NFS cache host setup
       hash: 3554f19eecca29a7c7af2d73693b1238a787bfb9
       body: ""
