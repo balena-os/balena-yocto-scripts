@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update product-os/review-commit-action action to v0.1.12
+      hash: 42105754eb5dfd53b4535d76f70122a796ff26f6
+      body: |
+        Update product-os/review-commit-action from 0.1.11 to 0.1.12
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.30.36
+  title: ""
+  date: 2025-02-26T03:12:54.670Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.90
       hash: 795fff76a07637937692262d557d252b4d9072dd
       body: |
