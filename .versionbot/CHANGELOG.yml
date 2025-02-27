@@ -1,4 +1,41 @@
 - commits:
+    - subject: Remove balena API key from yocto build step
+      hash: 4beb0be8adddcf2dcac6e04f38a25b7e72ab7b05
+      body: >
+        This key was only used to fetch the supervisor image name from the API,
+
+        but that endpoint does not need auth as the supervisor images are
+        public.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Separate build jobs by environments
+      hash: c91dc23ff49f1c7f07206709b5a4cda77fa7c26c
+      body: |
+        This allows more granular control over which environments are used
+        for which steps, and avoids requiring a single environment to define
+        how to build, sign, and publish.
+
+        This is better for security as it allows each job to only have
+        the secrets it needs, and not all secrets for all steps.
+
+        We retain backwards compatibility by falling back to the original
+        monolith environment input for now.
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.31.0
+  title: ""
+  date: 2025-02-27T14:28:24.783Z
+- commits:
     - subject: Update product-os/review-commit-action action to v0.1.12
       hash: 42105754eb5dfd53b4535d76f70122a796ff26f6
       body: |
