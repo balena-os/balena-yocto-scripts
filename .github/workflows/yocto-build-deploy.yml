@@ -386,7 +386,7 @@ jobs:
       # is_private=$(${CURL} -XGET -H "Content-type: application/json" -H "Authorization: bearer ${BALENAOS_TOKEN}" --silent --retry 5 "https://api.${API_ENV}/${TRANSLATION}/device_type?\$filter=slug%20eq%20%27${device_slug}%27&\$select=slug,is_private" | jq -r '.d[0].is_private')
       # echo "is_private=${is_private}" >>"${GITHUB_OUTPUT}"
       - name: Check if device-type is private
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
         id: is-private
         env:
           API_ENV: ${{ env.BALENARC_BALENA_URL }}
@@ -969,7 +969,7 @@ jobs:
           cp -v "${DEPLOY_PATH}/balena.yml" "${WORKSPACE}/balena.yml"
 
       - name: Setup balena CLI
-        uses: balena-io-examples/setup-balena-action@v0.0.6
+        uses: balena-io-examples/setup-balena-action@41338eb4bb2b2e8b239d8ca5b8523d1a707333bf # v0.0.6
         env:
           # renovate: datasource=github-releases depName=balena-io/balena-cli
           BALENA_CLI_VERSION: v20.2.1
@@ -1484,7 +1484,7 @@ jobs:
           fi
 
       - name: Setup balena CLI
-        uses: balena-io-examples/setup-balena-action@v0.0.6
+        uses: balena-io-examples/setup-balena-action@41338eb4bb2b2e8b239d8ca5b8523d1a707333bf # v0.0.6
         env:
           # renovate: datasource=github-releases depName=balena-io/balena-cli
           BALENA_CLI_VERSION: v20.2.1
