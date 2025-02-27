@@ -1,4 +1,23 @@
 - commits:
+    - subject: Unset the new environment inputs until they have been deployed
+      hash: 5ee032a311e915b27420eb261d06f6d6555b9c8d
+      body: |
+        By setting defaults here we are overriding values that may
+        have been set at the device level via deploy-environment.
+
+        For now leave them blank until we have rolled out the new
+        environments to all the repositories.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.31.2
+  title: ""
+  date: 2025-02-27T20:42:14.925Z
+- commits:
     - subject: Update Pin dependencies
       hash: 9ad66c325cd50213bd128ed684684b8ad13f335d
       body: |
