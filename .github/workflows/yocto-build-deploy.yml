@@ -88,22 +88,22 @@ on:
         description: The balena environment to use for yocto build - includes the related vars and secrets
         required: false
         type: string
-        default: balena-cloud.com
+        # default: balena-cloud.com
       hostapp-deploy-environment:
         description: The balena environment to use for hostApp deployment - includes the related vars and secrets
         required: false
         type: string
-        default: balena-cloud.com
+        # default: balena-cloud.com
       source-mirror-environment:
         description: The AWS environment to use for the S3 source mirror - includes related vars and OIDC role(s)
         required: false
         type: string
-        default: ''
+        # default: balena-production.us-east-1
       s3-deploy-environment:
         description: The AWS environment to use for the S3 and AMI deployments - includes related vars and OIDC role(s)
         required: false
         type: string
-        default: ''
+        # default: balena-production.us-east-1
       # This input exists because we want the option to not auto-finalise for some device types, even if they have tests and those tests pass - for example some custom device types, the customer doesn't want new releases published until they green light it
       finalize-on-push-if-tests-passed:
         description: Whether to finalize a hostApp container image to a balena environment, if tests pass.
