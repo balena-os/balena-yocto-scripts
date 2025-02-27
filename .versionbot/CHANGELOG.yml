@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update Pin dependencies
+      hash: 9ad66c325cd50213bd128ed684684b8ad13f335d
+      body: |
+        Update actions/github-script
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.1
+  title: ""
+  date: 2025-02-27T18:02:39.719Z
+- commits:
     - subject: Remove balena API key from yocto build step
       hash: 4beb0be8adddcf2dcac6e04f38a25b7e72ab7b05
       body: >
