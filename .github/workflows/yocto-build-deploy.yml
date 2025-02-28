@@ -84,11 +84,11 @@ on:
         required: false
         type: string
         default: balena-cloud.com
-      build-environment:
-        description: The bitbake environment to use for yocto build - includes the related vars and secrets
+      signing-environment:
+        description: The signing environment to use for the bitbake build - includes the related vars and secrets
         required: false
         type: string
-        # default: balena-cloud.com
+        default: ''
       source-mirror-environment:
         description: The AWS environment to use for the S3 source mirror - includes related vars and OIDC role(s)
         required: false
@@ -264,6 +264,7 @@ jobs:
       should_finalize: ${{ steps.merge-test-result.outputs.finalize == 'true' || inputs.force-finalize }}
       is_esr: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v20')) || (github.event_name == 'workflow_dispatch' && startsWith(github.ref_name, '20')) }}
       deploy_path: ${{ github.workspace }}/deploy/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}
+      balena_host: ${{ env.BALENARC_BALENA_URL }}
 
     steps:
       # Generate an app installation token that has access to
@@ -505,7 +506,7 @@ jobs:
     # - SIGN_API_KEY
     # - SIGN_KMOD_KEY_APPEND
     # - YOCTO_SSH_PRIVATE_KEY_B64: used to pull private yocto sources from within the same organization
-    environment: ${{ inputs.build-environment || inputs.deploy-environment }}
+    environment: ${{ inputs.signing-environment || inputs.deploy-environment }}
 
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
@@ -521,7 +522,7 @@ jobs:
       # https://docs.yoctoproject.org/3.1.21/overview-manual/overview-manual-concepts.html#user-configuration
       # Create an autobuilder configuration file that is loaded before local.conf
       AUTO_CONF_FILE: "${{ github.workspace }}/build/conf/auto.conf"
-      BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || 'balena-cloud.com' }}
+      BALENARC_BALENA_URL: ${{ needs.balena-lib.outputs.balena_host }}
       DEPLOY_PATH: ${{ github.workspace }}/deploy
 
     defaults:
