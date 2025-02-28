@@ -1,4 +1,35 @@
 - commits:
+    - subject: Rename build environment to signing environment
+      hash: 3e545cbea7641d1f7cf9e7e12265be09a4cb5a50
+      body: |
+        This better aligns with the purpose.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Do not allow changing the S3 deploy environment
+      hash: a4aea6f919ff6e82d173defd0f31dbdd3b915f84
+      body: |
+        The AWS environment is always tied to the balenaCloud deploy
+        environment so exposing this to the device workflows is only
+        potential for issues, and no benefit.
+
+        For the time being, the deploy environment will contain
+        both the AWS and BC vars and secrets.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.31.3
+  title: ""
+  date: 2025-02-28T19:02:20.368Z
+- commits:
     - subject: Unset the new environment inputs until they have been deployed
       hash: 5ee032a311e915b27420eb261d06f6d6555b9c8d
       body: |
