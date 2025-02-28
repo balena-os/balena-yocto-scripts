@@ -80,17 +80,12 @@ on:
         required: false
         type: string
       deploy-environment:
-        description: Deprecated - use hostapp-deploy-environment instead
+        description: The balena environment to use for hostApp deployment - includes the related vars and secrets
         required: false
         type: string
         default: balena-cloud.com
       build-environment:
-        description: The balena environment to use for yocto build - includes the related vars and secrets
-        required: false
-        type: string
-        # default: balena-cloud.com
-      hostapp-deploy-environment:
-        description: The balena environment to use for hostApp deployment - includes the related vars and secrets
+        description: The bitbake environment to use for yocto build - includes the related vars and secrets
         required: false
         type: string
         # default: balena-cloud.com
@@ -189,7 +184,7 @@ on:
 # Note that we do not use github.ref here, as PRs from forks will have a
 # ref of 'refs/heads/master' and collide with each other. Instead, we use github.head_ref
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}-${{ inputs.machine }}-${{ inputs.hostapp-deploy-environment || inputs.deploy-environment }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}-${{ inputs.machine }}-${{ inputs.deploy-environment }}
   # Cancel jobs in-progress for open PRs, but not merged or closed PRs, by checking for the merge ref.
   # Note that for pull_request_target events (PRs from forks), the github.ref value is
   # usually 'refs/heads/master' so we can't rely on that to determine if it is a merge event or not.
@@ -245,7 +240,7 @@ jobs:
     # - BALENA_HOST
     # This environment requires the following secrets:
     # - BALENA_API_DEPLOY_KEY - used to authenticate with the balena API
-    environment: ${{ inputs.hostapp-deploy-environment || inputs.deploy-environment || 'balena-cloud.com' }}
+    environment: ${{ inputs.deploy-environment || 'balena-cloud.com' }}
 
     env:
       automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
@@ -931,7 +926,7 @@ jobs:
     # - HOSTAPP_ORG
     # This environment should contain the following secrets:
     # - BALENA_API_DEPLOY_KEY
-    environment: ${{ inputs.hostapp-deploy-environment || inputs.deploy-environment }}
+    environment: ${{ inputs.deploy-environment }}
 
     env:
       BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || vars.BALENARC_BALENA_URL || 'balena-cloud.com' }}
@@ -2128,7 +2123,7 @@ jobs:
       matrix:
         include:
           - machine: ${{ inputs.machine }}
-            environment: ${{ inputs.hostapp-deploy-environment || inputs.deploy-environment }}
+            environment: ${{ inputs.deploy-environment }}
 
     steps:
       - name: Reject failed jobs
