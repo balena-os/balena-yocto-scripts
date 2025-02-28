@@ -746,6 +746,8 @@ jobs:
           >&2 eval "$(ssh-agent)"
           echo "${{ secrets.YOCTO_SSH_PRIVATE_KEY_B64 }}" | base64 -d | ssh-add - >&2
 
+          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a DEVICE_TYPE=${SLUG}"
+
           ./balena-yocto-scripts/build/balena-build.sh \
             -d "${MACHINE}" \
             -s "${SHARED_BUILD_DIR}" \
