@@ -94,11 +94,6 @@ on:
         required: false
         type: string
         # default: balena-production.us-east-1
-      s3-deploy-environment:
-        description: The AWS environment to use for the S3 and AMI deployments - includes related vars and OIDC role(s)
-        required: false
-        type: string
-        # default: balena-production.us-east-1
       # This input exists because we want the option to not auto-finalise for some device types, even if they have tests and those tests pass - for example some custom device types, the customer doesn't want new releases published until they green light it
       finalize-on-push-if-tests-passed:
         description: Whether to finalize a hostApp container image to a balena environment, if tests pass.
@@ -1212,7 +1207,7 @@ jobs:
     # - AWS_IAM_ROLE: AWS IAM role to assume for S3 image deployment, AMI deployment
     # - AWS_S3_BUCKET: AWS S3 bucket for image deployment, and AMI deployment
     # - AWS_S3_SSE_ALGORITHM: AWS S3 server-side encryption algorithm
-    environment: ${{ inputs.s3-deploy-environment || inputs.deploy-environment }}
+    environment: ${{ inputs.deploy-environment }}
 
     env:  
       # Include a number of similar variable keys to allow for flexibility in the environment and backwards compatibility
@@ -1380,7 +1375,7 @@ jobs:
     # - AWS_S3_SSE_ALGORITHM: AWS S3 server-side encryption algorithm
     # This environment should contain the following secrets:
     # - BALENA_API_DEPLOY_KEY: Balena API deploy key with access to the balena_os/cloud-config-* fleets
-    environment: ${{ inputs.s3-deploy-environment || inputs.deploy-environment }}
+    environment: ${{ inputs.deploy-environment }}
 
     env:  
       # Include a number of similar variable keys to allow for flexibility in the environment and backwards compatibility
