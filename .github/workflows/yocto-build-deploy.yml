@@ -80,27 +80,17 @@ on:
         required: false
         type: string
       deploy-environment:
-        description: Deprecated - use hostapp-deploy-environment instead
-        required: false
-        type: string
-        default: balena-cloud.com
-      build-environment:
-        description: The balena environment to use for yocto build - includes the related vars and secrets
-        required: false
-        type: string
-        # default: balena-cloud.com
-      hostapp-deploy-environment:
         description: The balena environment to use for hostApp deployment - includes the related vars and secrets
         required: false
         type: string
-        # default: balena-cloud.com
-      source-mirror-environment:
-        description: The AWS environment to use for the S3 source mirror - includes related vars and OIDC role(s)
+        default: balena-cloud.com
+      signing-environment:
+        description: The signing environment to use for the bitbake build - includes the related vars and secrets
         required: false
         type: string
-        # default: balena-production.us-east-1
-      s3-deploy-environment:
-        description: The AWS environment to use for the S3 and AMI deployments - includes related vars and OIDC role(s)
+        default: ''
+      source-mirror-environment:
+        description: The AWS environment to use for the S3 source mirror - includes related vars and OIDC role(s)
         required: false
         type: string
         # default: balena-production.us-east-1
@@ -189,7 +179,7 @@ on:
 # Note that we do not use github.ref here, as PRs from forks will have a
 # ref of 'refs/heads/master' and collide with each other. Instead, we use github.head_ref
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}-${{ inputs.machine }}-${{ inputs.hostapp-deploy-environment || inputs.deploy-environment }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}-${{ inputs.machine }}-${{ inputs.deploy-environment }}
   # Cancel jobs in-progress for open PRs, but not merged or closed PRs, by checking for the merge ref.
   # Note that for pull_request_target events (PRs from forks), the github.ref value is
   # usually 'refs/heads/master' so we can't rely on that to determine if it is a merge event or not.
@@ -245,7 +235,7 @@ jobs:
     # - BALENA_HOST
     # This environment requires the following secrets:
     # - BALENA_API_DEPLOY_KEY - used to authenticate with the balena API
-    environment: ${{ inputs.hostapp-deploy-environment || inputs.deploy-environment || 'balena-cloud.com' }}
+    environment: ${{ inputs.deploy-environment || 'balena-cloud.com' }}
 
     env:
       automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
@@ -274,6 +264,7 @@ jobs:
       should_finalize: ${{ steps.merge-test-result.outputs.finalize == 'true' || inputs.force-finalize }}
       is_esr: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v20')) || (github.event_name == 'workflow_dispatch' && startsWith(github.ref_name, '20')) }}
       deploy_path: ${{ github.workspace }}/deploy/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}
+      balena_host: ${{ env.BALENARC_BALENA_URL }}
 
     steps:
       # Generate an app installation token that has access to
@@ -515,7 +506,7 @@ jobs:
     # - SIGN_API_KEY
     # - SIGN_KMOD_KEY_APPEND
     # - YOCTO_SSH_PRIVATE_KEY_B64: used to pull private yocto sources from within the same organization
-    environment: ${{ inputs.build-environment || inputs.deploy-environment }}
+    environment: ${{ inputs.signing-environment || inputs.deploy-environment }}
 
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
@@ -531,7 +522,7 @@ jobs:
       # https://docs.yoctoproject.org/3.1.21/overview-manual/overview-manual-concepts.html#user-configuration
       # Create an autobuilder configuration file that is loaded before local.conf
       AUTO_CONF_FILE: "${{ github.workspace }}/build/conf/auto.conf"
-      BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || 'balena-cloud.com' }}
+      BALENARC_BALENA_URL: ${{ needs.balena-lib.outputs.balena_host }}
       DEPLOY_PATH: ${{ github.workspace }}/deploy
 
     defaults:
@@ -931,7 +922,7 @@ jobs:
     # - HOSTAPP_ORG
     # This environment should contain the following secrets:
     # - BALENA_API_DEPLOY_KEY
-    environment: ${{ inputs.hostapp-deploy-environment || inputs.deploy-environment }}
+    environment: ${{ inputs.deploy-environment }}
 
     env:
       BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || vars.BALENARC_BALENA_URL || 'balena-cloud.com' }}
@@ -1217,7 +1208,7 @@ jobs:
     # - AWS_IAM_ROLE: AWS IAM role to assume for S3 image deployment, AMI deployment
     # - AWS_S3_BUCKET: AWS S3 bucket for image deployment, and AMI deployment
     # - AWS_S3_SSE_ALGORITHM: AWS S3 server-side encryption algorithm
-    environment: ${{ inputs.s3-deploy-environment || inputs.deploy-environment }}
+    environment: ${{ inputs.deploy-environment }}
 
     env:  
       # Include a number of similar variable keys to allow for flexibility in the environment and backwards compatibility
@@ -1385,7 +1376,7 @@ jobs:
     # - AWS_S3_SSE_ALGORITHM: AWS S3 server-side encryption algorithm
     # This environment should contain the following secrets:
     # - BALENA_API_DEPLOY_KEY: Balena API deploy key with access to the balena_os/cloud-config-* fleets
-    environment: ${{ inputs.s3-deploy-environment || inputs.deploy-environment }}
+    environment: ${{ inputs.deploy-environment }}
 
     env:  
       # Include a number of similar variable keys to allow for flexibility in the environment and backwards compatibility
@@ -2128,7 +2119,7 @@ jobs:
       matrix:
         include:
           - machine: ${{ inputs.machine }}
-            environment: ${{ inputs.hostapp-deploy-environment || inputs.deploy-environment }}
+            environment: ${{ inputs.deploy-environment }}
 
     steps:
       - name: Reject failed jobs
