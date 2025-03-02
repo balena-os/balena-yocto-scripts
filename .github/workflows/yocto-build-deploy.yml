@@ -1248,7 +1248,7 @@ jobs:
         run: |
           openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${ARTIFACTS_ENC}" -out "${ARTIFACTS_TAR}"
 
-      # Decompress the entire image/ directory for the S3 prepare script.
+      # Decompress the entire the entire tarball for the S3 upload.
       # Note that in this case DEPLOY_PATH includes <workspace>/deploy/${device_slug}/${version}/
       # List the contents of the tar file to make sure we're decompressing the right files.
       # Unzip the raw image files that were zipped and removed before uploading.
@@ -1259,7 +1259,7 @@ jobs:
           set -x
           mkdir -p "${DEPLOY_PATH}"
           tar -tf "${ARTIFACTS_TAR}"
-          tar -I zstd -xvf "${ARTIFACTS_TAR}" -C "${DEPLOY_PATH}" ./image/
+          tar -I zstd -xvf "${ARTIFACTS_TAR}" -C "${DEPLOY_PATH}"
 
           if ! command -v unzip; then
             sudo apt-get update
