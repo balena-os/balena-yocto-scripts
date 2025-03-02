@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/download-artifact digest to cc20338
+      hash: 51b419e62a8ba96522301cfba231c8c1c27c3b3e
+      body: |
+        Update actions/download-artifact
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.5
+  title: ""
+  date: 2025-03-02T23:18:57.438Z
+- commits:
     - subject: Unpack all artifacts for S3 upload
       hash: 805891c5b292134fdab8e42c1d75f382b422bc1e
       body: |
