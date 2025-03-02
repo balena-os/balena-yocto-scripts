@@ -1,4 +1,20 @@
 - commits:
+    - subject: Unpack all artifacts for S3 upload
+      hash: 805891c5b292134fdab8e42c1d75f382b422bc1e
+      body: |
+        We need most of the files from the root of the artifacts
+        directory for the S3 upload, not just the files in the image directory.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.31.4
+  title: ""
+  date: 2025-03-02T21:53:20.251Z
+- commits:
     - subject: Rename build environment to signing environment
       hash: 3e545cbea7641d1f7cf9e7e12265be09a4cb5a50
       body: |
