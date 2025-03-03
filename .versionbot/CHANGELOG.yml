@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.22.35
+      hash: 2e4d3d84fcb817ae8785daf031a0cf2a53547eac
+      body: |
+        Update aws/aws-cli from 2.22.10 to 2.22.35
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.6
+  title: ""
+  date: 2025-03-03T01:25:53.061Z
+- commits:
     - subject: Update actions/download-artifact digest to cc20338
       hash: 51b419e62a8ba96522301cfba231c8c1c27c3b3e
       body: |
