@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update product-os/review-commit-action action to v0.2.0
+      hash: 946ce45bf57dde1c3d390e566f34732d42f349c2
+      body: |
+        Update product-os/review-commit-action from 0.1.12 to 0.2.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.11
+  title: ""
+  date: 2025-03-03T17:15:01.189Z
+- commits:
     - subject: Update aws-actions/configure-aws-credentials action to v4.1.0
       hash: 8d02327368ce46acefed4700d14997911733cfae
       body: |
