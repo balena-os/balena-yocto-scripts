@@ -506,7 +506,7 @@ jobs:
     # - SIGN_API_KEY
     # - SIGN_KMOD_KEY_APPEND
     # - YOCTO_SSH_PRIVATE_KEY_B64: used to pull private yocto sources from within the same organization
-    environment: ${{ inputs.signing-environment || inputs.deploy-environment }}
+    environment: ${{ inputs.signing-environment }}
 
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
@@ -2119,7 +2119,8 @@ jobs:
       matrix:
         include:
           - machine: ${{ inputs.machine }}
-            environment: ${{ inputs.deploy-environment }}
+            deploy-environment: ${{ inputs.deploy-environment }}
+            signing-environment: ${{ inputs.signing-environment }}
 
     steps:
       - name: Reject failed jobs
