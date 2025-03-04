@@ -1,4 +1,19 @@
 - commits:
+    - subject: Add signing environment to All Jobs context
+      hash: 592bf3a1261009519b101577c64258306e932f34
+      body: |
+        This is one of the unique identifiers for merge requirements.
+      footer:
+        CHange-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.31.13
+  title: ""
+  date: 2025-03-04T12:49:02.985Z
+- commits:
     - subject: Update aws/aws-cli to v2.24.16
       hash: c3a58167929e76227947323638f92190a26f5c53
       body: |
