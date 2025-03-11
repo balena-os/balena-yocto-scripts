@@ -1,4 +1,18 @@
 - commits:
+    - subject: "workflows: yocto-build-deploy: pass device type to build"
+      hash: 8670526bd57cd78c6c909f0b6fb1f2a5884cf84d
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.31.23
+  title: ""
+  date: 2025-03-11T16:42:32.413Z
+- commits:
     - subject: Update aws/aws-cli to v2.24.21
       hash: 25bcbd5068f6576a2ec80cd9fb6d67b804778cfa
       body: |
