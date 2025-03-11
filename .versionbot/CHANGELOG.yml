@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io/balena-cli to v21
+      hash: 34fe16cd44cfc37538597c9256bb0bbcdfc1eaee
+      body: |
+        Update balena-io/balena-cli from 20.2.10 to 21.0.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.24
+  title: ""
+  date: 2025-03-11T19:39:44.664Z
+- commits:
     - subject: "workflows: yocto-build-deploy: pass device type to build"
       hash: 8670526bd57cd78c6c909f0b6fb1f2a5884cf84d
       body: ""
