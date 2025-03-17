@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update product-os/review-commit-action action to v0.2.4
+      hash: 152ebc760b0786e21ba34c4ef9e275aeb52d6a41
+      body: |
+        Update product-os/review-commit-action from 0.2.3 to 0.2.4
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.30
+  title: ""
+  date: 2025-03-17T04:55:12.812Z
+- commits:
     - subject: Update aws/aws-cli to v2.24.24
       hash: 63485a0715a1d0a98252972fba88e0a7c5d4b3d3
       body: |
