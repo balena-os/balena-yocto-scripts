@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.24.26
+      hash: e11a00565bc8a4f4efaddf2948c5d2d077cac193
+      body: |
+        Update aws/aws-cli from 2.24.25 to 2.24.26
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.33
+  title: ""
+  date: 2025-03-18T21:31:54.822Z
+- commits:
     - subject: Update actions/download-artifact digest to b14cf4c
       hash: 2c37a1957a5953dc1911d468a2cd5ea1272049f0
       body: |
