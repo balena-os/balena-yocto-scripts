@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/download-artifact digest to 95815c3
+      hash: e58416f7919ad514abd7b275e85af2a72e558344
+      body: |
+        Update actions/download-artifact
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.37
+  title: ""
+  date: 2025-03-19T22:58:05.166Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.91
       hash: 027ab777163e2914dfdc553eeccac7ce7872ca35
       body: |
