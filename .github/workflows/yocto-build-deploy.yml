@@ -935,7 +935,7 @@ jobs:
 
       # https://github.com/actions/download-artifact
       - name: Fetch build artifacts
-        uses: actions/download-artifact@b14cf4c92620c250e1c074ab0a5800e37df86765 # v4
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4
         with:
           name: build-artifacts
           path: ${{ runner.temp }}
@@ -1236,7 +1236,7 @@ jobs:
 
       # https://github.com/actions/download-artifact
       - name: Fetch build artifacts
-        uses: actions/download-artifact@b14cf4c92620c250e1c074ab0a5800e37df86765 # v4
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4
         with:
           name: build-artifacts
           path: ${{ runner.temp }}
@@ -1402,7 +1402,7 @@ jobs:
 
       # https://github.com/actions/download-artifact
       - name: Fetch build artifacts
-        uses: actions/download-artifact@b14cf4c92620c250e1c074ab0a5800e37df86765 # v4
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4
         with:
           name: build-artifacts
           path: ${{ runner.temp }}
@@ -2014,7 +2014,7 @@ jobs:
 
       # Images need to end up in workspace folder and need to have correct names
       - name: Fetch artifacts from build job
-        uses: actions/download-artifact@b14cf4c92620c250e1c074ab0a5800e37df86765 # v4
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4
         with:
           name: build-artifacts
           path: ${{ runner.temp }}
