@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/upload-artifact action to v4.6.2
+      hash: f383187400984f888a81b2fe7d070a26b60eff0f
+      body: |
+        Update actions/upload-artifact from 4.6.1 to 4.6.2
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.35
+  title: ""
+  date: 2025-03-19T19:00:40.331Z
+- commits:
     - subject: Update product-os/review-commit-action action to v0.2.5
       hash: 8cc54fc121dec925de757be9f233e28cef66c579
       body: |
