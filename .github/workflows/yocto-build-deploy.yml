@@ -1944,6 +1944,8 @@ jobs:
       WORKER_TYPE: ${{ matrix.worker_type || 'testbot' }}
       BALENACLOUD_APP_NAME: ${{ matrix.worker_fleets || 'balena/testbot-rig,balena/testbot-rig-partners,balena/testbot-rig-x86,balena/testbot-rig-partners-x86' }}
       BALENACLOUD_ORG: ${{ matrix.test_org || 'testbot' }}
+      # Allows for specifying an alternative build artifact to the default
+      BALENA_OS_IMAGE: ${{ matrix.image || 'balena' }}
 
       # Local directories
       LEVIATHAN_WORKSPACE: ${{ github.workspace }}/leviathan-workspace
@@ -2036,14 +2038,14 @@ jobs:
         run: |
           mkdir -p "${DEPLOY_PATH}"
           tar -tf "${ARTIFACTS_TAR}"
-          tar -I zstd -xvf "${ARTIFACTS_TAR}" -C "${DEPLOY_PATH}" ./image/balena.img.zip ./balena-image.docker
+          tar -I zstd -xvf "${ARTIFACTS_TAR}" -C "${DEPLOY_PATH}" "./image/${BALENA_OS_IMAGE}.img.zip" ./balena-image.docker
 
           if ! command -v unzip; then
             sudo apt-get update
             sudo apt-get install -y unzip
           fi
 
-          unzip "${DEPLOY_PATH}/image/balena.img.zip" -d "${DEPLOY_PATH}/image/"
+          unzip "${DEPLOY_PATH}/image/${BALENA_OS_IMAGE}.img.zip" -d "${DEPLOY_PATH}/image/"
 
       # Check out private contracts if this is a private device type - as these are required for the tests
       - name: Checkout private Contracts
@@ -2065,7 +2067,9 @@ jobs:
           fi
 
           mkdir -p "${LEVIATHAN_WORKSPACE}"
-          gzip -9 -c "${DEPLOY_PATH}/image/balena.img" >"${LEVIATHAN_WORKSPACE}/balena.img.gz"
+          
+          # The test suite expects the image to be tested to be called "balena.img.gz" - regardless of what it may have been called before 
+          gzip -9 -c "${DEPLOY_PATH}/image/${BALENA_OS_IMAGE}.img" >"${LEVIATHAN_WORKSPACE}/balena.img.gz"
           cp -v "${DEPLOY_PATH}/balena-image.docker" "${LEVIATHAN_WORKSPACE}/balena-image.docker"
 
           cp -v "${SUITES}/${TEST_SUITE}/config.js" "${LEVIATHAN_WORKSPACE}/config.js"
