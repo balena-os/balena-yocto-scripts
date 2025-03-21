@@ -128,6 +128,7 @@ on:
       # - test_org: The organization to use for testing cloud functionality. This default org is `testbot`
       # - runs_on: A JSON array of runner labels to use for the test job(s). For qemu workers use the labels `["self-hosted", "X64", "kvm"]`.
       # - secure_boot: (truthy) Enable secure boot testing flags QEMU_SECUREBOOT=1 and FLASHER_SECUREBOOT=1. Default is false.
+      # - test_image: (string) Select the yocto build artifact for use in the test suite. Default to 'balena.img', the artifact specified in the deployArtifact attribute in the coffee file. Can choose 'balena-flasher.img' or 'balena-raw.img' if present
       # To use specific settings for each test job, create an include array like this...
       # {"include": [
       #   {
@@ -1944,6 +1945,12 @@ jobs:
       WORKER_TYPE: ${{ matrix.worker_type || 'testbot' }}
       BALENACLOUD_APP_NAME: ${{ matrix.worker_fleets || 'balena/testbot-rig,balena/testbot-rig-partners,balena/testbot-rig-x86,balena/testbot-rig-partners-x86' }}
       BALENACLOUD_ORG: ${{ matrix.test_org || 'testbot' }}
+      # Allows for specifying an alternative build artifact to the default to use in the test
+      # Assumes that this artifact is present in ${DEPLOY_PATH}/image
+      # By default, 'balena.img' will be used - this is the default artifact, pointed to by the 'deployArtifact' attribute of the device coffee file
+      # This can be set to 'balena-flasher.img' if the coffee file specifies a deployFlasherArtifact
+      # This can be set to 'balena-raw.img' if the coffee file specifies a deployRawArtifact
+      BALENA_OS_IMAGE: ${{ matrix.test_image || 'balena.img' }}
 
       # Local directories
       LEVIATHAN_WORKSPACE: ${{ github.workspace }}/leviathan-workspace
@@ -2036,14 +2043,14 @@ jobs:
         run: |
           mkdir -p "${DEPLOY_PATH}"
           tar -tf "${ARTIFACTS_TAR}"
-          tar -I zstd -xvf "${ARTIFACTS_TAR}" -C "${DEPLOY_PATH}" ./image/balena.img.zip ./balena-image.docker
+          tar -I zstd -xvf "${ARTIFACTS_TAR}" -C "${DEPLOY_PATH}" "./image/${BALENA_OS_IMAGE}.zip" ./balena-image.docker
 
           if ! command -v unzip; then
             sudo apt-get update
             sudo apt-get install -y unzip
           fi
 
-          unzip "${DEPLOY_PATH}/image/balena.img.zip" -d "${DEPLOY_PATH}/image/"
+          unzip "${DEPLOY_PATH}/image/${BALENA_OS_IMAGE}.zip" -d "${DEPLOY_PATH}/image/"
 
       # Check out private contracts if this is a private device type - as these are required for the tests
       - name: Checkout private Contracts
@@ -2065,7 +2072,9 @@ jobs:
           fi
 
           mkdir -p "${LEVIATHAN_WORKSPACE}"
-          gzip -9 -c "${DEPLOY_PATH}/image/balena.img" >"${LEVIATHAN_WORKSPACE}/balena.img.gz"
+          
+          # The test suite expects the image to be tested to be called "balena.img.gz" - regardless of what it may have been called before 
+          gzip -9 -c "${DEPLOY_PATH}/image/${BALENA_OS_IMAGE}" >"${LEVIATHAN_WORKSPACE}/balena.img.gz"
           cp -v "${DEPLOY_PATH}/balena-image.docker" "${LEVIATHAN_WORKSPACE}/balena-image.docker"
 
           cp -v "${SUITES}/${TEST_SUITE}/config.js" "${LEVIATHAN_WORKSPACE}/config.js"
