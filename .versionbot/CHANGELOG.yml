@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update tespkg/actions-cache action to v1.8.0
+      hash: 44e2b20b5015e326b3ec15859096abb360fc4f3f
+      body: |
+        Update tespkg/actions-cache from 1.7.2 to 1.8.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.44
+  title: ""
+  date: 2025-03-26T12:12:46.541Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.94
       hash: 0452803541beb25401d0e955fedb227bf7149ee2
       body: |
