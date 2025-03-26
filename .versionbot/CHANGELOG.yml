@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.25.4
+      hash: d8e86fdf0056a3639a4d82e45def6ab7cbed95bf
+      body: |
+        Update aws/aws-cli from 2.25.2 to 2.25.4
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.46
+  title: ""
+  date: 2025-03-26T21:10:26.929Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.95
       hash: c7eca54e1a973dcb97ee9797e4c7f47b785a3f9e
       body: |
