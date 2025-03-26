@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.95
+      hash: c7eca54e1a973dcb97ee9797e4c7f47b785a3f9e
+      body: |
+        Update balena-os/leviathan from 2.31.94 to 2.31.95
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.45
+  title: ""
+  date: 2025-03-26T13:27:53.645Z
+- commits:
     - subject: Update tespkg/actions-cache action to v1.8.0
       hash: 44e2b20b5015e326b3ec15859096abb360fc4f3f
       body: |
