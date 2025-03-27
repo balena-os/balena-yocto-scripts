@@ -2043,8 +2043,7 @@ jobs:
         run: |
           mkdir -p "${DEPLOY_PATH}"
           tar -tf "${ARTIFACTS_TAR}"
-          tar -I zstd -xvf "${ARTIFACTS_TAR}" -C "${DEPLOY_PATH}" "./image/${BALENA_OS_IMAGE}.zip" ./balena-image.docker
-
+          tar -I zstd -xvf "${ARTIFACTS_TAR}" -C "${DEPLOY_PATH}" "./image/${BALENA_OS_IMAGE}.zip" ./balena-image.docker ./kernel_modules_headers.tar.gz
           if ! command -v unzip; then
             sudo apt-get update
             sudo apt-get install -y unzip
@@ -2076,6 +2075,7 @@ jobs:
           # The test suite expects the image to be tested to be called "balena.img.gz" - regardless of what it may have been called before 
           gzip -9 -c "${DEPLOY_PATH}/image/${BALENA_OS_IMAGE}" >"${LEVIATHAN_WORKSPACE}/balena.img.gz"
           cp -v "${DEPLOY_PATH}/balena-image.docker" "${LEVIATHAN_WORKSPACE}/balena-image.docker"
+          cp -v "${DEPLOY_PATH}/kernel_modules_headers.tar.gz" "${LEVIATHAN_WORKSPACE}/kernel_modules_headers.tar.gz"
 
           cp -v "${SUITES}/${TEST_SUITE}/config.js" "${LEVIATHAN_WORKSPACE}/config.js"
           mkdir -p "${REPORTS}"
