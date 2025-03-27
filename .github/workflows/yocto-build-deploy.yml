@@ -1649,32 +1649,34 @@ jobs:
         run: |
           aws s3 rm "${S3_IMG_URL}"
 
-      - name: Setup AMI test fleet
-        id: ami-test-fleet
+      - name: Setup AMI test Device
+        id: ami-test-device
         env:
           HOSTOS_VERSION: "${{ needs.balena-lib.outputs.os_version }}"
-          AMI_TEST_ORG: testbot
           AMI_TEST_DEV_MODE: true
+          # Pre-made permanent fleet for provisioning AMI's in to for testing
+          AMI_TEST_ORG: ${{ vars.AMI_TEST_ORG }}
+          AMI_TEST_FLEET: ${{ vars.AMI_TEST_FLEET }}
         run: | 
           key_file="${HOME}/.ssh/id_ed25519"
 
-          ami_test_fleet=$(openssl rand -hex 4)
+          # Create an ssh key id so we can identify the correct key to delete at the end of the test
+          ssh_key_id=$(openssl rand -hex 4)
+          # Export this as an output, so in the teardown we can delete this key
+          echo "ssh_key_id=${ssh_key_id}" >>"${GITHUB_OUTPUT}"
+
           config_json=$(mktemp)
           echo "config_json=${config_json}" >>"${GITHUB_OUTPUT}"
 
-          # Create test fleet
-          >&2 echo "Creating ${AMI_TEST_ORG}/${ami_test_fleet}"
-          >&2 balena fleet create "${ami_test_fleet}" --organization "${AMI_TEST_ORG}" --type "${SLUG}"
-
-          # Register a key
+          # Register an SSH key
           mkdir -p "$(dirname "${_key_file}")"
           ssh-keygen -t ed25519 -N "" -q -f "${key_file}"
           # shellcheck disable=SC2046
           >&2 eval $(ssh-agent)
           >&2 ssh-add
-          balena key add "${ami_test_fleet}" "${key_file}.pub"
+          balena key add "${ssh_key_id}" "${key_file}.pub"
 
-          uuid=$(balena device register "${AMI_TEST_ORG}/${ami_test_fleet}" | awk '{print $4}')
+          uuid=$(balena device register "${AMI_TEST_ORG}/${AMI_TEST_FLEET}" | awk '{print $4}')
           >&2 echo "Pre-registered device with UUID ${uuid}"
           echo "uuid=${uuid}" >>"${GITHUB_OUTPUT}"
 
@@ -1695,14 +1697,13 @@ jobs:
                   exit 1
               fi
           fi
-          echo "fleet=${AMI_TEST_ORG}/${ami_test_fleet}" >>"${GITHUB_OUTPUT}"
 
       - name: Test AMI image
         id: ami-test
         env:
           IMAGE: ${{ env.DEPLOY_PATH }}/image/balena.img
-          UUID: "${{ steps.ami-test-fleet.outputs.uuid }}"
-          CONFIG_JSON: "${{ steps.ami-test-fleet.outputs.config_json }}"
+          UUID: "${{ steps.ami-test-device.outputs.uuid }}"
+          CONFIG_JSON: "${{ steps.ami-test-device.outputs.config_json }}"
           AWS_SUBNET_ID: ${{ env.AWS_SUBNET_ID }}
           AWS_SECURITY_GROUP_ID: ${{ env.AWS_SECURITY_GROUP_ID }}
         run: |
@@ -1761,15 +1762,18 @@ jobs:
         run: |
           aws ec2 terminate-instances --instance-ids "${INSTANCE_ID}"
 
-      - name: Clean up test fleet
+      - name: Clean up test device
         continue-on-error: true
         if: always()
         env: 
-          FLEET: "${{ steps.ami-test-fleet.outputs.fleet }}"
+          TEST_DEVICE_UUID: "${{ steps.ami-test-device.outputs.uuid }}"
+          SSH_KEY_ID: "${{ steps.ami-test-device.outputs.ssh_key_id }}"
         run: |
-          [ -z "${FLEET}" ] && exit 0
-          balena fleet rm "${FLEET}" --yes || true
-          _key_id=$(balena ssh-key list | grep "${FLEET#*/}" | awk '{print $1}')
+          # Delete test device in balena cloud
+          balena device rm ${TEST_DEVICE_UUID}
+
+          # Delete SSH key used in test
+          _key_id=$(balena ssh-key list | grep "${SSH_KEY_ID#*/}" | awk '{print $1}')
           balena ssh-key rm "${_key_id}" --yes || true
         
       # FIXME - This currently will not work, due to not being able to share encypted snapshots
