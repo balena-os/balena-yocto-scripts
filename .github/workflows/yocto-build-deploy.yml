@@ -2080,6 +2080,11 @@ jobs:
           echo "FLASHER_SECUREBOOT=1" >> "${GITHUB_ENV}"
           echo "QEMU_MEMORY=4G" >> "${GITHUB_ENV}"
 
+      - name: Provide header files for private device types
+        if: needs.balena-lib.outputs.is_private == 'true'
+        run: |
+          cp -v "${DEPLOY_PATH}/kernel_modules_headers.tar.gz" "${LEVIATHAN_WORKSPACE}"
+
       # https://github.com/balena-os/leviathan/blob/master/action.yml
       - name: BalenaOS Leviathan Tests
         uses: balena-os/leviathan@c3c66615235f29f8195e288cd5f8610f68037cea # v2.31.95
