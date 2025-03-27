@@ -1363,7 +1363,8 @@ jobs:
   ami-deploy:
     name: Deploy AMI
     runs-on: ${{ fromJSON(inputs.build-runs-on) }}
-    if: inputs.deploy-ami && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    ## ENSURE THIS RUNS ON EVERY PR FOR TESTING - REMOVE THIS BEFORE MERGE
+    if: inputs.deploy-ami
     needs:
       - approved-commit
       - build
@@ -1650,24 +1651,27 @@ jobs:
         run: |
           aws s3 rm "${S3_IMG_URL}"
 
-      - name: Setup AMI test fleet
-        id: ami-test-fleet
+      - name: Setup AMI test Device
+        id: ami-test-device
         env:
           HOSTOS_VERSION: "${{ needs.balena-lib.outputs.os_version }}"
-          AMI_TEST_ORG: testbot
           AMI_TEST_DEV_MODE: true
         run: | 
           key_file="${HOME}/.ssh/id_ed25519"
 
+          # Create a fleet with randomised name, using the name as the key id so we can identify the correct key to delete at the end of the test
           ami_test_fleet=$(openssl rand -hex 4)
+          # Export this as an output, so in the teardown we can delete it
+          echo "ami_test_fleet=${ami_test_fleet}" >>"${GITHUB_OUTPUT}"
+
           config_json=$(mktemp)
           echo "config_json=${config_json}" >>"${GITHUB_OUTPUT}"
-
+          
           # Create test fleet
-          >&2 echo "Creating ${AMI_TEST_ORG}/${ami_test_fleet}"
-          >&2 balena fleet create "${ami_test_fleet}" --organization "${AMI_TEST_ORG}" --type "${SLUG}"
+          >&2 echo "Creating ${ami_test_fleet}"
+          >&2 balena fleet create "${ami_test_fleet}" --type "${SLUG}"
 
-          # Register a key
+          # Register an SSH key
           mkdir -p "$(dirname "${_key_file}")"
           ssh-keygen -t ed25519 -N "" -q -f "${key_file}"
           # shellcheck disable=SC2046
@@ -1675,7 +1679,7 @@ jobs:
           >&2 ssh-add
           balena key add "${ami_test_fleet}" "${key_file}.pub"
 
-          uuid=$(balena device register "${AMI_TEST_ORG}/${ami_test_fleet}" | awk '{print $4}')
+          uuid=$(balena device register "${ami_test_fleet}" | awk '{print $4}')
           >&2 echo "Pre-registered device with UUID ${uuid}"
           echo "uuid=${uuid}" >>"${GITHUB_OUTPUT}"
 
@@ -1696,14 +1700,13 @@ jobs:
                   exit 1
               fi
           fi
-          echo "fleet=${AMI_TEST_ORG}/${ami_test_fleet}" >>"${GITHUB_OUTPUT}"
 
       - name: Test AMI image
         id: ami-test
         env:
           IMAGE: ${{ env.DEPLOY_PATH }}/image/balena.img
-          UUID: "${{ steps.ami-test-fleet.outputs.uuid }}"
-          CONFIG_JSON: "${{ steps.ami-test-fleet.outputs.config_json }}"
+          UUID: "${{ steps.ami-test-device.outputs.uuid }}"
+          CONFIG_JSON: "${{ steps.ami-test-device.outputs.config_json }}"
           AWS_SUBNET_ID: ${{ env.AWS_SUBNET_ID }}
           AWS_SECURITY_GROUP_ID: ${{ env.AWS_SECURITY_GROUP_ID }}
         run: |
@@ -1762,14 +1765,17 @@ jobs:
         run: |
           aws ec2 terminate-instances --instance-ids "${INSTANCE_ID}"
 
-      - name: Clean up test fleet
+      - name: Clean up test device
         continue-on-error: true
         if: always()
         env: 
-          FLEET: "${{ steps.ami-test-fleet.outputs.fleet }}"
+          TEST_DEVICE_UUID: "${{ steps.ami-test-device.outputs.uuid }}"
+          FLEET: "${{ steps.ami-test-device.outputs.ami_test_fleet }}"
         run: |
           [ -z "${FLEET}" ] && exit 0
           balena fleet rm "${FLEET}" --yes || true
+          
+          # Delete SSH key used in test
           _key_id=$(balena ssh-key list | grep "${FLEET#*/}" | awk '{print $1}')
           balena ssh-key rm "${_key_id}" --yes || true
         
@@ -1875,7 +1881,8 @@ jobs:
 
         # Tear down any AMI's created in the case of a failure - to leave a clean slate for the next run
       - name: Clean up AMI images on failure
-        if: failure()
+        # DRAFT - ALWAYS CLEAN UP IMAGE AT THE END - WE DON@T ACTUALLY WANT TO PUBLISH ANYTHING WHILE TESTING THE PR
+        if: always() 
         run: |
           image_id=$(aws ec2 describe-images \
               --filters "Name=name,Values=${AMI_NAME}" \

@@ -53,11 +53,12 @@ jobs:
     if: (github.event.pull_request.head.repo.full_name == github.repository) == (github.event_name == 'pull_request')
     secrets: inherit
     with:
-      machine: genericx86-64-ext
-      deploy-environment: balena-staging.com
+      machine: generic-amd64
+      deploy-environment: balena-staging.com # USE BALENA GENERIC TO TEST THIS PR
       # device-repo and device-repo-ref inputs should not be provided on device repos
-      device-repo: balena-os/balena-intel
+      device-repo: balena-os/balena-generic # USE BALENA GENERIC TO TEST THIS PR
       device-repo-ref: master
+      deploy-ami: true
       # Use qemu workers for testing
       test_matrix: >
         {
