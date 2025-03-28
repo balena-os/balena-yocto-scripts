@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.96
+      hash: 5dcd2e56ff18822bdaddb8ef5def6003a6acdb58
+      body: |
+        Update balena-os/leviathan from 2.31.95 to 2.31.96
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.51
+  title: ""
+  date: 2025-03-28T15:46:35.141Z
+- commits:
     - subject: "Leviathan: Allow specifying alternative image to test"
       hash: 30ad694fa8b688a5df5cad8a8db82fafad3ecff6
       body: >
