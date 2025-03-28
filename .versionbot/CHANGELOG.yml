@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update easimon/maximize-build-space digest to c28619d
+      hash: 6de76326f162839ef2458fd2d92cc244906c6915
+      body: |
+        Update easimon/maximize-build-space
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.53
+  title: ""
+  date: 2025-03-28T20:40:56.919Z
+- commits:
     - subject: Update aws/aws-cli to v2.25.5
       hash: 70a95a0e6353f981d9cc2a3da2cdd05c5f0f7dae
       body: |
