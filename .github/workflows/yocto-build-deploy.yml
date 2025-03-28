@@ -536,7 +536,7 @@ jobs:
       # https://github.com/easimon/maximize-build-space
       - name: Maximize build space
         if: contains(fromJSON(inputs.build-runs-on), 'ubuntu-latest') == true
-        uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c
+        uses: easimon/maximize-build-space@c28619d8999a147d5e09c1199f84ff6af6ad5794
         with:
           root-reserve-mb: "4096"
           temp-reserve-mb: "1024"
