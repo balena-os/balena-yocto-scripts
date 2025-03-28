@@ -1,4 +1,23 @@
 - commits:
+    - subject: "Leviathan: Allow specifying alternative image to test"
+      hash: 30ad694fa8b688a5df5cad8a8db82fafad3ecff6
+      body: >
+        This is for use in at least 3 device types - where the customer requires
+        a non-flasher image to be available by default via downloads, but for
+        testing purposes we need ot use the flasher image. This change allows
+        for selecting the flasher image using the test_matrix input - i.e image:
+        balena-flasher.img
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+  version: 1.31.50
+  title: ""
+  date: 2025-03-28T12:22:02.875Z
+- commits:
     - subject: Update actions/create-github-app-token action to v1.12.0
       hash: e793f06ebb4e225c7be646e7f198eff482f69a3f
       body: |
