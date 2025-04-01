@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.97
+      hash: 38c3ed376003b62a5613000aed9b92f950a4be65
+      body: |
+        Update balena-os/leviathan from 2.31.96 to 2.31.97
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.57
+  title: ""
+  date: 2025-04-01T19:01:03.077Z
+- commits:
     - subject: Update Lock file maintenance
       hash: e03de806a408c084fa9175e39ed7b07b2a4f2b4e
       body: |
