@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io/balena-cli to v21.1.9
+      hash: cda10a0fb3824f8e989424acffe89bd737dcf460
+      body: |
+        Update balena-io/balena-cli from 21.1.8 to 21.1.9
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.67
+  title: ""
+  date: 2025-04-07T21:28:48.906Z
+- commits:
     - subject: "workflows: yocto-build-deploy: provide header files to test suite"
       hash: 575db688f22535bc9af6820d378c8787025e5c50
       body: |
