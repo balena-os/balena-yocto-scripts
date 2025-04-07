@@ -1,4 +1,20 @@
 - commits:
+    - subject: "workflows: yocto-build-deploy: provide header files to test suite"
+      hash: 575db688f22535bc9af6820d378c8787025e5c50
+      body: |
+        This is needed for private device types to pass the secure boot module
+        signing test.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.31.66
+  title: ""
+  date: 2025-04-07T19:44:29.738Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.101
       hash: eb795f5bdbcebce8decb6c90573ccea1d09988a4
       body: |
