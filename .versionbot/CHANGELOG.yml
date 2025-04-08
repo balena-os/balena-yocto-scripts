@@ -1,4 +1,21 @@
 - commits:
+    - subject: "build/barys: Fix builds for older Poky variants"
+      hash: 0bcdad7ea22ce796b80891824783b288b345fd2e
+      body: |
+        Commit 8d9f26fb switched to using the wildcard * char inside quotes,
+        which makes ls fail to find the intended directory and thus all builds
+        for older Poky revisions fail. We can fix this by removing the quotes.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alexandru Costache <alexandru@balena.io>
+        signed-off-by: Alexandru Costache <alexandru@balena.io>
+      author: Alexandru Costache
+      nested: []
+  version: 1.31.68
+  title: ""
+  date: 2025-04-08T07:25:00.234Z
+- commits:
     - subject: Update balena-io/balena-cli to v21.1.9
       hash: cda10a0fb3824f8e989424acffe89bd737dcf460
       body: |
