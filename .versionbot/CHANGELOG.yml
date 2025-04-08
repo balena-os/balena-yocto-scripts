@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.25.12
+      hash: 0c8084e0c0c90c8dd5de678740e4e730457f9660
+      body: |
+        Update aws/aws-cli from 2.25.11 to 2.25.12
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.69
+  title: ""
+  date: 2025-04-08T12:04:47.975Z
+- commits:
     - subject: "build/barys: Fix builds for older Poky variants"
       hash: 0bcdad7ea22ce796b80891824783b288b345fd2e
       body: |
