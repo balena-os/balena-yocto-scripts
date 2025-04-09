@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.25.14
+      hash: 786673cd6050ce97ff9949503ebed04981bc53b7
+      body: |
+        Update aws/aws-cli from 2.25.13 to 2.25.14
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.72
+  title: ""
+  date: 2025-04-09T21:35:16.103Z
+- commits:
     - subject: Update aws/aws-cli to v2.25.13
       hash: 2db786c0505371d9ce89e9c888f1a6803f848b64
       body: |
