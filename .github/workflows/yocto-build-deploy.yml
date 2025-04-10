@@ -967,6 +967,7 @@ jobs:
         env:
           # renovate: datasource=github-releases depName=balena-io/balena-cli
           BALENA_CLI_VERSION: v21.1.9
+          BALENARC_BALENA_URL: ${{ vars.BALENA_HOST }}
         with:
           # balena CLI version to install
           cli-version: ${{ env.BALENA_CLI_VERSION }}
@@ -1483,6 +1484,7 @@ jobs:
         env:
           # renovate: datasource=github-releases depName=balena-io/balena-cli
           BALENA_CLI_VERSION: v21.1.9
+          BALENARC_BALENA_URL: ${{ vars.BALENA_HOST }}
         with:
           # balena CLI version to install
           cli-version: ${{ env.BALENA_CLI_VERSION }}
@@ -1496,6 +1498,7 @@ jobs:
           AMI_SECUREBOOT: "${{ inputs.sign-image }}"
           BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ needs.balena-lib.outputs.dt_arch }}"
           HOSTOS_VERSION: "${{ needs.balena-lib.outputs.os_version }}"
+          BALENARC_BALENA_URL: ${{ vars.BALENA_HOST }}
         run: |          
           config_json=$(mktemp)
           cat << EOF > "${config_json}"
@@ -1526,6 +1529,7 @@ jobs:
           IMAGE: ${{ env.DEPLOY_PATH }}/image/balena.img
           BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ needs.balena-lib.outputs.dt_arch }}"
           BALENA_PRELOAD_COMMIT: current
+          BALENARC_BALENA_URL: ${{ vars.BALENA_HOST }}
         run: |
           echo "* Adding the preload app"
           balena preload \
@@ -1656,6 +1660,7 @@ jobs:
         env:
           HOSTOS_VERSION: "${{ needs.balena-lib.outputs.os_version }}"
           AMI_TEST_DEV_MODE: true
+          BALENARC_BALENA_URL: ${{ vars.BALENA_HOST }}
         run: | 
           key_file="${HOME}/.ssh/id_ed25519"
 
@@ -1709,6 +1714,7 @@ jobs:
           CONFIG_JSON: "${{ steps.ami-test-device.outputs.config_json }}"
           AWS_SUBNET_ID: ${{ env.AWS_SUBNET_ID }}
           AWS_SECURITY_GROUP_ID: ${{ env.AWS_SECURITY_GROUP_ID }}
+          BALENARC_BALENA_URL: ${{ vars.BALENA_HOST }}
         run: |
           # Default to a Nitro instance for TPM support
           _ami_instance_type="m5.large"
@@ -1771,6 +1777,7 @@ jobs:
         env: 
           TEST_DEVICE_UUID: "${{ steps.ami-test-device.outputs.uuid }}"
           FLEET: "${{ steps.ami-test-device.outputs.ami_test_fleet }}"
+          BALENARC_BALENA_URL: ${{ vars.BALENA_HOST }}
         run: |
           [ -z "${FLEET}" ] && exit 0
           balena fleet rm "${FLEET}" --yes || true
