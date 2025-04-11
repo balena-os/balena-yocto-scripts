@@ -1423,6 +1423,7 @@ jobs:
       AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}
       AWS_S3_SSE_ALGORITHM: ${{ vars.SOURCE_MIRROR_S3_SSE_ALGORITHM || vars.AWS_S3_SSE_ALGORITHM || vars.S3_SSE_ALGORITHM || vars.SSE_ALGORITHM || vars.SSE || 'AES256' }}
 
+      BALENARC_BALENA_URL: ${{ vars.BALENA_HOST }}
       DEPLOY_PATH: ${{ github.workspace }}/deploy
 
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
@@ -1533,11 +1534,11 @@ jobs:
           # balena CLI version to install
           cli-version: ${{ env.BALENA_CLI_VERSION }}
           # balenaCloud API token to login automatically
-          balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
+          balena-token: ${{ secrets.BALENA_API_TEST_KEY }}
 
       - name: Configure AMI installer image
         env:
-          BALENACLI_TOKEN: ${{ secrets.BALENA_API_DEPLOY_KEY }}
+          BALENACLI_TOKEN: ${{ secrets.BALENA_API_TEST_KEY }}
           IMAGE: ${{ env.DEPLOY_PATH }}/image/balena.img
           AMI_SECUREBOOT: "${{ inputs.sign-image }}"
           BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ needs.balena-lib.outputs.dt_arch }}"
@@ -1701,7 +1702,7 @@ jobs:
         id: ami-test-fleet
         env:
           HOSTOS_VERSION: "${{ needs.balena-lib.outputs.os_version }}"
-          AMI_TEST_ORG: testbot
+          AMI_TEST_ORG: ${{ vars.AMI_TEST_ORG || 'testbot'}}
           AMI_TEST_DEV_MODE: true
         run: | 
           key_file="${HOME}/.ssh/id_ed25519"
