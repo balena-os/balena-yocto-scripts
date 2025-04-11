@@ -1363,7 +1363,8 @@ jobs:
   ami-deploy:
     name: Deploy AMI
     runs-on: ${{ fromJSON(inputs.build-runs-on) }}
-    if: inputs.deploy-ami && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    ## ENSURE THIS RUNS ON EVERY PR FOR TESTING - REMOVE THIS BEFORE MERGE
+    if: inputs.deploy-ami
     needs:
       - approved-commit
       - build
@@ -1876,7 +1877,8 @@ jobs:
 
         # Tear down any AMI's created in the case of a failure - to leave a clean slate for the next run
       - name: Clean up AMI images on failure
-        if: failure()
+      # DRAFT - ALWAYS CLEAN UP IMAGE AT THE END - WE DON@T ACTUALLY WANT TO PUBLISH ANYTHING WHILE TESTING THE PR
+        if: always()
         run: |
           image_id=$(aws ec2 describe-images \
               --filters "Name=name,Values=${AMI_NAME}" \
