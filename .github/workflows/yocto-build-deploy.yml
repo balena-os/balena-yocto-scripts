@@ -1536,38 +1536,6 @@ jobs:
           # balenaCloud API token to login automatically
           balena-token: ${{ secrets.BALENA_API_TEST_KEY }}
 
-      - name: Configure AMI installer image
-        env:
-          BALENACLI_TOKEN: ${{ secrets.BALENA_API_TEST_KEY }}
-          IMAGE: ${{ env.DEPLOY_PATH }}/image/balena.img
-          AMI_SECUREBOOT: "${{ inputs.sign-image }}"
-          BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ needs.balena-lib.outputs.dt_arch }}"
-          HOSTOS_VERSION: "${{ needs.balena-lib.outputs.os_version }}"
-        run: |          
-          config_json=$(mktemp)
-          cat << EOF > "${config_json}"
-          {
-              "deviceType": "${SLUG}",
-              "installer": {
-                  "secureboot": true
-              }
-          }
-          EOF
-
-          if [ -z "${AMI_SECUREBOOT}" ] || [ "${AMI_SECUREBOOT}" = "false" ]; then
-              exit 0
-          fi
-
-          echo "* Configuring installer image"
-          balena os configure "${IMAGE}"\
-            --debug \
-            --fleet "${BALENA_PRELOAD_APP}" \
-            --config-network ethernet \
-            --version "${HOSTOS_VERSION}"\
-            --device-type "${SLUG}"\
-            --config "${config_json}"
-          rm -rf "${config_json}"
-
       - name: Preload AMI install image
         env:
           IMAGE: ${{ env.DEPLOY_PATH }}/image/balena.img
@@ -1733,7 +1701,8 @@ jobs:
               _dev_mode="";
           fi
 
-          >&2 balena config generate --network ethernet --version "${HOSTOS_VERSION}" --device "${uuid}" --appUpdatePollInterval 5 --output "${config_json}" "${_dev_mode}"
+
+          >&2 balena config generate --network ethernet --version "${HOSTOS_VERSION}" --device "${uuid}" --appUpdatePollInterval 5 --output "${config_json}" ${_dev_mode}
           if [ ! -f "${config_json}" ]; then
             echo "Unable to generate configuration"
             exit 1
