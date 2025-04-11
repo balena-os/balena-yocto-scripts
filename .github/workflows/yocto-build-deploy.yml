@@ -1363,7 +1363,8 @@ jobs:
   ami-deploy:
     name: Deploy AMI
     runs-on: ${{ fromJSON(inputs.build-runs-on) }}
-    if: inputs.deploy-ami && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    ## ENSURE THIS RUNS ON EVERY PR FOR TESTING - REMOVE THIS BEFORE MERGE
+    if: inputs.deploy-ami
     needs:
       - approved-commit
       - build
@@ -1391,6 +1392,7 @@ jobs:
       AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}
       AWS_S3_SSE_ALGORITHM: ${{ vars.SOURCE_MIRROR_S3_SSE_ALGORITHM || vars.AWS_S3_SSE_ALGORITHM || vars.S3_SSE_ALGORITHM || vars.SSE_ALGORITHM || vars.SSE || 'AES256' }}
 
+      BALENARC_BALENA_URL: ${{ vars.BALENA_HOST }}
       DEPLOY_PATH: ${{ github.workspace }}/deploy
 
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
@@ -1486,39 +1488,40 @@ jobs:
           # balena CLI version to install
           cli-version: ${{ env.BALENA_CLI_VERSION }}
           # balenaCloud API token to login automatically
-          balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
+          balena-token: ${{ secrets.BALENA_API_TEST_KEY }}
 
-      - name: Configure AMI installer image
-        env:
-          BALENACLI_TOKEN: ${{ secrets.BALENA_API_DEPLOY_KEY }}
-          IMAGE: ${{ env.DEPLOY_PATH }}/image/balena.img
-          AMI_SECUREBOOT: "${{ inputs.sign-image }}"
-          BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ needs.balena-lib.outputs.dt_arch }}"
-          HOSTOS_VERSION: "${{ needs.balena-lib.outputs.os_version }}"
-        run: |          
-          config_json=$(mktemp)
-          cat << EOF > "${config_json}"
-          {
-              "deviceType": "${SLUG}",
-              "installer": {
-                  "secureboot": true
-              }
-          }
-          EOF
+      # TESTING - This appears to only serve to enabled secureboot - try to create AMI without it, and enabled secureboot later, as preloading secureboot images isn't supported   
+      # - name: Configure AMI installer image
+      #   env:
+      #     BALENACLI_TOKEN: ${{ secrets.BALENA_API_TEST_KEY }}
+      #     IMAGE: ${{ env.DEPLOY_PATH }}/image/balena.img
+      #     AMI_SECUREBOOT: "${{ inputs.sign-image }}"
+      #     BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ needs.balena-lib.outputs.dt_arch }}"
+      #     HOSTOS_VERSION: "${{ needs.balena-lib.outputs.os_version }}"
+      #   run: |          
+      #     config_json=$(mktemp)
+      #     cat << EOF > "${config_json}"
+      #     {
+      #         "deviceType": "${SLUG}",
+      #         "installer": {
+      #             "secureboot": true
+      #         }
+      #     }
+      #     EOF
 
-          if [ -z "${AMI_SECUREBOOT}" ] || [ "${AMI_SECUREBOOT}" = "false" ]; then
-              exit 0
-          fi
+      #     if [ -z "${AMI_SECUREBOOT}" ] || [ "${AMI_SECUREBOOT}" = "false" ]; then
+      #         exit 0
+      #     fi
 
-          echo "* Configuring installer image"
-          balena os configure "${IMAGE}"\
-            --debug \
-            --fleet "${BALENA_PRELOAD_APP}" \
-            --config-network ethernet \
-            --version "${HOSTOS_VERSION}"\
-            --device-type "${SLUG}"\
-            --config "${config_json}"
-          rm -rf "${config_json}"
+      #     echo "* Configuring installer image"
+      #     balena os configure "${IMAGE}"\
+      #       --debug \
+      #       --fleet "${BALENA_PRELOAD_APP}" \
+      #       --config-network ethernet \
+      #       --version "${HOSTOS_VERSION}"\
+      #       --device-type "${SLUG}"\
+      #       --config "${config_json}"
+      #     rm -rf "${config_json}"
 
       - name: Preload AMI install image
         env:
@@ -1654,8 +1657,9 @@ jobs:
         id: ami-test-fleet
         env:
           HOSTOS_VERSION: "${{ needs.balena-lib.outputs.os_version }}"
-          AMI_TEST_ORG: testbot
+          AMI_TEST_ORG: ${{ vars.AMI_TEST_ORG || 'testbot'}}
           AMI_TEST_DEV_MODE: true
+          AMI_SECUREBOOT: "${{ inputs.sign-image }}"
         run: | 
           key_file="${HOME}/.ssh/id_ed25519"
 
@@ -1685,7 +1689,13 @@ jobs:
               _dev_mode="";
           fi
 
-          >&2 balena config generate --network ethernet --version "${HOSTOS_VERSION}" --device "${uuid}" --appUpdatePollInterval 5 --output "${config_json}" "${_dev_mode}"
+          if [ "$AMI_SECUREBOOT" = true ]; then 
+              _secureBoot="--secureBoot";
+          else
+              _secureBoot="";
+          fi
+
+          >&2 balena config generate --network ethernet --version "${HOSTOS_VERSION}" --device "${uuid}" --appUpdatePollInterval 5 --output "${config_json}" "${_dev_mode}" "${_secureBoot}"
           if [ ! -f "${config_json}" ]; then
             echo "Unable to generate configuration"
             exit 1
@@ -1875,7 +1885,8 @@ jobs:
 
         # Tear down any AMI's created in the case of a failure - to leave a clean slate for the next run
       - name: Clean up AMI images on failure
-        if: failure()
+      # DRAFT - ALWAYS CLEAN UP IMAGE AT THE END - WE DON@T ACTUALLY WANT TO PUBLISH ANYTHING WHILE TESTING THE PR
+        if: always()
         run: |
           image_id=$(aws ec2 describe-images \
               --filters "Name=name,Values=${AMI_NAME}" \
