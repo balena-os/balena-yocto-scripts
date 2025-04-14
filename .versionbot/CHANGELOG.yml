@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.26.2
+      hash: 88ec1824b9eba69b15bdfa614d4788eff702d384
+      body: |
+        Update aws/aws-cli from 2.26.1 to 2.26.2
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.76
+  title: ""
+  date: 2025-04-14T21:59:45.235Z
+- commits:
     - subject: Update Lock file maintenance
       hash: f7559dff39ccf70e06cbe7c83d8ca9ff55946f4a
       body: |
