@@ -1,4 +1,18 @@
 - commits:
+    - subject: "Leviathan: Add aarch64 testbot fleet to worker pool"
+      hash: db746e411d9640cf48772b87d03a362f1e155fa4
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+  version: 1.31.77
+  title: ""
+  date: 2025-04-15T14:56:51.996Z
+- commits:
     - subject: Update aws/aws-cli to v2.26.2
       hash: 88ec1824b9eba69b15bdfa614d4788eff702d384
       body: |
