@@ -1943,7 +1943,7 @@ jobs:
       DEVICE_TYPE: ${{ needs.balena-lib.outputs.device_slug }}
       TEST_SUITE: ${{ matrix.test_suite }}
       WORKER_TYPE: ${{ matrix.worker_type || 'testbot' }}
-      BALENACLOUD_APP_NAME: ${{ matrix.worker_fleets || 'balena/testbot-rig,balena/testbot-rig-partners,balena/testbot-rig-x86,balena/testbot-rig-partners-x86' }}
+      BALENACLOUD_APP_NAME: ${{ matrix.worker_fleets || 'balena/testbot-rig,balena/testbot-rig-partners,balena/testbot-rig-x86,balena/testbot-rig-partners-x86,balena/testbot-rig-aarch64' }}
       BALENACLOUD_ORG: ${{ matrix.test_org || 'testbot' }}
       # Allows for specifying an alternative build artifact to the default to use in the test
       # Assumes that this artifact is present in ${DEPLOY_PATH}/image
