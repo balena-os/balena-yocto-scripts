@@ -1656,7 +1656,8 @@ jobs:
       - name: Setup AMI test fleet
         id: ami-test-fleet
         env:
-          HOSTOS_VERSION: "${{ needs.balena-lib.outputs.os_version }}"
+          ## HARD CODED TO TEST ON balena-generic PR
+          HOSTOS_VERSION: "6.3.18+rev6"
           AMI_TEST_ORG: ${{ vars.AMI_TEST_ORG || 'testbot'}}
           AMI_TEST_DEV_MODE: true
           AMI_SECUREBOOT: "${{ inputs.sign-image }}"
