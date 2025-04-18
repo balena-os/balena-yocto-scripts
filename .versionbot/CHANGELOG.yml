@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.26.5
+      hash: ed0dd7d642fed3a2763fa5d770f7d670d44622c4
+      body: |
+        Update aws/aws-cli from 2.26.2 to 2.26.5
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.78
+  title: ""
+  date: 2025-04-18T20:58:31.801Z
+- commits:
     - subject: "Leviathan: Add aarch64 testbot fleet to worker pool"
       hash: db746e411d9640cf48772b87d03a362f1e155fa4
       body: ""
