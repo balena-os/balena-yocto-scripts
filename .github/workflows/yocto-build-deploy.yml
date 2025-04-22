@@ -384,13 +384,14 @@ jobs:
           API_ENV: ${{ env.BALENARC_BALENA_URL }}
           TRANSLATION: "v6"
           DEVICE_SLUG: ${{ steps.balena-lib.outputs.device_slug }}
+          BALENAOS_TOKEN: ${{ secrets.BALENA_API_DEPLOY_KEY }}
         with:
           result-encoding: json
           script: |
             const result = await fetch(`https://api.${process.env.API_ENV}/${process.env.TRANSLATION}/device_type?\$filter=slug%20eq%20%27${process.env.DEVICE_SLUG}%27&\$select=slug,is_private`, {
               headers: {
                 'Content-type': 'application/json',
-                'Authorization': `Bearer ${{ secrets.BALENA_API_DEPLOY_KEY }}`
+                'Authorization': `Bearer ${process.env.BALENAOS_TOKEN}`
               }
             })
             const data = await result.json()
