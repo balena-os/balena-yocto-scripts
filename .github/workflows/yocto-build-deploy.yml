@@ -351,6 +351,8 @@ jobs:
           device_slug="$(balena_lib_get_slug "${SLUG}")"
           echo "device_slug=${device_slug}" >>"${GITHUB_OUTPUT}"
 
+          echo "pwd: $(pwd)"
+
           # As we use this to determine the os version from the device repository - when checking out the repo we need enough fetch depth to get tags
           os_version=$(git describe --abbrev=0)
           echo "os_version=${os_version#v*}" >>"${GITHUB_OUTPUT}"
