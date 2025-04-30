@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/download-artifact digest to d3f86a1
+      hash: b3741d2c4ce0983c456b384fbb95683f40aa59b9
+      body: |
+        Update actions/download-artifact
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.85
+  title: ""
+  date: 2025-04-30T03:31:36.722Z
+- commits:
     - subject: Update aws/aws-cli to v2.27.4
       hash: e27cbabf52de12b5d9717a0b75bc86f9a188458d
       body: |
