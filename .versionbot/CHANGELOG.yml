@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/create-github-app-token action to v2.0.3
+      hash: 272433b18fb94f7d4637672c11b8fc10d3c66de5
+      body: |
+        Update actions/create-github-app-token from 2.0.2 to 2.0.3
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.86
+  title: ""
+  date: 2025-05-01T17:16:05.552Z
+- commits:
     - subject: Update actions/download-artifact digest to d3f86a1
       hash: b3741d2c4ce0983c456b384fbb95683f40aa59b9
       body: |
