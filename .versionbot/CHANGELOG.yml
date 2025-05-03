@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/create-github-app-token action to v2.0.6
+      hash: b3fec686b26163c07b1086acd58ac057405a1b99
+      body: |
+        Update actions/create-github-app-token from 2.0.5 to 2.0.6
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.91
+  title: ""
+  date: 2025-05-03T23:20:43.761Z
+- commits:
     - subject: Update aws/aws-cli to v2.27.7
       hash: 951521262d1bdd5f16567fac40e8a75e9be50a99
       body: |
