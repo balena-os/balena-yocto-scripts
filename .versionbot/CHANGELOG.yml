@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.105
+      hash: 006cd48fca912e52e3e4c7c0d99347bd0a3e5c1b
+      body: |
+        Update balena-os/leviathan from 2.31.104 to 2.31.105
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.89
+  title: ""
+  date: 2025-05-03T00:26:33.350Z
+- commits:
     - subject: Update actions/create-github-app-token action to v2.0.5
       hash: 828ae57f475b1c393280f9fc1596372dc2c7b36f
       body: |
