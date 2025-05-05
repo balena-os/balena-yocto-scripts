@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io/balena-cli to v21.1.10
+      hash: f7b043debaf2d9677c37ea1b6c3542b5d3ccc670
+      body: |
+        Update balena-io/balena-cli from 21.1.9 to 21.1.10
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.31.92
+  title: ""
+  date: 2025-05-05T21:10:40.462Z
+- commits:
     - subject: Update actions/create-github-app-token action to v2.0.6
       hash: b3fec686b26163c07b1086acd58ac057405a1b99
       body: |
