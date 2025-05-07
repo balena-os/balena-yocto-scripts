@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.27.10
+      hash: ad04c2a299700fa469039114ee97c9daf091cafd
+      body: |
+        Update aws/aws-cli from 2.27.8 to 2.27.10
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.32.1
+  title: ""
+  date: 2025-05-07T22:45:59.670Z
+- commits:
     - subject: Remove legacy Jenkins deploy scripts
       hash: 43645a8075784913dfa522ea60b14ab4556f21e9
       body: |
