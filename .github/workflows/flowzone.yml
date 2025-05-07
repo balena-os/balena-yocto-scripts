@@ -50,4 +50,4 @@ jobs:
     with:
       docker_images: |
         ghcr.io/balena-os/balena-yocto-scripts
-      bake_targets: yocto-build-env,balena-push-env
+      bake_targets: yocto-build-env

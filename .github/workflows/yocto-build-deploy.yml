@@ -866,7 +866,7 @@ jobs:
           fi
 
           source "${automation_dir}/include/balena-deploy.inc"
-          # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-deploy.inc#L23
+          # https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/include/balena-deploy.inc#L23
           balena_deploy_artifacts "${SLUG}" "${DEPLOY_PATH}" true
 
           cp -v "${WORKSPACE}/balena.yml" "${DEPLOY_PATH}/balena.yml"
@@ -1003,7 +1003,7 @@ jobs:
         run: |
           set -e
 
-          ## Adapted from https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/entry_scripts/balena-deploy-block.sh
+          ## Adapted from https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/entry_scripts/balena-deploy-block.sh
           ## That script was executed from inside a helper image - here we're doing it inline
 
           # load hostapp bundle and get local image reference, needed for `balena deploy`
@@ -1027,7 +1027,7 @@ jobs:
 
           echo "[INFO] Deploying to ${BALENAOS_ACCOUNT}/${APPNAME}"
 
-          ## Adapted from https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L373
+          ## Adapted from https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/include/balena-api.inc#L373
           # Get the App Id from the name
           _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application?\$filter=(slug%20eq%20'${BALENAOS_ACCOUNT}/${APPNAME}')" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
           _appID=$(echo "${_json}" | jq --raw-output '.d[0].id')
@@ -1086,7 +1086,7 @@ jobs:
           # Potentially this should be split into a separate step
           ### Attaching assets to release ###
 
-          # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/entry_scripts/balena-deploy-block.sh#L43
+          # https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/entry_scripts/balena-deploy-block.sh#L43
           # find assets
           _assets="$(find "${DEPLOY_PATH}" -name licenses.tar.gz) ${DEPLOY_PATH}/CHANGELOG.md"
 
@@ -1098,7 +1098,7 @@ jobs:
           # For use in esr tagging step
           echo "release_id=${_release_id}" >>"${GITHUB_OUTPUT}"
 
-          # https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L1163
+          # https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/include/balena-api.inc#L1163
           # attach each asset to release with _release_id
           for _asset in ${_assets}; do
             if [ -f "${_asset}" ]; then
