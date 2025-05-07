@@ -138,13 +138,4 @@ balena_deploy_artifacts () {
 			rm -rf "$_deploy_dir/image/balena-raw.img"
 		fi
 	fi
-
-	if [ -d "${device_dir}/layers/meta-balena/tests" ]
-	then
-		# package all leviathan/testbot tests from meta-balena to the deploy dir
-		# make sure they are compressed so a flattened unzip of artifacts does not fail
-		(cd "${device_dir}/layers/meta-balena/tests" || return
-			tar -czvf "$_deploy_dir/tests.tar.gz" .
-		)
-	fi
 }
