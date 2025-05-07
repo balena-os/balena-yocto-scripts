@@ -62,7 +62,7 @@ balena_deploy_artifacts () {
 	cp -v "$(readlink --canonicalize "$_yocto_build_deploy/balena-image-$_machine.docker")" "$_deploy_dir/balena-image.docker"
 
 	if [ -d "${_yocto_licenses_deploy}" ]; then
-		tar -czf "${_deploy_dir}/licenses.tar.gz" -C $(dirname "${_yocto_licenses_deploy}") $(basename "${_yocto_licenses_deploy}")
+		tar -czf "${_deploy_dir}/licenses.tar.gz" -C "$(dirname "${_yocto_licenses_deploy}")" "$(basename "${_yocto_licenses_deploy}")"
 	fi
 	if [ -f "${device_dir}/CHANGELOG.md" ]; then
 		cp -v "${device_dir}/CHANGELOG.md" "${_deploy_dir}"
@@ -89,53 +89,56 @@ balena_deploy_artifacts () {
 	if [ -f "$_yocto_build_deploy/kernel_source.tar.gz" ]; then
 		cp -v "$_yocto_build_deploy/kernel_source.tar.gz" "$_deploy_dir" || true
 	fi
-	if [ "${_compressed}" != 'true' ]; then
-		# uncompressed, just copy and we're done
-		cp -v "$(readlink --canonicalize "$_yocto_build_deploy/$_deploy_artifact")" "$_deploy_dir/image/balena.img"
-		if [ -n "$_deploy_flasher_artifact" ]; then
-			cp -v "$(readlink --canonicalize "$_yocto_build_deploy/$_deploy_flasher_artifact")" \
-				"$_deploy_dir/image/balena-flasher.img"
-		fi
 
-		if [ -n "${_deploy_raw_artifact}" ]; then
-			cp -v "$(readlink --canonicalize "$_yocto_build_deploy/$_deploy_raw_artifact")" \
-				"$_deploy_dir/image/balena-raw.img"
+	# Artifacts with archive: true are bundles of files, so compression is implied
+	if [[ "${_archive}" = 'true' ]]; then
+		cp -rv "${_yocto_build_deploy}/${_deploy_artifact}"/* "${_deploy_dir}/image/"
+		(cd "${_deploy_dir}/image/" && zip -r "../${_deploy_artifact}.zip" .)
+		if [[ -n "${_deploy_flasher_artifact}" ]]; then
+		    cp -rv "${_yocto_build_deploy}/${_deploy_flasher_artifact}"/* "${_deploy_dir}/image/"
+		    (cd "${_deploy_dir}/image/" && zip -r "../${_deploy_flasher_artifact}.zip" .)
 		fi
-
+		if [[ -n "${_deploy_raw_artifact}" ]]; then
+			cp -rv "${_yocto_build_deploy}/${_deploy_raw_artifact}"/* "${_deploy_dir}/image/"
+			(cd "${_deploy_dir}/image/" && zip -r "../${_deploy_raw_artifact}.zip" .)
+		fi
+		if [[ "${_remove_compressed_file}" = "true" ]]; then
+			rm -rf "${_deploy_dir}/image"
+		fi
 		return
 	fi
 
-	if [ "${_archive}" = 'true' ]; then
-		cp -rv "$_yocto_build_deploy"/"$_deploy_artifact"/* "$_deploy_dir"/image/
-		(cd "$_deploy_dir/image/" && zip -r "../$_deploy_artifact.zip" .)
-		if [ -n "$_deploy_flasher_artifact" ]; then
-		    cp -rv "$_yocto_build_deploy"/"$_deploy_flasher_artifact"/* "$_deploy_dir"/image/
-		    (cd "$_deploy_dir/image/" && zip -r "../$_deploy_flasher_artifact.zip" .)
-		fi
-		if [ -n "$_deploy_raw_artifact" ]; then
-			cp -rv "$_yocto_build_deploy"/"$_deploy_raw_artifact"/* "$_deploy_dir"/image/
-			(cd "$_deploy_dir/image/" && zip -r "../$_deploy_raw_artifact.zip" .)
-		fi
-		if [ "$_remove_compressed_file" = "true" ]; then
-			rm -rf "$_deploy_dir/image"
-		fi
-	else
-		cp -v "$(readlink --canonicalize "$_yocto_build_deploy/$_deploy_artifact")" "$_deploy_dir/image/balena.img"
-		(cd "$_deploy_dir/image" && zip balena.img.zip balena.img)
-		if [ -n "$_deploy_flasher_artifact" ]; then
-			cp -v "$(readlink --canonicalize "$_yocto_build_deploy/$_deploy_flasher_artifact")" \
-				"$_deploy_dir/image/balena-flasher.img"
-			(cd "$_deploy_dir/image" && zip balena-flasher.img.zip balena-flasher.img)
-		fi
-		if [ -n "$_deploy_raw_artifact" ]; then
-			cp -v "$(readlink --canonicalize "$_yocto_build_deploy/$_deploy_raw_artifact")" \
-				"$_deploy_dir/image/balena-raw.img"
-			(cd "$_deploy_dir/image" && zip balena-raw.img.zip balena-raw.img)
-		fi
-		if [ "$_remove_compressed_file" = "true" ]; then
-			rm -rf "$_deploy_dir/image/balena.img"
-			rm -rf "$_deploy_dir/image/balena-flasher.img"
-			rm -rf "$_deploy_dir/image/balena-raw.img"
-		fi
+	# shellcheck disable=SC2312
+	cp -v "$(readlink --canonicalize "${_yocto_build_deploy}/${_deploy_artifact}")" \
+		"${_deploy_dir}/image/balena.img"
+
+	# shellcheck disable=SC2312
+	if [[ -n "${_deploy_flasher_artifact}" ]]; then
+		cp -v "$(readlink --canonicalize "${_yocto_build_deploy}/${_deploy_flasher_artifact}")" \
+			"${_deploy_dir}/image/balena-flasher.img"
 	fi
+
+	# shellcheck disable=SC2312
+	if [[ -n "${_deploy_raw_artifact}" ]]; then
+		cp -v "$(readlink --canonicalize "${_yocto_build_deploy}/${_deploy_raw_artifact}")" \
+			"${_deploy_dir}/image/balena-raw.img"
+	fi
+
+	if [[ "${_compressed}" != 'true' ]]; then
+		# uncompressed, just copy and we're done
+		return
+	fi
+
+	local _zip_flags=()
+	_zip_flags+=("-v") # verbose operation/print version info
+	_zip_flags+=("-j") # junk (don't record) directory names
+	_zip_flags+=("-9") # compress better
+
+	if [[ "${_remove_compressed_file}" = "true" ]]; then
+		_zip_flags+=("-m") # move into zipfile (delete OS files)
+	fi
+
+	for _image in "${_deploy_dir}"/image/*.img; do
+		(cd "${_deploy_dir}/image" && zip "${_zip_flags[@]}" "${_image}.zip" "${_image}")
+	done
 }
