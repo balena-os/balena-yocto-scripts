@@ -899,7 +899,9 @@ jobs:
           name: build-artifacts
           if-no-files-found: error
           retention-days: 3
-          compression-level: 7
+          # Change compression-level to 0 since we already compressed with zstd and
+          # encrypted files cannot be compressed further.
+          compression-level: 0
           path: |
             ${{ env.ARTIFACTS_TAR }}
             ${{ env.ARTIFACTS_ENC }}
