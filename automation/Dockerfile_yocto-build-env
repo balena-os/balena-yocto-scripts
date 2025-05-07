@@ -3,7 +3,8 @@ FROM ubuntu:22.04 AS yocto-build-env
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install the following utilities (required by poky)
-RUN apt-get update && apt-get install -y build-essential chrpath curl diffstat gcc-multilib gawk git-core locales zstd liblz4-tool \
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential chrpath curl diffstat gcc-multilib gawk git-core locales zstd liblz4-tool \
                                          texinfo unzip wget xterm cpio file python3 openssh-client iputils-ping iproute2 \
                                          python3-distutils python3-pip python3-pexpect python3-git python3-jinja2 python3-subunit \
                                          gawk socat xz-utils libegl1-mesa libsdl1.2-dev pylint mesa-common-dev debianutils screen rsync sharutils \
@@ -11,22 +12,26 @@ RUN apt-get update && apt-get install -y build-essential chrpath curl diffstat g
 
 # Set the locale to UTF-8 for bulding with poky morty
 RUN locale-gen en_US.UTF-8
-ENV LANG en_US.UTF-8
+ENV LANG=en_US.UTF-8
 
 # Additional host packages required by balena
-RUN apt-get update && apt-get install -y apt-transport-https iptables iproute2 procps uidmap && rm -rf /var/lib/apt/lists/*
-RUN apt-get update && apt-get install -y jq nodejs npm sudo && rm -rf /var/lib/apt/lists/*
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends apt-transport-https iptables iproute2 procps uidmap && rm -rf /var/lib/apt/lists/*
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends jq nodejs npm sudo && rm -rf /var/lib/apt/lists/*
 
 # Additional host packages required by various BSP layers
-RUN apt-get update && apt-get install -y dos2unix && rm -rf /var/lib/apt/lists/*
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends dos2unix && rm -rf /var/lib/apt/lists/*
 
 # Install docker matching the balena-engine version
 # https://docs.docker.com/engine/install/ubuntu/
-RUN apt-get update && apt-get install -y iptables procps e2fsprogs xfsprogs xz-utils git kmod apt-transport-https ca-certificates curl gnupg lsb-release docker.io && rm -rf /var/lib/apt/lists/*
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends iptables procps e2fsprogs xfsprogs xz-utils git kmod apt-transport-https ca-certificates curl gnupg lsb-release docker.io && rm -rf /var/lib/apt/lists/*
 VOLUME /var/lib/docker
 
 # Install balena-cli
-ENV BALENA_CLI_VERSION 18.2.2
+ENV BALENA_CLI_VERSION=18.2.2
 RUN curl -sSL https://github.com/balena-io/balena-cli/releases/download/v$BALENA_CLI_VERSION/balena-cli-v$BALENA_CLI_VERSION-linux-x64-standalone.zip > balena-cli.zip && \
   unzip balena-cli.zip && \
   mv balena-cli/* /usr/bin && \
