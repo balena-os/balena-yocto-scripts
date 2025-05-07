@@ -1,4 +1,20 @@
 - commits:
+    - subject: Remove legacy Jenkins deploy scripts
+      hash: 43645a8075784913dfa522ea60b14ab4556f21e9
+      body: |
+        These scripts have been unrolled into the GitHub Action workflow
+        and are no longer kept up-to-date or tested.
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.32.0
+  title: ""
+  date: 2025-05-07T18:38:01.404Z
+- commits:
     - subject: Update balena-io/balena-cli to v21.1.11
       hash: 51790edaaab7338e3df08c3b28a22a3b27cd2803
       body: |
