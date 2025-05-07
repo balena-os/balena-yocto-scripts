@@ -769,7 +769,7 @@ jobs:
         # always upload build logs, even if the build fails
         if: always()
         with:
-          name: build-logs
+          name: build-logs-${{ env.MACHINE }}
           if-no-files-found: error
           retention-days: 7
           compression-level: 7
@@ -936,12 +936,27 @@ jobs:
 
     steps:
 
-      # https://github.com/actions/download-artifact
-      - name: Fetch build artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: build-artifacts
-          path: ${{ runner.temp }}
+      # Use gh to download the build artifacts from the build job
+      # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
+      # https://cli.github.com/manual/gh_run_download
+      # https://cli.github.com/manual/gh_help_environment
+      - name: Download build artifacts
+        run: |
+          gh run download "${GITHUB_RUN_ID}" --dir "${{ runner.temp }}" --name build-artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GH_DEBUG: "true"
+          GH_PAGER: "cat"
+          GH_PROMPT_DISABLED: "true"
+          GH_SPINNER_DISABLED: "true"
+
+      # # https://github.com/actions/download-artifact
+      # - name: Download build artifacts
+      #   uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      #   with:
+      #     name: build-artifacts
+      #     path: ${{ runner.temp }}
 
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
@@ -1237,12 +1252,27 @@ jobs:
 
     steps:
 
-      # https://github.com/actions/download-artifact
-      - name: Fetch build artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: build-artifacts
-          path: ${{ runner.temp }}
+      # Use gh to download the build artifacts from the build job
+      # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
+      # https://cli.github.com/manual/gh_run_download
+      # https://cli.github.com/manual/gh_help_environment
+      - name: Download build artifacts
+        run: |
+          gh run download "${GITHUB_RUN_ID}" --dir "${{ runner.temp }}" --name build-artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GH_DEBUG: "true"
+          GH_PAGER: "cat"
+          GH_PROMPT_DISABLED: "true"
+          GH_SPINNER_DISABLED: "true"
+
+      # # https://github.com/actions/download-artifact
+      # - name: Download build artifacts
+      #   uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      #   with:
+      #     name: build-artifacts
+      #     path: ${{ runner.temp }}
 
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
@@ -1403,12 +1433,27 @@ jobs:
 
     steps:
 
-      # https://github.com/actions/download-artifact
-      - name: Fetch build artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: build-artifacts
-          path: ${{ runner.temp }}
+      # Use gh to download the build artifacts from the build job
+      # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
+      # https://cli.github.com/manual/gh_run_download
+      # https://cli.github.com/manual/gh_help_environment
+      - name: Download build artifacts
+        run: |
+          gh run download "${GITHUB_RUN_ID}" --dir "${{ runner.temp }}" --name build-artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GH_DEBUG: "true"
+          GH_PAGER: "cat"
+          GH_PROMPT_DISABLED: "true"
+          GH_SPINNER_DISABLED: "true"
+
+      # # https://github.com/actions/download-artifact
+      # - name: Download build artifacts
+      #   uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      #   with:
+      #     name: build-artifacts
+      #     path: ${{ runner.temp }}
 
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
@@ -2021,12 +2066,27 @@ jobs:
           git checkout --force "${{ inputs.meta-balena-ref }}"
           git submodule update --init --recursive
 
-      # Images need to end up in workspace folder and need to have correct names
-      - name: Fetch artifacts from build job
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: build-artifacts
-          path: ${{ runner.temp }}
+      # Use gh to download the build artifacts from the build job
+      # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
+      # https://cli.github.com/manual/gh_run_download
+      # https://cli.github.com/manual/gh_help_environment
+      - name: Download build artifacts
+        run: |
+          gh run download "${GITHUB_RUN_ID}" --dir "${{ runner.temp }}" --name build-artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GH_DEBUG: "true"
+          GH_PAGER: "cat"
+          GH_PROMPT_DISABLED: "true"
+          GH_SPINNER_DISABLED: "true"
+
+      # # https://github.com/actions/download-artifact
+      # - name: Download build artifacts
+      #   uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      #   with:
+      #     name: build-artifacts
+      #     path: ${{ runner.temp }}
 
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
