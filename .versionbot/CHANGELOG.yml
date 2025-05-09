@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.27.11
+      hash: ab9729ed4ac8ae32a34112f117c9afdae82ea5b4
+      body: |
+        Update aws/aws-cli from 2.27.10 to 2.27.11
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.32.3
+  title: ""
+  date: 2025-05-09T10:02:04.803Z
+- commits:
     - subject: Use GH CLI to download build artifacts
       hash: 8c626a994c211fd24dbcfbf862cfd44a3c590ef6
       body: |
