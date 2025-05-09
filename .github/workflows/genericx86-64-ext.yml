@@ -29,11 +29,11 @@ on:
   # workflow_dispatch:
 
 permissions:
-      id-token: write # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
-      actions: read # We are fetching workflow run results of a merge commit when workflow is triggered by new tag, to see if tests pass
-      pull-requests: write # Read is required to fetch the PR that merged, in order to get the test results. Write is required to create PR comments for workflow approvals.
-      packages: read
-      contents: read
+  id-token: write # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
+  actions: read # We are fetching workflow run results of a merge commit when workflow is triggered by new tag, to see if tests pass
+  pull-requests: write # Read is required to fetch the PR that merged, in order to get the test results. Write is required to create PR comments for workflow approvals.
+  packages: read
+  contents: read
 
 jobs:
   yocto:
@@ -58,6 +58,7 @@ jobs:
       # device-repo and device-repo-ref inputs should not be provided on device repos
       device-repo: balena-os/balena-intel
       device-repo-ref: master
+      yocto-scripts-ref: ${{ github.event.pull_request.head.sha }}
       # Use qemu workers for testing
       test_matrix: >
         {
