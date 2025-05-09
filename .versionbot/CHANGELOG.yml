@@ -1,4 +1,55 @@
 - commits:
+    - subject: Use GH CLI to download build artifacts
+      hash: 8c626a994c211fd24dbcfbf862cfd44a3c590ef6
+      body: |
+        This is reported to have fewer failures than the action.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Disable GHA compression for build artifacts
+      hash: eb8aec7e232f0693d5684e2cb1d8379b10d421a0
+      body: |
+        These artifacts are already compressed with zstd and encrypted
+        files cannot be compressed further.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Provide yocto scripts ref to test build pipeline
+      hash: 2352a2dbbc15f9dfd8cb4bc4595dc740b4ec3c0b
+      body: |
+        This will make sure the automation scripts are aligned
+        with the workflow for testing.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Remove leviathan test suites from build artifacts
+      hash: 6595f2ab0a90d42a7bfa8edceee72f97a821466f
+      body: |
+        These were previously used by Jenkins to align the tests
+        with the meta-balena release, but the GHA workflowsn don't use them.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.32.2
+  title: ""
+  date: 2025-05-09T06:25:21.589Z
+- commits:
     - subject: Update aws/aws-cli to v2.27.10
       hash: ad04c2a299700fa469039114ee97c9daf091cafd
       body: |
