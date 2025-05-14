@@ -1,4 +1,18 @@
 - commits:
+    - subject: "AMI deploy: parameterise test org + use TEST api key"
+      hash: 10710ecebdc57c3d0bab3abbff6379005f7c0fdd
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+  version: 1.32.6
+  title: ""
+  date: 2025-05-14T18:12:17.036Z
+- commits:
     - subject: Update aws/aws-cli to v2.27.14
       hash: a194efa31402336cf13d52b054184005767ffc72
       body: |
