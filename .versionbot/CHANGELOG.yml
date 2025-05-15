@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws-actions/configure-aws-credentials action to v4.2.1
+      hash: f7f9fff9b4bdcb5d4a25376ca9b0bbdaade03d67
+      body: |
+        Update aws-actions/configure-aws-credentials from 4.2.0 to 4.2.1
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.32.8
+  title: ""
+  date: 2025-05-15T06:36:22.825Z
+- commits:
     - subject: Update aws/aws-cli to v2.27.15
       hash: 0d5f18b64f0866a763b7a3c69c536fde5710421a
       body: |
