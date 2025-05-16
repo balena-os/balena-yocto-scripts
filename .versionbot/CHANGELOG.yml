@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io/balena-cli to v21.1.12
+      hash: 1ed133b904609c2be462e1c4c59125c066c0f36e
+      body: |
+        Update balena-io/balena-cli from 21.1.11 to 21.1.12
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.32.11
+  title: ""
+  date: 2025-05-16T21:41:27.996Z
+- commits:
     - subject: Remove the old grep for build errors
       hash: d3fdb6474c7efb10c8b92dedd1584dac428e0ca8
       body: >
