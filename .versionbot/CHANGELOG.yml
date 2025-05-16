@@ -1,4 +1,19 @@
 - commits:
+    - subject: Remove the old grep for build errors
+      hash: d3fdb6474c7efb10c8b92dedd1584dac428e0ca8
+      body: >
+        This grep has started to catch file strings in the cooker logs, even on
+        success, so instead just rely on the success message in the second grep
+        of balena build logs.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Kyle Harding
+      nested: []
+  version: 1.32.10
+  title: ""
+  date: 2025-05-16T18:13:50.676Z
+- commits:
     - subject: Update aws/aws-cli to v2.27.16
       hash: 7d7bd44f22ae9e8b185171c438d5a798e4d9bd65
       body: |
