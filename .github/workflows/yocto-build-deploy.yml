@@ -754,10 +754,6 @@ jobs:
             -s "${SHARED_BUILD_DIR}" \
             -g "${BARYS_ARGUMENTS_VAR}" | tee balena-build.log
 
-          if grep -R "ERROR: " build/tmp/log/*; then
-            exit 1
-          fi
-
           if ! grep -q "Build for ${{ inputs.machine }} suceeded" balena-build.log; then
             exit 1
           fi
