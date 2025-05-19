@@ -925,6 +925,9 @@ jobs:
     # - BALENA_API_DEPLOY_KEY
     environment: ${{ inputs.deploy-environment }}
 
+    permissions:
+      actions: read # Required to download artifacts from build job for private repos:- https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28#download-an-artifact 
+
     env:
       BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || vars.BALENARC_BALENA_URL || 'balena-cloud.com' }}
       DEPLOY_PATH: ${{ github.workspace }}/deploy
@@ -1245,6 +1248,7 @@ jobs:
     # https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect#adding-permissions-settings
     permissions:
       id-token: write # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
+      actions: read # Required to download artifacts from build job for private repos:- https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28#download-an-artifact 
 
     steps:
 
@@ -1427,6 +1431,7 @@ jobs:
     # https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect#adding-permissions-settings
     permissions:
       id-token: write # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
+      actions: read # Required to download artifacts from build job for private repos:- https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28#download-an-artifact 
 
     steps:
 
@@ -1940,6 +1945,9 @@ jobs:
       run:
         working-directory: .
         shell: bash --noprofile --norc -eo pipefail -x {0}
+
+    permissions:
+      actions: read # Required to download artifacts from build job for private repos:- https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28#download-an-artifact 
 
     strategy:
       fail-fast: false
