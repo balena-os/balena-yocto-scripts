@@ -1765,7 +1765,7 @@ jobs:
                   _loops=$(( _loops - 1 ))
                   if [ ${_loops} -lt 0 ]; then
                       echo "Timed out without supervisor health check pass"
-                      break
+                      exit 1
                   fi
           done
 
