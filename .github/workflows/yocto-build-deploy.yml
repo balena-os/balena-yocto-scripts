@@ -1521,11 +1521,7 @@ jobs:
         env: 
           VERSION: "${{ needs.balena-lib.outputs.os_version }}"
         run: |
-          if [ "${{ inputs.sign-image }}" = "true" ]; then
-            echo "AMI_NAME=balenaOS-secureboot-${VERSION}-${SLUG}" | sed 's/+/-/g' >>"${GITHUB_ENV}"
-          else
             echo "AMI_NAME=balenaOS-${VERSION}-${SLUG}" | sed 's/+/-/g' >>"${GITHUB_ENV}"
-          fi
 
       - name: Setup balena CLI
         uses: balena-io-examples/setup-balena-action@c832aa8125faf8e8140ab2785346d7fc67f4f326 # v0.0.18
