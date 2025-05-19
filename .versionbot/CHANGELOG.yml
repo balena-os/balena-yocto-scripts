@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.27.18
+      hash: 9d3c9dec69cf0e282be51c7fc2243ad107c194ff
+      body: |
+        Update aws/aws-cli from 2.27.17 to 2.27.18
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.32.15
+  title: ""
+  date: 2025-05-19T22:01:45.688Z
+- commits:
     - subject: "grant actions: read permissions to jobs needing to download build
         artifacts"
       hash: 0af02513df61ab15bc73596b8432c1a65326f3f3
