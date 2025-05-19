@@ -1,4 +1,20 @@
 - commits:
+    - subject: "grant actions: read permissions to jobs needing to download build
+        artifacts"
+      hash: 0af02513df61ab15bc73596b8432c1a65326f3f3
+      body: |
+        This is required to download build artifacts in private repos
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+  version: 1.32.14
+  title: ""
+  date: 2025-05-19T12:18:11.912Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.31.108
       hash: 81a4d605dc4b7e1e14b2786f88c3f3f3de12f07a
       body: |
