@@ -1395,7 +1395,8 @@ jobs:
   ami-deploy:
     name: Deploy AMI
     runs-on: ${{ fromJSON(inputs.build-runs-on) }}
-    if: inputs.deploy-ami && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    # DEBUG - FOR TESTING
+    if: inputs.deploy-ami
     needs:
       - approved-commit
       - build
@@ -1518,7 +1519,7 @@ jobs:
       - name: Set AMI name
         id: ami-name
         env: 
-          VERSION: "${{ needs.balena-lib.outputs.os_version }}"
+          VERSION: "6.5.29+rev1" #DEBUG: FOR TESTING
         run: |
             echo "AMI_NAME=balenaOS-${VERSION}-${SLUG}" | sed 's/+/-/g' >>"${GITHUB_ENV}"
 
@@ -1537,7 +1538,7 @@ jobs:
         env:
           IMAGE: ${{ env.DEPLOY_PATH }}/image/balena.img
           BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ needs.balena-lib.outputs.dt_arch }}"
-          BALENA_PRELOAD_COMMIT: current
+          BALENA_PRELOAD_COMMIT: ad1945acc72002421866b95515327449
         run: |
           echo "* Adding the preload app"
           balena preload \
@@ -1889,7 +1890,7 @@ jobs:
 
         # Tear down any AMI's created in the case of a failure - to leave a clean slate for the next run
       - name: Clean up AMI images on failure
-        if: failure()
+        if: always()
         run: |
           image_id=$(aws ec2 describe-images \
               --filters "Name=name,Values=${AMI_NAME}" \
