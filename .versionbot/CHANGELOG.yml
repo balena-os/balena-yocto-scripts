@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update tespkg/actions-cache action to v1.9.0
+      hash: 8cfe2d2358dad7224cfeb28174ef02008a33cf7b
+      body: |
+        Update tespkg/actions-cache from 1.8.0 to 1.9.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.32.16
+  title: ""
+  date: 2025-05-20T12:04:27.146Z
+- commits:
     - subject: Update aws/aws-cli to v2.27.18
       hash: 9d3c9dec69cf0e282be51c7fc2243ad107c194ff
       body: |
