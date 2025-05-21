@@ -1519,7 +1519,7 @@ jobs:
       - name: Set AMI name
         id: ami-name
         env: 
-          VERSION: "6.5.29+rev1" #DEBUG: FOR TESTING
+          VERSION: "6.5.29+rev5" #DEBUG: FOR TESTING
         run: |
             echo "AMI_NAME=balenaOS-${VERSION}-${SLUG}" | sed 's/+/-/g' >>"${GITHUB_ENV}"
 
@@ -1538,7 +1538,7 @@ jobs:
         env:
           IMAGE: ${{ env.DEPLOY_PATH }}/image/balena.img
           BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ needs.balena-lib.outputs.dt_arch }}"
-          BALENA_PRELOAD_COMMIT: ad1945acc72002421866b95515327449
+          BALENA_PRELOAD_COMMIT: 1ae607b0e2f16001e00d15b73a2550ae
         run: |
           echo "* Adding the preload app"
           balena preload \
