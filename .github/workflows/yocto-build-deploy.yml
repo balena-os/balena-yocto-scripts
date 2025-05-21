@@ -905,9 +905,14 @@ jobs:
             ${{ env.S3_DEPLOY_PATH }}/compressed*/*.deflate
             ${{ env.S3_DEPLOY_PATH }}/*.manifest
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
+            ${{ env.S3_DEPLOY_PATH }}/secure-boot-lock.tar.gz
         run: |
           set -x
           for file in $(echo "${PATHS_TO_ENCRYPT}" | tr '\n' ' '); do
+            if ! [ -f "${file}" ]; then
+              echo "File ${file} does not exist, skipping encryption."
+              continue
+            fi
             openssl enc -v -e -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${file}" -out "${file}.enc"
             rm "${file}"
           done
@@ -939,6 +944,7 @@ jobs:
             ${{ env.S3_DEPLOY_PATH }}/licenses.tar.gz
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz.enc
+            ${{ env.S3_DEPLOY_PATH }}/secure-boot-lock.tar.gz.enc
 
       # Upload artifacts for Leviathan test suites and for AMI creation.
       # Primarily raw and flasher images, and the hostapp docker image, and the kernel module headers.
@@ -1262,6 +1268,7 @@ jobs:
             ${{ env.DEPLOY_PATH }}/compressed*/*.deflate
             ${{ env.DEPLOY_PATH }}/kernel_modules_headers.tar.gz
             ${{ env.DEPLOY_PATH }}/licenses.tar.gz
+            ${{ env.DEPLOY_PATH }}/secure-boot-lock.tar.gz
 
   ##############################
   # S3 Deploy
