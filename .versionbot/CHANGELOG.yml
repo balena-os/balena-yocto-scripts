@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.31.111
+      hash: 68a38e25d8a19c079f8b0d99179a591bc27f5a4d
+      body: |
+        Update balena-os/leviathan from 2.31.109 to 2.31.111
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.32.21
+  title: ""
+  date: 2025-05-24T02:25:38.667Z
+- commits:
     - subject: Update aws/aws-cli to v2.27.22
       hash: 1d8a66fad8fd4a619734f716e07054d43f12cb12
       body: |
