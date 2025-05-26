@@ -979,7 +979,7 @@ jobs:
           cp -v "${DEPLOY_PATH}/balena.yml" "${WORKSPACE}/balena.yml"
 
       - name: Setup balena CLI
-        uses: balena-io-examples/setup-balena-action@e715ef9e59fbc33509a523c7f9c2ccd156e9b95e # v0.0.10
+        uses: balena-io-examples/setup-balena-action@b01d875d058ec241cf4e028ec99b91aab794d89d # v0.0.12
         env:
           # renovate: datasource=github-releases depName=balena-io/balena-cli
           BALENA_CLI_VERSION: v21.1.14
@@ -1527,7 +1527,7 @@ jobs:
           fi
 
       - name: Setup balena CLI
-        uses: balena-io-examples/setup-balena-action@e715ef9e59fbc33509a523c7f9c2ccd156e9b95e # v0.0.10
+        uses: balena-io-examples/setup-balena-action@b01d875d058ec241cf4e028ec99b91aab794d89d # v0.0.12
         env:
           # renovate: datasource=github-releases depName=balena-io/balena-cli
           BALENA_CLI_VERSION: v21.1.14
