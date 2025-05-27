@@ -31,11 +31,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends iptables procps
 VOLUME /var/lib/docker
 
 # Install balena-cli
-ENV BALENA_CLI_VERSION=18.2.2
-RUN curl -sSL https://github.com/balena-io/balena-cli/releases/download/v$BALENA_CLI_VERSION/balena-cli-v$BALENA_CLI_VERSION-linux-x64-standalone.zip > balena-cli.zip && \
-  unzip balena-cli.zip && \
-  mv balena-cli/* /usr/bin && \
-  rm -rf balena-cli.zip balena-cli
+# renovate: datasource=github-releases depName=balena-io/balena-cli
+ENV BALENA_CLI_VERSION=v22.0.0
+RUN curl -fsSL https://github.com/balena-io/balena-cli/releases/download/${BALENA_CLI_VERSION}/balena-cli-${BALENA_CLI_VERSION}-linux-x64-standalone.tar.gz | tar -xzf - && \
+    cp -a balena /usr/lib/balena && \
+    ln -sf /usr/lib/balena/bin/balena /usr/bin/balena && \
+    balena version
 
 COPY include/balena-docker.inc /
 COPY entry_scripts/prepare-and-start.sh /
