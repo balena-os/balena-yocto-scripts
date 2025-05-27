@@ -2074,6 +2074,14 @@ jobs:
           git checkout --force "${{ inputs.meta-balena-ref }}"
           git submodule update --init --recursive
 
+      - name: Update leviathan submodule to kyle/publish-docker
+        working-directory: ./layers/meta-balena/tests/leviathan
+        run: |
+          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
+          git fetch --all
+          git checkout --force "kyle/publish-docker"
+          git submodule update --init --recursive
+
       # Use gh to download the build artifacts from the build job
       # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
       # https://cli.github.com/manual/gh_run_download
@@ -2161,7 +2169,7 @@ jobs:
 
       # https://github.com/balena-os/leviathan/blob/master/action.yml
       - name: BalenaOS Leviathan Tests
-        uses: balena-os/leviathan@2c6c6efb7e429b1dd151210f0a870937d58a3133 # v2.32.6
+        uses: ./layers/meta-balena/tests/leviathan
         env:
           WORKSPACE: "${{ env.LEVIATHAN_WORKSPACE }}"
           # BALENA_API_TEST_KEY is a secret that should be specific to the runtime environment
