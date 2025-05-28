@@ -658,7 +658,7 @@ jobs:
           SIGN_API_KEY: "${{ secrets.SIGN_API_KEY }}"
           SIGN_GRUB_KEY_ID: "${{ vars.SIGN_GRUB_KEY_ID || '2EB29B4CE0132F6337897F5FB8A88D1C62FCC729' }}"
           SIGN_KMOD_KEY_APPEND: "${{ secrets.SIGN_KMOD_KEY_APPEND }}"
-          SIGN_HAB_PKI_ID: "${{ vars.SIGN_HAB_PKI_ID || '6d74b15cbc5df27fdc8d470a7c71edb3' }}"
+          SIGN_HAB_PKI_ID: "${{ vars.SIGN_HAB_PKI_ID || 'b4ce3cb4cfd70a27b4e641f81a9048af' }}"
           SIGN_RSA_KEY_ID: "${{ vars.SIGN_RSA_KEY_ID || 'fe1b0af3afa08cc40df6000402404220' }}"
         run: |
           BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_API=${SIGN_API}"
