@@ -917,6 +917,7 @@ jobs:
       - approved-commit
       - build
       - balena-lib
+      - s3-deploy
 
     # This environment should contain the following variables:
     # - BALENA_HOST
