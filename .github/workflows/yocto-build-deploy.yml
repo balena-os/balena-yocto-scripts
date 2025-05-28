@@ -1283,7 +1283,6 @@ jobs:
       - approved-commit
       - build
       - balena-lib
-      - hostapp-deploy
 
     # This environment should contain the following variables:
     # - AWS_SECURITY_GROUP: AWS security group to use for AMI testing
