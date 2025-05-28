@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.27.23
+      hash: bf29e4b9bf6fbf635c8fe0e19ffc3f6840fcd471
+      body: |
+        Update aws/aws-cli from 2.27.22 to 2.27.23
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.32.30
+  title: ""
+  date: 2025-05-28T01:46:17.531Z
+- commits:
     - subject: Update balena-io/balena-cli to v22
       hash: 6a230bbbdffc7d18daee1928e435eb08d0a123ab
       body: |
