@@ -1,4 +1,23 @@
 - commits:
+    - subject: Make hostapp-deploy depend on a successful s3-deploy
+      hash: 7e5c501cb45943353472c98764d8ba43a29ef48c
+      body: |
+        If something failed on S3 upload, we do not want to deploy the
+        hostapp as it will likely need to be invalidated.
+
+        This order will change when we move to web resources, and uploads
+        depend on the hostapp creation.
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.33.0
+  title: ""
+  date: 2025-05-28T14:02:02.653Z
+- commits:
     - subject: Update aws/aws-cli to v2.27.23
       hash: bf29e4b9bf6fbf635c8fe0e19ffc3f6840fcd471
       body: |
