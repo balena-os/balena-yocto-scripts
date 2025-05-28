@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io/balena-cli to v22.0.1
+      hash: f5ebc1dac3a572de018319620ef6a8839bac875a
+      body: |
+        Update balena-io/balena-cli from 22.0.0 to 22.0.1
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.33.1
+  title: ""
+  date: 2025-05-28T19:01:41.439Z
+- commits:
     - subject: Make hostapp-deploy depend on a successful s3-deploy
       hash: 7e5c501cb45943353472c98764d8ba43a29ef48c
       body: |
