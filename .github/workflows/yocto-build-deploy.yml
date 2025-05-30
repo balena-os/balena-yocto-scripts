@@ -1396,7 +1396,8 @@ jobs:
   ami-deploy:
     name: Deploy AMI
     runs-on: ${{ fromJSON(inputs.build-runs-on) }}
-    if: inputs.deploy-ami && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    # DEBUG - FOR TESTING
+    if: inputs.deploy-ami
     needs:
       - approved-commit
       - build
@@ -1519,13 +1520,9 @@ jobs:
       - name: Set AMI name
         id: ami-name
         env: 
-          VERSION: "${{ needs.balena-lib.outputs.os_version }}"
+          VERSION: "6.5.29+rev5" #DEBUG: FOR TESTING
         run: |
-          if [ "${{ inputs.sign-image }}" = "true" ]; then
-            echo "AMI_NAME=balenaOS-secureboot-${VERSION}-${SLUG}" | sed 's/+/-/g' >>"${GITHUB_ENV}"
-          else
             echo "AMI_NAME=balenaOS-${VERSION}-${SLUG}" | sed 's/+/-/g' >>"${GITHUB_ENV}"
-          fi
 
       - name: Setup balena CLI
         uses: balena-io-examples/setup-balena-action@07f4057946affd3fab6660cd9e55a6693acc4c52 # v0.0.17
@@ -1542,7 +1539,7 @@ jobs:
         env:
           IMAGE: ${{ env.DEPLOY_PATH }}/image/balena.img
           BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ needs.balena-lib.outputs.dt_arch }}"
-          BALENA_PRELOAD_COMMIT: current
+          BALENA_PRELOAD_COMMIT: 1ae607b0e2f16001e00d15b73a2550ae
         run: |
           echo "* Adding the preload app"
           balena preload \
@@ -1769,7 +1766,7 @@ jobs:
                   _loops=$(( _loops - 1 ))
                   if [ ${_loops} -lt 0 ]; then
                       echo "Timed out without supervisor health check pass"
-                      break
+                      exit 1
                   fi
           done
 
@@ -1862,39 +1859,39 @@ jobs:
       
       # From https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-quotas.html
       # The maximum number of public and private AMIs allowed per Region iz 50000.
-      - name: Clean up EOL AMIs
-        if: always()
-        continue-on-error: true
-        env: 
-          PERIOD: "2 years ago"
-        run: |
-          _date=$(date +%Y-%m-%d -d "${PERIOD}")
-          echo "Cleaning up AMI images older than ${PERIOD}"
-          image_ids=$(aws ec2 describe-images \
-              --filters "Name=name,Values=${AMI_NAME%%-*}-*" \
-              --owners "self" \
-              --query 'Images[?CreationDate<`'"${_date}"'`].[ImageId]' --output text)
-          for image_id in ${image_ids}; do
-              _snapshots="$(aws ec2 describe-images --image-ids "${image_id}" --query 'Images[*].BlockDeviceMappings[*].Ebs.SnapshotId' --output text)"
-              if aws ec2 deregister-image --image-id "${image_id}"; then
-                  echo "De-registered AMI ${image_id}"
-                  if [ -n "${_snapshots}" ]; then
-                      for snapshot in ${_snapshots}; do
-                          if aws ec2 delete-snapshot --snapshot-id "${snapshot}"; then
-                              echo "Removed snapshot ${snapshot}"
-                          else
-                              echo "Could not remove snapshot ${snapshot}"
-                          fi
-                      done
-                  fi
-              else
-                  echo "Could not de-register AMI ${image_id}"
-              fi
-          done
+      # - name: Clean up EOL AMIs
+      #   if: always()
+      #   continue-on-error: true
+      #   env: 
+      #     PERIOD: "2 years ago"
+      #   run: |
+      #     _date=$(date +%Y-%m-%d -d "${PERIOD}")
+      #     echo "Cleaning up AMI images older than ${PERIOD}"
+      #     image_ids=$(aws ec2 describe-images \
+      #         --filters "Name=name,Values=${AMI_NAME%%-*}-*" \
+      #         --owners "self" \
+      #         --query 'Images[?CreationDate<`'"${_date}"'`].[ImageId]' --output text)
+      #     for image_id in ${image_ids}; do
+      #         _snapshots="$(aws ec2 describe-images --image-ids "${image_id}" --query 'Images[*].BlockDeviceMappings[*].Ebs.SnapshotId' --output text)"
+      #         if aws ec2 deregister-image --image-id "${image_id}"; then
+      #             echo "De-registered AMI ${image_id}"
+      #             if [ -n "${_snapshots}" ]; then
+      #                 for snapshot in ${_snapshots}; do
+      #                     if aws ec2 delete-snapshot --snapshot-id "${snapshot}"; then
+      #                         echo "Removed snapshot ${snapshot}"
+      #                     else
+      #                         echo "Could not remove snapshot ${snapshot}"
+      #                     fi
+      #                 done
+      #             fi
+      #         else
+      #             echo "Could not de-register AMI ${image_id}"
+      #         fi
+      #     done
 
         # Tear down any AMI's created in the case of a failure - to leave a clean slate for the next run
       - name: Clean up AMI images on failure
-        if: failure()
+        if: always()
         run: |
           image_id=$(aws ec2 describe-images \
               --filters "Name=name,Values=${AMI_NAME}" \
