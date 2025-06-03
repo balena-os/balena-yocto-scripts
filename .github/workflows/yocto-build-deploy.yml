@@ -1538,7 +1538,7 @@ jobs:
         env:
           IMAGE: ${{ env.DEPLOY_PATH }}/image/balena.img
           BALENA_PRELOAD_APP: "balena_os/cloud-config-${{ needs.balena-lib.outputs.dt_arch }}"
-          BALENA_PRELOAD_COMMIT: current
+          BALENA_PRELOAD_COMMIT: 2f81758f1daaf6c6a45096756cf49ee1
         run: |
           echo "* Adding the preload app"
           balena preload \
