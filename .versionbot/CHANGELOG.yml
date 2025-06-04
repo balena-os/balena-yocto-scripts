@@ -1,4 +1,21 @@
 - commits:
+    - subject: "AMI deploy: remove secureboot reference from AMI name"
+      hash: ed09169ad436883013d57a378b699f80d2c32386
+      body: >
+        We have disabled secureboot AMIs in
+        31b55b59824a4e7a20ee223fe9d4d6fd5e7aa5e4 - so we need to remove it from
+        the AMI name
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+  version: 1.33.13
+  title: ""
+  date: 2025-06-04T14:12:03.067Z
+- commits:
     - subject: Update aws/aws-cli to v2.27.28
       hash: e0fb43d4fb3c84b6d94456e90ffc6f6ce45954f9
       body: |
