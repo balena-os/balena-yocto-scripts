@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.27.29
+      hash: da15c785cfee37528b3ac91a175a9eff21de5dcf
+      body: |
+        Update aws/aws-cli from 2.27.28 to 2.27.29
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.33.14
+  title: ""
+  date: 2025-06-04T22:44:26.972Z
+- commits:
     - subject: "AMI deploy: remove secureboot reference from AMI name"
       hash: ed09169ad436883013d57a378b699f80d2c32386
       body: >
