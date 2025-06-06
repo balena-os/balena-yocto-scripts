@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.27.31
+      hash: bc57af45e3ad57db7c1f8a4f5e6715e7c04f552a
+      body: |
+        Update aws/aws-cli from 2.27.30 to 2.27.31
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.33.18
+  title: ""
+  date: 2025-06-06T21:03:06.224Z
+- commits:
     - subject: "Leviathan: Configure image type for hup suite"
       hash: f7c0ba950665e14c56aab1d93da6c8cca9b70e3b
       body: >
