@@ -2122,6 +2122,18 @@ jobs:
           echo "FLASHER_SECUREBOOT=1" >> "${GITHUB_ENV}"
           echo "QEMU_MEMORY=4G" >> "${GITHUB_ENV}"
 
+      # If we specify a non-default image type for the tests, the HUP suite will have to fetch that same iamge type to HUP from
+      # This tells the suite what type of image to fetch
+      - name: Configure HUP suite image download
+        if: matrix.test_image
+        env:
+          IMAGE_TYPE: ${{ matrix.test_image }}
+        run: |
+          # Extracts the "flasher" or "raw" label from the artifact
+          imageType=$(echo "$IMAGE_TYPE" | grep -oP '(?<=balena-)(raw|flasher)(?=\.img)')
+          # The HUP suite config.js has an env var "DOWNLOAD_IMAGE_TYPE" to pass this to the suite
+          echo "DOWNLOAD_IMAGE_TYPE=${imageType}" >> "${GITHUB_ENV}"
+
       # https://github.com/balena-os/leviathan/blob/master/action.yml
       - name: BalenaOS Leviathan Tests
         uses: balena-os/leviathan@2c6c6efb7e429b1dd151210f0a870937d58a3133 # v2.32.6
