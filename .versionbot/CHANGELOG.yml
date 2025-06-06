@@ -1,4 +1,21 @@
 - commits:
+    - subject: "Leviathan: Configure image type for hup suite"
+      hash: f7c0ba950665e14c56aab1d93da6c8cca9b70e3b
+      body: >
+        This is needed to pass the image type to the hup suite, so in teh cases
+        where the non-default image is used, the correct type is downloaded from
+        balena cloud
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+  version: 1.33.17
+  title: ""
+  date: 2025-06-06T13:20:55.980Z
+- commits:
     - subject: Update aws/aws-cli to v2.27.30
       hash: e896d203dd880d34d63173bc08db873969cf7157
       body: |
