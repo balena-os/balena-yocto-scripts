@@ -906,23 +906,52 @@ jobs:
             rm "${file}"
           done
 
-      # Upload either the encrypted or the unencrypted artifacts, whichever is present
+      # Upload artifacts to be deployed to S3 / webresources along with the hostapp release.
+      # Primarily deflate files, and licenses, and manifests.
       # https://github.com/actions/upload-artifact
-      - name: Upload artifacts
+      - name: Upload hostapp artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        env:
-          ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
-          ARTIFACTS_ENC: "${{ runner.temp }}/artifacts.tar.zst.enc"
         with:
-          name: build-artifacts
+          name: hostapp-artifacts
           if-no-files-found: error
           retention-days: 3
-          # Change compression-level to 0 since we already compressed with zstd and
-          # encrypted files cannot be compressed further.
+          # Use 0 compression to avoid corrupting the encrypted files
           compression-level: 0
+          # Look for both the encrypted (.enc) and unencrypted file variants.
+          # Do not upload uncompressed .img files as they can be restored from the compressed .zip files after download.
           path: |
-            ${{ env.ARTIFACTS_TAR }}
-            ${{ env.ARTIFACTS_ENC }}
+            ${{ env.S3_DEPLOY_PATH }}/image/*.img.zip
+            ${{ env.S3_DEPLOY_PATH }}/image/*.img.zip.enc
+            ${{ env.S3_DEPLOY_PATH }}/balena-image.docker
+            ${{ env.S3_DEPLOY_PATH }}/balena-image.docker.enc
+            ${{ env.S3_DEPLOY_PATH }}/compressed*/*.deflate
+            ${{ env.S3_DEPLOY_PATH }}/compressed*/*.deflate.enc
+            ${{ env.S3_DEPLOY_PATH }}/balena.yml
+            ${{ env.S3_DEPLOY_PATH }}/*.json
+            ${{ env.S3_DEPLOY_PATH }}/*.md
+            ${{ env.S3_DEPLOY_PATH }}/VERSION*
+            ${{ env.S3_DEPLOY_PATH }}/*.manifest
+            ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
+
+      # Upload artifacts used by Leviathan for test suites.
+      # Primarily raw and flasher images, and the hostapp docker image, and the kernel module headers.
+      # https://github.com/actions/upload-artifact
+      - name: Upload testing artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: testing-artifacts
+          if-no-files-found: error
+          retention-days: 3
+          # Use 0 compression to avoid corrupting the encrypted files
+          compression-level: 0
+          # Look for both the encrypted (.enc) and unencrypted file variants.
+          # Do not upload uncompressed .img files as they can be restored from the compressed .zip files after download.
+          path: |
+            ${{ env.S3_DEPLOY_PATH }}/image/*.img.zip
+            ${{ env.S3_DEPLOY_PATH }}/image/*.img.zip.enc
+            ${{ env.S3_DEPLOY_PATH }}/balena-image.docker
+            ${{ env.S3_DEPLOY_PATH }}/balena-image.docker.enc
+            ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
 
   ##############################
   # hostapp Deploy
