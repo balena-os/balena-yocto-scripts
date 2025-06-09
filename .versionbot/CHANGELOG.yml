@@ -1,4 +1,18 @@
 - commits:
+    - subject: Remove deprecated poll-interval input from review-commit-action
+      hash: 185bf9342daf06809f83c10d0aa57928308b4490
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.33.20
+  title: ""
+  date: 2025-06-09T19:43:26.314Z
+- commits:
     - subject: Update balena-os/leviathan action to v2.32.8
       hash: 950bd24c2801c575a21f460279434c8f8fd35881
       body: |
