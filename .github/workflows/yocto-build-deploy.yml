@@ -619,6 +619,7 @@ jobs:
 
       # Unrolled balena_api_is_dt_private function - https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
       # Had to be unrolled due to this: https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191 function relying on a jenkins env var to select the balena env - so failed
+      # TODO: Move this to hostapp-deploy job
       - name: Build OS contract
         env:
           CONTRACTS_BUILD_DIR: "${{ github.workspace }}/balena-yocto-scripts/build/contracts"
