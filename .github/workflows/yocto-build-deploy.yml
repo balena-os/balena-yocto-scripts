@@ -525,7 +525,7 @@ jobs:
       BALENARC_BALENA_URL: ${{ needs.balena-lib.outputs.balena_host }}
       DEPLOY_PATH: ${{ github.workspace }}/deploy
       # Note that this is the DEPLOY_PATH + the device slug and os version
-      S3_DEPLOY_PATH: "${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}"
+      S3_DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}
 
     defaults:
       run:
@@ -866,10 +866,9 @@ jobs:
         env:
           ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
         run: |
-          automation_dir="${{ env.automation_dir }}"
-          if [[ ! -d "$automation_dir" ]]; then
-            echo "[ERROR] automation_dir missing or not accessible"
-            exit 1
+          if ! command -v zip; then
+            sudo apt-get update
+            sudo apt-get install -y zip
           fi
 
           source "${automation_dir}/include/balena-deploy.inc"
@@ -982,8 +981,8 @@ jobs:
 
     env:
       BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || vars.BALENARC_BALENA_URL || 'balena-cloud.com' }}
-      DEPLOY_PATH: ${{ github.workspace }}/deploy
       HOSTAPP_ORG: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
+      DEPLOY_PATH: ${{ github.workspace }}/deploy
 
     steps:
 
@@ -991,9 +990,10 @@ jobs:
       # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
       # https://cli.github.com/manual/gh_run_download
       # https://cli.github.com/manual/gh_help_environment
-      - name: Download build artifacts
+      - name: Download hostapp artifacts
         run: |
-          gh run download "${GITHUB_RUN_ID}" --dir "${{ runner.temp }}" --name build-artifacts
+          mkdir -p "${DEPLOY_PATH}"
+          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name hostapp-artifacts
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -1012,22 +1012,29 @@ jobs:
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
         env:
-          ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
-          ARTIFACTS_ENC: "${{ runner.temp }}/artifacts.tar.zst.enc"
           PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
         run: |
-          openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${ARTIFACTS_ENC}" -out "${ARTIFACTS_TAR}"
+          set -x
+          for enc in "${DEPLOY_PATH}"/**/*.enc; do
+            openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${enc}" -out "${enc%.enc}"
+          done
 
-      # Only decompress the balena-image.docker and balena.yml files for hostapp deployment\
-      # List the contents of the tar file to make sure we're decompressing the right files
+      # Unzip the raw image files that were zipped and removed before uploading.
       - name: Decompress artifacts
-        env:
-          ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
         run: |
           set -x
-          mkdir -p "${DEPLOY_PATH}"
-          tar -tf "${ARTIFACTS_TAR}"
-          tar -I zstd -xvf "${ARTIFACTS_TAR}" -C "${DEPLOY_PATH}" ./balena-image.docker ./balena.yml
+
+          if ! command -v unzip; then
+            sudo apt-get update
+            sudo apt-get install -y unzip
+          fi
+
+          find "${DEPLOY_PATH}/image" -type f -name "*.img.zip"
+
+          for zip in "${DEPLOY_PATH}"/image/*.img.zip; do
+            unzip "${zip}" -d "$(dirname "${zip}")"
+          done
+
           cp -v "${DEPLOY_PATH}/balena.yml" "${WORKSPACE}/balena.yml"
 
       - name: Setup balena CLI
@@ -1060,8 +1067,8 @@ jobs:
           TRANSLATION: "v6"
           FINAL: ${{ needs.balena-lib.outputs.should_finalize }}
           ESR: "${{ needs.balena-lib.outputs.is_esr }}"
-          balenaCloudEmail: # TODO: currently trying to use named API key only, its possible email/pw auth no longer has the additional privileges that it used to
-          balenaCloudPassword: # TODO: currently trying to use named API key only, its possible email/pw auth no longer has the additional privileges that it used to
+          balenaCloudEmail: "" # TODO: currently trying to use named API key only, its possible email/pw auth no longer has the additional privileges that it used to
+          balenaCloudPassword: "" # TODO: currently trying to use named API key only, its possible email/pw auth no longer has the additional privileges that it used to
           CURL: "curl --silent --retry 10 --location --compressed"
           VERSION: ${{ needs.balena-lib.outputs.os_version }}
           # Used when creating a new hostapp APP - to give the relevant access to the relevant team
@@ -1076,6 +1083,11 @@ jobs:
 
           # load hostapp bundle and get local image reference, needed for `balena deploy`
           _local_image=$(docker load -i "${DEPLOY_PATH}/balena-image.docker" | cut -d: -f1 --complement | tr -d " " )
+
+          if [[ -z "${_local_image}" ]]; then
+            echo "[ERROR] Failed to load balena-image.docker"
+            exit 1
+          fi
 
           echo "[INFO] Logging into ${API_ENV} as ${BALENAOS_ACCOUNT}"
           export BALENARC_BALENA_URL="${API_ENV}"
@@ -1291,9 +1303,9 @@ jobs:
       AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}
       AWS_S3_SSE_ALGORITHM: ${{ vars.SOURCE_MIRROR_S3_SSE_ALGORITHM || vars.AWS_S3_SSE_ALGORITHM || vars.S3_SSE_ALGORITHM || vars.SSE_ALGORITHM || vars.SSE || 'AES256' }}
 
+      # Note that this is the DEPLOY_PATH from previous jobs + the device slug and os version
       DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}
-      # Same as DEPLOY_PATH but used by prepare.ts which expects the structure "/host/images/${device_slug}/${version}/..."
-      PREPARE_DEPLOY_PATH: ${{ github.workspace }}/deploy
+      S3_DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}
 
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
@@ -1308,9 +1320,10 @@ jobs:
       # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
       # https://cli.github.com/manual/gh_run_download
       # https://cli.github.com/manual/gh_help_environment
-      - name: Download build artifacts
+      - name: Download hostapp artifacts
         run: |
-          gh run download "${GITHUB_RUN_ID}" --dir "${{ runner.temp }}" --name build-artifacts
+          mkdir -p "${DEPLOY_PATH}"
+          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name hostapp-artifacts
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -1329,24 +1342,17 @@ jobs:
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
         env:
-          ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
-          ARTIFACTS_ENC: "${{ runner.temp }}/artifacts.tar.zst.enc"
           PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
         run: |
-          openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${ARTIFACTS_ENC}" -out "${ARTIFACTS_TAR}"
+          set -x
+          for enc in "${DEPLOY_PATH}"/**/*.enc; do
+            openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${enc}" -out "${enc%.enc}"
+          done
 
-      # Decompress the entire the entire tarball for the S3 upload.
-      # Note that in this case DEPLOY_PATH includes <workspace>/deploy/${device_slug}/${version}/
-      # List the contents of the tar file to make sure we're decompressing the right files.
       # Unzip the raw image files that were zipped and removed before uploading.
       - name: Decompress artifacts
-        env:
-          ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
         run: |
           set -x
-          mkdir -p "${DEPLOY_PATH}"
-          tar -tf "${ARTIFACTS_TAR}"
-          tar -I zstd -xvf "${ARTIFACTS_TAR}" -C "${DEPLOY_PATH}"
 
           if ! command -v unzip; then
             sudo apt-get update
@@ -1379,28 +1385,6 @@ jobs:
           # https://github.com/orgs/community/discussions/26636#discussioncomment-3252664
           mask-aws-account-id: false
 
-      # login required to pull private balena/balena-img image
-      # https://github.com/docker/login-action
-      - name: Login to Docker Hub
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USER }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Prepare files for S3
-        if: needs.balena-lib.outputs.deploy_artifact != 'docker-image'
-        env:
-          HELPER_IMAGE: balena/balena-img:6.20.26
-          PREPARE_DEPLOY_PATH: ${{ env.PREPARE_DEPLOY_PATH }}
-        run: |
-          docker run --rm \
-            -e BASE_DIR=/host/images \
-            -v "${PREPARE_DEPLOY_PATH}:/host/images" \
-            "${HELPER_IMAGE}" /usr/src/app/node_modules/.bin/ts-node /usr/src/app/scripts/prepare.ts
-
-          find "${PREPARE_DEPLOY_PATH}" -exec ls -lh {} \;
-
       - name: Set S3 ACL to private
         id: s3-acl-private
         if: needs.balena-lib.outputs.is_private != 'false'
@@ -1424,7 +1408,7 @@ jobs:
           S3_REGION: ${{ env.AWS_REGION }}
           SLUG: ${{ needs.balena-lib.outputs.device_slug }}
           VERSION: ${{ needs.balena-lib.outputs.os_version }}
-          SOURCE_DIR: ${{ env.PREPARE_DEPLOY_PATH }}
+          SOURCE_DIR: ${{ github.workspace }}/deploy
         run: |
           if [ -n "$(aws s3 ls "${S3_URL}/${SLUG}/${VERSION}/")" ] && [ -z "$($S3_CMD ls "${S3_URL}/${SLUG}/${VERSION}/IGNORE")" ]; then
             echo "::warning::Deployment already exists at ${S3_URL}/${VERSION}"
@@ -1491,9 +1475,10 @@ jobs:
       # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
       # https://cli.github.com/manual/gh_run_download
       # https://cli.github.com/manual/gh_help_environment
-      - name: Download build artifacts
+      - name: Download hostapp artifacts
         run: |
-          gh run download "${GITHUB_RUN_ID}" --dir "${{ runner.temp }}" --name build-artifacts
+          mkdir -p "${DEPLOY_PATH}"
+          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name hostapp-artifacts
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -1512,28 +1497,28 @@ jobs:
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
         env:
-          ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
-          ARTIFACTS_ENC: "${{ runner.temp }}/artifacts.tar.zst.enc"
           PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
         run: |
-          openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${ARTIFACTS_ENC}" -out "${ARTIFACTS_TAR}"
+          set -x
+          for enc in "${DEPLOY_PATH}"/**/*.enc; do
+            openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${enc}" -out "${enc%.enc}"
+          done
 
-      # Only decompress the raw image file for the AMI creation
-      # List the contents of the tar file to make sure we're decompressing the right files
+      # Unzip the raw image files that were zipped and removed before uploading.
       - name: Decompress artifacts
-        env:
-          ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
         run: |
-          mkdir -p "${DEPLOY_PATH}"
-          tar -tf "${ARTIFACTS_TAR}"
-          tar -I zstd -xvf "${ARTIFACTS_TAR}" -C "${DEPLOY_PATH}" ./image/balena.img.zip
+          set -x
 
           if ! command -v unzip; then
             sudo apt-get update
             sudo apt-get install -y unzip
           fi
 
-          unzip "${DEPLOY_PATH}/image/balena.img.zip" -d "${DEPLOY_PATH}/image/"
+          find "${DEPLOY_PATH}/image" -type f -name "*.img.zip"
+
+          for zip in "${DEPLOY_PATH}"/image/*.img.zip; do
+            unzip "${zip}" -d "$(dirname "${zip}")"
+          done
 
       # https://github.com/unfor19/install-aws-cli-action
       # https://github.com/aws/aws-cli/tags
@@ -2092,9 +2077,10 @@ jobs:
       # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
       # https://cli.github.com/manual/gh_run_download
       # https://cli.github.com/manual/gh_help_environment
-      - name: Download build artifacts
+      - name: Download testing artifacts
         run: |
-          gh run download "${GITHUB_RUN_ID}" --dir "${{ runner.temp }}" --name build-artifacts
+          mkdir -p "${DEPLOY_PATH}"
+          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name testing-artifacts
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -2113,25 +2099,24 @@ jobs:
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
         env:
-          ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
-          ARTIFACTS_ENC: "${{ runner.temp }}/artifacts.tar.zst.enc"
           PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
         run: |
-          openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${ARTIFACTS_ENC}" -out "${ARTIFACTS_TAR}"
+          set -x
+          for enc in "${DEPLOY_PATH}"/**/*.enc; do
+            openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${enc}" -out "${enc%.enc}"
+          done
 
-      # Only decompress the raw image file and the balena-image.docker file for the leviathan tests
-      # List the contents of the tar file to make sure we're decompressing the right files
+      # Unzip the raw image files that were zipped and removed before uploading.
       - name: Decompress artifacts
-        env:
-          ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
         run: |
-          mkdir -p "${DEPLOY_PATH}"
-          tar -tf "${ARTIFACTS_TAR}"
-          tar -I zstd -xvf "${ARTIFACTS_TAR}" -C "${DEPLOY_PATH}" "./image/${BALENA_OS_IMAGE}.zip" ./balena-image.docker ./kernel_modules_headers.tar.gz
+          set -x
+
           if ! command -v unzip; then
             sudo apt-get update
             sudo apt-get install -y unzip
           fi
+
+          find "${DEPLOY_PATH}/image" -type f -name "*.img.zip"
 
           unzip "${DEPLOY_PATH}/image/${BALENA_OS_IMAGE}.zip" -d "${DEPLOY_PATH}/image/"
 
