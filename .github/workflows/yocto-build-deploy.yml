@@ -524,6 +524,8 @@ jobs:
       AUTO_CONF_FILE: "${{ github.workspace }}/build/conf/auto.conf"
       BALENARC_BALENA_URL: ${{ needs.balena-lib.outputs.balena_host }}
       DEPLOY_PATH: ${{ github.workspace }}/deploy
+      # Note that this is the DEPLOY_PATH + the device slug and os version
+      S3_DEPLOY_PATH: "${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}"
 
     defaults:
       run:
