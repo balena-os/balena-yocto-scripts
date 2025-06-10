@@ -881,7 +881,7 @@ jobs:
       # Deflate files are the main image artifact for S3 / webresource deploy
       # is they are used by the img-maker and os download endpoints.
       - name: Prepare deflate files
-        if: needs.balena-lib.outputs.deploy_artifact != 'docker-image'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || inputs.force-finalize
         env:
           HELPER_IMAGE: balena/balena-img:6.20.26
         run: |
@@ -910,6 +910,7 @@ jobs:
       # https://github.com/actions/upload-artifact
       - name: Upload hostapp artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || inputs.force-finalize
         with:
           name: hostapp-artifacts
           if-no-files-found: error
@@ -1400,7 +1401,6 @@ jobs:
       # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/cp.html
       # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/sync.html
       - name: Deploy to S3
-        if: needs.balena-lib.outputs.deploy_artifact != 'docker-image'
         env:
           S3_ACL: ${{ steps.s3-acl-private.outputs.string || 'public-read' }}
           S3_SSE: ${{ env.AWS_S3_SSE_ALGORITHM }}
