@@ -892,15 +892,23 @@ jobs:
 
           find "${DEPLOY_PATH}" -exec ls -lh {} \;
 
-      # Encrypt .img and .img.zip files and remove the originals
       # Encryption is required for private device types, and signed images.
+      # We do this to obfuscate private device images on public repos,
+      # and to prevent running signed images that have not gone through review and may have security flaws.
+      # Additional file extensions can be added below, but are only required if included as artifact uploads.
       - name: Encrypt signed/private artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
         env:
           PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
+          PATHS_TO_ENCRYPT: |
+            ${{ env.S3_DEPLOY_PATH }}/balena-image.docker
+            ${{ env.S3_DEPLOY_PATH }}/image/*.img.zip
+            ${{ env.S3_DEPLOY_PATH }}/compressed*/*.deflate
+            ${{ env.S3_DEPLOY_PATH }}/*.manifest
+            ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
         run: |
           set -x
-          for file in "${S3_DEPLOY_PATH}"/**/*.img "${S3_DEPLOY_PATH}"/**/*.img.zip "${S3_DEPLOY_PATH}"/**/*.docker "${S3_DEPLOY_PATH}"/**/*.deflate; do
+          for file in $(echo "${PATHS_TO_ENCRYPT}" | tr '\n' ' '); do
             openssl enc -v -e -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${file}" -out "${file}.enc"
             rm "${file}"
           done
@@ -932,6 +940,7 @@ jobs:
             ${{ env.S3_DEPLOY_PATH }}/VERSION*
             ${{ env.S3_DEPLOY_PATH }}/*.manifest
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
+            ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz.enc
 
       # Upload artifacts used by Leviathan for test suites.
       # Primarily raw and flasher images, and the hostapp docker image, and the kernel module headers.
@@ -952,6 +961,7 @@ jobs:
             ${{ env.S3_DEPLOY_PATH }}/balena-image.docker
             ${{ env.S3_DEPLOY_PATH }}/balena-image.docker.enc
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
+            ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz.enc
 
   ##############################
   # hostapp Deploy
@@ -1014,9 +1024,12 @@ jobs:
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
         env:
           PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
+          PATHS_TO_DECRYPT: |
+            ${{ env.DEPLOY_PATH }}/*.enc
+            ${{ env.DEPLOY_PATH }}/**/*.enc
         run: |
           set -x
-          for enc in "${DEPLOY_PATH}"/**/*.enc; do
+          for enc in $(echo "${PATHS_TO_DECRYPT}" | tr '\n' ' '); do
             openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${enc}" -out "${enc%.enc}"
           done
 
@@ -1345,9 +1358,12 @@ jobs:
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
         env:
           PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
+          PATHS_TO_DECRYPT: |
+            ${{ env.DEPLOY_PATH }}/*.enc
+            ${{ env.DEPLOY_PATH }}/**/*.enc
         run: |
           set -x
-          for enc in "${DEPLOY_PATH}"/**/*.enc; do
+          for enc in $(echo "${PATHS_TO_DECRYPT}" | tr '\n' ' '); do
             openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${enc}" -out "${enc%.enc}"
           done
 
@@ -1499,9 +1515,12 @@ jobs:
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
         env:
           PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
+          PATHS_TO_DECRYPT: |
+            ${{ env.DEPLOY_PATH }}/*.enc
+            ${{ env.DEPLOY_PATH }}/**/*.enc
         run: |
           set -x
-          for enc in "${DEPLOY_PATH}"/**/*.enc; do
+          for enc in $(echo "${PATHS_TO_DECRYPT}" | tr '\n' ' '); do
             openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${enc}" -out "${enc%.enc}"
           done
 
@@ -2101,9 +2120,12 @@ jobs:
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
         env:
           PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
+          PATHS_TO_DECRYPT: |
+            ${{ env.DEPLOY_PATH }}/*.enc
+            ${{ env.DEPLOY_PATH }}/**/*.enc
         run: |
           set -x
-          for enc in "${DEPLOY_PATH}"/**/*.enc; do
+          for enc in $(echo "${PATHS_TO_DECRYPT}" | tr '\n' ' '); do
             openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${enc}" -out "${enc%.enc}"
           done
 
@@ -2144,8 +2166,8 @@ jobs:
           
           # The test suite expects the image to be tested to be called "balena.img.gz" - regardless of what it may have been called before 
           gzip -9 -c "${DEPLOY_PATH}/image/${BALENA_OS_IMAGE}" >"${LEVIATHAN_WORKSPACE}/balena.img.gz"
-          cp -v "${DEPLOY_PATH}/balena-image.docker" "${LEVIATHAN_WORKSPACE}/balena-image.docker"
-          cp -v "${DEPLOY_PATH}/kernel_modules_headers.tar.gz" "${LEVIATHAN_WORKSPACE}/kernel_modules_headers.tar.gz"
+          mv -v "${DEPLOY_PATH}/balena-image.docker" "${LEVIATHAN_WORKSPACE}/balena-image.docker"
+          mv -v "${DEPLOY_PATH}/kernel_modules_headers.tar.gz" "${LEVIATHAN_WORKSPACE}/kernel_modules_headers.tar.gz"
 
           cp -v "${SUITES}/${TEST_SUITE}/config.js" "${LEVIATHAN_WORKSPACE}/config.js"
           mkdir -p "${REPORTS}"
