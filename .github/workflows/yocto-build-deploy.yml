@@ -524,7 +524,7 @@ jobs:
       AUTO_CONF_FILE: "${{ github.workspace }}/build/conf/auto.conf"
       BALENARC_BALENA_URL: ${{ needs.balena-lib.outputs.balena_host }}
       DEPLOY_PATH: ${{ github.workspace }}/deploy
-      # Note that this is the DEPLOY_PATH + the device slug and os version
+      # S3_DEPLOY_PATH is the DEPLOY_PATH + the device slug and os version as is expected by the prepare.ts script from image maker
       S3_DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}
 
     defaults:
@@ -1304,8 +1304,9 @@ jobs:
       AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}
       AWS_S3_SSE_ALGORITHM: ${{ vars.SOURCE_MIRROR_S3_SSE_ALGORITHM || vars.AWS_S3_SSE_ALGORITHM || vars.S3_SSE_ALGORITHM || vars.SSE_ALGORITHM || vars.SSE || 'AES256' }}
 
-      # Note that this is the DEPLOY_PATH from previous jobs + the device slug and os version
+      # For this job only, the DEPLOY_PATH is the same as the S3_DEPLOY_PATH
       DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}
+      # S3_DEPLOY_PATH is the DEPLOY_PATH + the device slug and os version as is expected by the prepare.ts script from image maker
       S3_DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}
 
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
