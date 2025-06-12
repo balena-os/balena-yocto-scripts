@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.27.35
+      hash: 74932cc7b29711c7bbc69278681e765b6a120b74
+      body: |
+        Update aws/aws-cli from 2.27.34 to 2.27.35
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.34.1
+  title: ""
+  date: 2025-06-12T23:13:04.866Z
+- commits:
     - subject: Remove docker-image deploy type and only upload artifacts when needed
       hash: 514b4379a5f14693644cb1bffc27883e5afb0a28
       body: |
