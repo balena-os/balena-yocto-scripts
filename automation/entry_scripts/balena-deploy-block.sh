@@ -41,6 +41,10 @@ if [ -z "${_releaseID}" ]; then
 fi
 
 _assets="$(find /deploy/deploy-jenkins -name licenses.tar.gz) /deploy/CHANGELOG.md"
+rpi_secure_boot_lock="$(find /deploy/deploy-jenkins -name secure-boot-lock.tar.gz)"
+if [ -n "${rpi_secure_boot_lock}" ]; then
+	_assets="${_assets} ${rpi_secure_boot_lock}"
+fi
 _rid=$(balena_api_releaseID_from_commitID "${_releaseID}" "${API_ENV}" "${BALENAOS_TOKEN}")
 for _asset in ${_assets}; do
 	if [ -f "${_asset}" ]; then
