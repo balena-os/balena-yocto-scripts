@@ -1287,7 +1287,7 @@ jobs:
         continue-on-error: true
         with:
           balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
-          balena-host: ${{ env.BALENA_HOST }}
+          balena-host: ${{ env.BALENARC_BALENA_URL }}
           release-id: ${{ steps.deploy-hostapp.outputs.release_id }}
           if-no-files-found: error
           path: |
