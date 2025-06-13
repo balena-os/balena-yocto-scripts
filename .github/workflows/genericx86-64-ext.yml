@@ -67,3 +67,4 @@ jobs:
           "worker_type": ["qemu"],
           "runs_on": [["self-hosted", "X64", "kvm"]]
         }
+      force-finalize: true
