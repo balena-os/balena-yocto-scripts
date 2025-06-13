@@ -1280,6 +1280,24 @@ jobs:
               fi
             fi
           fi
+      
+      - name: Upload release assets
+        uses: balena-io/upload-balena-release-asset@v0.1.3
+        continue-on-error: true
+        with:
+          balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
+          balena-host: ${{ env.BALENARC_BALENA_URL }}
+          release-id: ${{ steps.deploy-hostapp.outputs.release_id }}
+          if-no-files-found: error
+          path: |
+            ${{ env.DEPLOY_PATH }}/CHANGELOG.md
+            ${{ env.DEPLOY_PATH }}/VERSION
+            ${{ env.DEPLOY_PATH }}/VERSION_HOSTOS
+            ${{ env.DEPLOY_PATH }}/*.manifest
+            ${{ env.DEPLOY_PATH }}/*.json
+            ${{ env.DEPLOY_PATH }}/compressed*/*.deflate
+            ${{ env.DEPLOY_PATH }}/kernel_modules_headers.tar.gz
+            ${{ env.DEPLOY_PATH }}/licenses.tar.gz
 
   ##############################
   # S3 Deploy
