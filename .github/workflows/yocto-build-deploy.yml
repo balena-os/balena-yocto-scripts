@@ -881,7 +881,6 @@ jobs:
       # Deflate files are the main image artifact for S3 / webresource deploy
       # is they are used by the img-maker and os download endpoints.
       - name: Prepare deflate files
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || inputs.force-finalize
         env:
           HELPER_IMAGE: balena/balena-img:6.20.26
         run: |
