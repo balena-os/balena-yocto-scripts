@@ -1170,45 +1170,17 @@ jobs:
           [ -n "${releaseCommit}" ] && >&2 echo "Deployed ${_local_image} to ${BALENAOS_ACCOUNT}/${APPNAME} as ${status##--} at ${releaseCommit}"
           echo "${releaseCommit}"
 
-
           if [ -z "${releaseCommit}" ]; then
             echo "[INFO] Failed to deploy to ${BALENAOS_ACCOUNT}/${APPNAME}"
             exit 1
           fi
-
-
-          # Potentially this should be split into a separate step
-          ### Attaching assets to release ###
-
-          # https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/entry_scripts/balena-deploy-block.sh#L43
-          # find assets
-          _assets="$(find "${DEPLOY_PATH}" -name licenses.tar.gz) ${DEPLOY_PATH}/CHANGELOG.md"
 
           # Get hostapp release ID - at the moment we only have the commit hash releaseCommit
           _json=$(${CURL} -XGET -H "Content-type: application/json" "https://api.${API_ENV}/${TRANSLATION}/release?\$filter=commit%20eq%20%27${releaseCommit}%27" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
           _release_id=$(echo "${_json}" | jq -r '.d[0].id')
           echo "${_release_id}"
 
-          # For use in esr tagging step
           echo "release_id=${_release_id}" >>"${GITHUB_OUTPUT}"
-
-          # https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/include/balena-api.inc#L1163
-          # attach each asset to release with _release_id
-          for _asset in ${_assets}; do
-            if [ -f "${_asset}" ]; then
-              _asset_key=$(basename "${_asset}")
-              # note: this uses the "resin" endpoint rather than v6
-              _json=$(${CURL} -XPOST "https://api.${API_ENV}/resin/release_asset" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --form "release=${_release_id}" --form "asset_key=${_asset_key}" --form "asset=@${_asset}")
-              _aid=$(echo "${_json}" | jq -r '.id')
-              echo "${_aid}"
-              if [ -n "${_aid}" ]; then
-                echo "[INFO] Added ${_asset} with ID ${_aid} to release ${releaseCommit}"
-              else
-                echo "[ERROR] Failed to add ${_asset} to release ${releaseCommit}"
-                exit 1
-              fi
-            fi
-          done
 
       - name: Tag ESR release
         if: needs.balena-lib.outputs.is_esr == 'true' && needs.balena-lib.outputs.should_finalize
