@@ -927,8 +927,6 @@ jobs:
           # Look for both the encrypted (.enc) and unencrypted file variants.
           # Do not upload uncompressed .img files as they can be restored from the compressed .zip files after download.
           path: |
-            ${{ env.S3_DEPLOY_PATH }}/image/*.img.zip
-            ${{ env.S3_DEPLOY_PATH }}/image/*.img.zip.enc
             ${{ env.S3_DEPLOY_PATH }}/balena-image.docker
             ${{ env.S3_DEPLOY_PATH }}/balena-image.docker.enc
             ${{ env.S3_DEPLOY_PATH }}/compressed*/*.deflate
@@ -942,7 +940,7 @@ jobs:
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz.enc
 
-      # Upload artifacts used by Leviathan for test suites.
+      # Upload artifacts for Leviathan test suites and for AMI creation.
       # Primarily raw and flasher images, and the hostapp docker image, and the kernel module headers.
       # https://github.com/actions/upload-artifact
       - name: Upload testing artifacts
@@ -1042,12 +1040,6 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y unzip
           fi
-
-          find "${DEPLOY_PATH}/image" -type f -name "*.img.zip"
-
-          for zip in "${DEPLOY_PATH}"/image/*.img.zip; do
-            unzip "${zip}" -d "$(dirname "${zip}")"
-          done
 
           cp -v "${DEPLOY_PATH}/balena.yml" "${WORKSPACE}/balena.yml"
 
@@ -1367,12 +1359,6 @@ jobs:
             sudo apt-get install -y unzip
           fi
 
-          find "${DEPLOY_PATH}/image" -type f -name "*.img.zip"
-
-          for zip in "${DEPLOY_PATH}"/image/*.img.zip; do
-            unzip "${zip}" -d "$(dirname "${zip}")"
-          done
-
       # https://github.com/unfor19/install-aws-cli-action
       # https://github.com/aws/aws-cli/tags
       - name: Setup awscli
@@ -1482,10 +1468,10 @@ jobs:
       # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
       # https://cli.github.com/manual/gh_run_download
       # https://cli.github.com/manual/gh_help_environment
-      - name: Download hostapp artifacts
+      - name: Download testing artifacts
         run: |
           mkdir -p "${DEPLOY_PATH}"
-          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name hostapp-artifacts
+          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name testing-artifacts
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
