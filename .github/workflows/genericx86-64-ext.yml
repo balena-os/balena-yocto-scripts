@@ -56,8 +56,8 @@ jobs:
       machine: genericx86-64-ext
       deploy-environment: balena-staging.com
       # device-repo and device-repo-ref inputs should not be provided on device repos
-      device-repo: balena-os/balena-intel
-      device-repo-ref: master
+      device-repo: balena-os/balena-generic
+      device-repo-ref: sbom
       yocto-scripts-ref: ${{ github.event.pull_request.head.sha }}
       # Use qemu workers for testing
       test_matrix: >
