@@ -36,7 +36,7 @@ balena_deploy_artifacts () {
 	local _yocto_licenses_deploy
 	local _slug
 	local _machine
-
+	local _sbom_cdx_deploy
 
 	[ ! -f "${_device_type_json}" ] && echo "[balena_deploy_artifacts] Device type JSON not found" && return
 
@@ -50,6 +50,7 @@ balena_deploy_artifacts () {
 	_yocto_build_deploy="${device_dir}/build/tmp/deploy/images/${_machine}"
 	_yocto_licenses_deploy="${device_dir}/build/tmp/deploy/licenses/"
 	_slug=$(jq --raw-output '.slug' "${_device_type_json}")
+	_sbom_cdx_deploy="${device_dir}/build/tmp/deploy/cyclonedx/${_machine}"
 
 	[ -z "${_preserve_build}" ] && rm -rf "${_deploy_dir}"
 	mkdir -p "${_deploy_dir}/image"
@@ -64,6 +65,11 @@ balena_deploy_artifacts () {
 	if [ -d "${_yocto_licenses_deploy}" ]; then
 		tar -czf "${_deploy_dir}/licenses.tar.gz" -C "$(dirname "${_yocto_licenses_deploy}")" "$(basename "${_yocto_licenses_deploy}")"
 	fi
+
+	if [ -d "${_sbom_cdx_deploy}" ]; then
+		tar -czf "${_deploy_dir}/sbom.tar.gz" -C "$(dirname "${_sbom_cdx_deploy}")" "$(basename "${_sbom_cdx_deploy}")"
+	fi
+
 	if [ -f "${device_dir}/CHANGELOG.md" ]; then
 		cp -v "${device_dir}/CHANGELOG.md" "${_deploy_dir}"
 	fi

@@ -905,6 +905,7 @@ jobs:
             ${{ env.S3_DEPLOY_PATH }}/compressed*/*.deflate
             ${{ env.S3_DEPLOY_PATH }}/*.manifest
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
+            ${{ env.S3_DEPLOY_PATH }}/sbom.tar.gz
         run: |
           set -x
           for file in $(echo "${PATHS_TO_ENCRYPT}" | tr '\n' ' '); do
@@ -940,6 +941,8 @@ jobs:
             ${{ env.S3_DEPLOY_PATH }}/*.manifest
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz.enc
+            ${{ env.S3_DEPLOY_PATH }}/sbom.tar.gz
+            ${{ env.S3_DEPLOY_PATH }}/sbom.tar.gz.enc
 
       # Upload artifacts used by Leviathan for test suites.
       # Primarily raw and flasher images, and the hostapp docker image, and the kernel module headers.
@@ -1181,7 +1184,7 @@ jobs:
 
           # https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/entry_scripts/balena-deploy-block.sh#L43
           # find assets
-          _assets="$(find "${DEPLOY_PATH}" -name licenses.tar.gz) ${DEPLOY_PATH}/CHANGELOG.md"
+          _assets="$(find "${DEPLOY_PATH}" -name licenses.tar.gz) ${DEPLOY_PATH}/CHANGELOG.md $(find "${DEPLOY_PATH}" -name sbom.tar.gz)"
 
           # Get hostapp release ID - at the moment we only have the commit hash releaseCommit
           _json=$(${CURL} -XGET -H "Content-type: application/json" "https://api.${API_ENV}/${TRANSLATION}/release?\$filter=commit%20eq%20%27${releaseCommit}%27" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
