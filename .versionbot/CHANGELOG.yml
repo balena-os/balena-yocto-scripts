@@ -1,4 +1,46 @@
 - commits:
+    - subject: Remove .img and .img.zip files from hostapp artifacts
+      hash: d71961bc5e83d44199abc059ffa9a7ab06eba02d
+      body: |
+        These artifacts are no longer used by any of the download
+        endpoints of backend, so we can stop uploading them to save time
+        and S3 costs.
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Remove old manual uploads of licenses and changelog
+      hash: bd42aab51cf4cc3e4744c60e071ed40d660ceb61
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Upload release assets to hostapp on merge
+      hash: 1fefde01ecce8d7210acc18285773197f1754d55
+      body: |
+        Release assets will replace the manual S3 deploy job
+        once we have the rest of the pipline in place.
+
+        For now we are uploading in duplicate to test workflow
+        under load, and start developing the client changes.
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.35.0
+  title: ""
+  date: 2025-07-02T15:53:44.684Z
+- commits:
     - subject: Update aws/aws-cli to v2.27.47
       hash: 57d6c2406a476cd7bf7156be1f922850cdb265b5
       body: |
