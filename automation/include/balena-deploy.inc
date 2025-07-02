@@ -73,7 +73,7 @@ balena_deploy_artifacts () {
 	fi
 
 	if [ -d "$_yocto_build_deploy/rpi-eeprom/secure-boot-lock" ]; then
-		cp -rv "$_yocto_build_deploy/rpi-eeprom/secure-boot-lock" "$_deploy_dir" || true
+		tar cvzf "$_deploy_dir/secure-boot-lock.tar.gz" -C "$_yocto_build_deploy/rpi-eeprom/secure-boot-lock" .
 	fi
 
 	test "${_slug}" = "edge" && return
