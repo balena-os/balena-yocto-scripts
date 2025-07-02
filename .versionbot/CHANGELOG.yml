@@ -1,4 +1,40 @@
 - commits:
+    - subject: "workflows: yocto-build-deploy: pass RSA key if available"
+      hash: 01e03fb1543d9f78c320d783f842eaa805908ba6
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "workflows: yocto-build-deploy: deploy RPI locking artifacts as assets
+        if available"
+      hash: 32e0a048ec36eca7da143cc457dc35a60a5fc648
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+    - subject: "balena-deploy: compress RPI secure boot locking artifacts"
+      hash: 1fbeda7cbd6fa3b83779b127b19026b7f4837257
+      body: |
+        These allows to upload them as a single release asset artifact.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.35.1
+  title: ""
+  date: 2025-07-02T19:27:05.989Z
+- commits:
     - subject: Remove .img and .img.zip files from hostapp artifacts
       hash: d71961bc5e83d44199abc059ffa9a7ab06eba02d
       body: |
