@@ -927,8 +927,6 @@ jobs:
           # Look for both the encrypted (.enc) and unencrypted file variants.
           # Do not upload uncompressed .img files as they can be restored from the compressed .zip files after download.
           path: |
-            ${{ env.S3_DEPLOY_PATH }}/image/*.img.zip
-            ${{ env.S3_DEPLOY_PATH }}/image/*.img.zip.enc
             ${{ env.S3_DEPLOY_PATH }}/balena-image.docker
             ${{ env.S3_DEPLOY_PATH }}/balena-image.docker.enc
             ${{ env.S3_DEPLOY_PATH }}/compressed*/*.deflate
@@ -938,10 +936,11 @@ jobs:
             ${{ env.S3_DEPLOY_PATH }}/*.md
             ${{ env.S3_DEPLOY_PATH }}/VERSION*
             ${{ env.S3_DEPLOY_PATH }}/*.manifest
+            ${{ env.S3_DEPLOY_PATH }}/licenses.tar.gz
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz.enc
 
-      # Upload artifacts used by Leviathan for test suites.
+      # Upload artifacts for Leviathan test suites and for AMI creation.
       # Primarily raw and flasher images, and the hostapp docker image, and the kernel module headers.
       # https://github.com/actions/upload-artifact
       - name: Upload testing artifacts
@@ -1041,12 +1040,6 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y unzip
           fi
-
-          find "${DEPLOY_PATH}/image" -type f -name "*.img.zip"
-
-          for zip in "${DEPLOY_PATH}"/image/*.img.zip; do
-            unzip "${zip}" -d "$(dirname "${zip}")"
-          done
 
           cp -v "${DEPLOY_PATH}/balena.yml" "${WORKSPACE}/balena.yml"
 
@@ -1169,45 +1162,17 @@ jobs:
           [ -n "${releaseCommit}" ] && >&2 echo "Deployed ${_local_image} to ${BALENAOS_ACCOUNT}/${APPNAME} as ${status##--} at ${releaseCommit}"
           echo "${releaseCommit}"
 
-
           if [ -z "${releaseCommit}" ]; then
             echo "[INFO] Failed to deploy to ${BALENAOS_ACCOUNT}/${APPNAME}"
             exit 1
           fi
-
-
-          # Potentially this should be split into a separate step
-          ### Attaching assets to release ###
-
-          # https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/entry_scripts/balena-deploy-block.sh#L43
-          # find assets
-          _assets="$(find "${DEPLOY_PATH}" -name licenses.tar.gz) ${DEPLOY_PATH}/CHANGELOG.md"
 
           # Get hostapp release ID - at the moment we only have the commit hash releaseCommit
           _json=$(${CURL} -XGET -H "Content-type: application/json" "https://api.${API_ENV}/${TRANSLATION}/release?\$filter=commit%20eq%20%27${releaseCommit}%27" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
           _release_id=$(echo "${_json}" | jq -r '.d[0].id')
           echo "${_release_id}"
 
-          # For use in esr tagging step
           echo "release_id=${_release_id}" >>"${GITHUB_OUTPUT}"
-
-          # https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/include/balena-api.inc#L1163
-          # attach each asset to release with _release_id
-          for _asset in ${_assets}; do
-            if [ -f "${_asset}" ]; then
-              _asset_key=$(basename "${_asset}")
-              # note: this uses the "resin" endpoint rather than v6
-              _json=$(${CURL} -XPOST "https://api.${API_ENV}/resin/release_asset" -H "Authorization: Bearer ${BALENAOS_TOKEN}" --form "release=${_release_id}" --form "asset_key=${_asset_key}" --form "asset=@${_asset}")
-              _aid=$(echo "${_json}" | jq -r '.id')
-              echo "${_aid}"
-              if [ -n "${_aid}" ]; then
-                echo "[INFO] Added ${_asset} with ID ${_aid} to release ${releaseCommit}"
-              else
-                echo "[ERROR] Failed to add ${_asset} to release ${releaseCommit}"
-                exit 1
-              fi
-            fi
-          done
 
       - name: Tag ESR release
         if: needs.balena-lib.outputs.is_esr == 'true' && needs.balena-lib.outputs.should_finalize
@@ -1279,6 +1244,24 @@ jobs:
               fi
             fi
           fi
+      
+      - name: Upload release assets
+        uses: balena-io/upload-balena-release-asset@v0.1.3
+        continue-on-error: true
+        with:
+          balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
+          balena-host: ${{ env.BALENARC_BALENA_URL }}
+          release-id: ${{ steps.deploy-hostapp.outputs.release_id }}
+          if-no-files-found: error
+          path: |
+            ${{ env.DEPLOY_PATH }}/CHANGELOG.md
+            ${{ env.DEPLOY_PATH }}/VERSION
+            ${{ env.DEPLOY_PATH }}/VERSION_HOSTOS
+            ${{ env.DEPLOY_PATH }}/*.manifest
+            ${{ env.DEPLOY_PATH }}/*.json
+            ${{ env.DEPLOY_PATH }}/compressed*/*.deflate
+            ${{ env.DEPLOY_PATH }}/kernel_modules_headers.tar.gz
+            ${{ env.DEPLOY_PATH }}/licenses.tar.gz
 
   ##############################
   # S3 Deploy
@@ -1375,12 +1358,6 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y unzip
           fi
-
-          find "${DEPLOY_PATH}/image" -type f -name "*.img.zip"
-
-          for zip in "${DEPLOY_PATH}"/image/*.img.zip; do
-            unzip "${zip}" -d "$(dirname "${zip}")"
-          done
 
       # https://github.com/unfor19/install-aws-cli-action
       # https://github.com/aws/aws-cli/tags
@@ -1491,10 +1468,10 @@ jobs:
       # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
       # https://cli.github.com/manual/gh_run_download
       # https://cli.github.com/manual/gh_help_environment
-      - name: Download hostapp artifacts
+      - name: Download testing artifacts
         run: |
           mkdir -p "${DEPLOY_PATH}"
-          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name hostapp-artifacts
+          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name testing-artifacts
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
