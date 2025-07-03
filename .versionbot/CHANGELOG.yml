@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-os/leviathan action to v2.33.8
+      hash: 308fd6665af01e3f2dd3412578da5ad98b21e716
+      body: |
+        Update balena-os/leviathan from 2.33.7 to 2.33.8
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.35.2
+  title: ""
+  date: 2025-07-03T01:03:49.115Z
+- commits:
     - subject: "workflows: yocto-build-deploy: pass RSA key if available"
       hash: 01e03fb1543d9f78c320d783f842eaa805908ba6
       body: ""
