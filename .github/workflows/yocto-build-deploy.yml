@@ -945,6 +945,7 @@ jobs:
             ${{ env.S3_DEPLOY_PATH }}/VERSION*
             ${{ env.S3_DEPLOY_PATH }}/*.manifest
             ${{ env.S3_DEPLOY_PATH }}/licenses.tar.gz
+            ${{ env.S3_DEPLOY_PATH }}/cyclonedx/*/*.json
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz.enc
             ${{ env.S3_DEPLOY_PATH }}/secure-boot-lock.tar.gz.enc
@@ -1271,6 +1272,7 @@ jobs:
             ${{ env.DEPLOY_PATH }}/compressed*/*.deflate
             ${{ env.DEPLOY_PATH }}/kernel_modules_headers.tar.gz
             ${{ env.DEPLOY_PATH }}/licenses.tar.gz
+            ${{ env.DEPLOY_PATH }}/cyclonedx/*/*.json
             ${{ env.DEPLOY_PATH }}/secure-boot-lock.tar.gz
 
   ##############################
