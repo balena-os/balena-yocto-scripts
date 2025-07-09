@@ -49,7 +49,7 @@ balena_deploy_artifacts () {
 	_machine=$(jq --raw-output '.yocto.machine' "${_device_type_json}")
 	_yocto_build_deploy="${device_dir}/build/tmp/deploy/images/${_machine}"
 	_yocto_licenses_deploy="${device_dir}/build/tmp/deploy/licenses/"
-	_cyclonedx_dir="${device_dir}/build/tmp/deploy/cyclonedx"
+	_cyclonedx_dir="${device_dir}/build/tmp/deploy/cyclonedx-export"
 
 	_slug=$(jq --raw-output '.slug' "${_device_type_json}")
 
@@ -94,7 +94,7 @@ balena_deploy_artifacts () {
 
 	# Move sbom and vex files if they exists (there's one of each per target)
 	if [ -d "${_cyclonedx_dir}" ]; then
-		cp -rv "${_cyclonedx_dir}" "${_deploy_dir}"
+		cp -rv "${_cyclonedx_dir}" "${_deploy_dir}/cyclonedx"
 	fi
 
 	# Artifacts with archive: true are bundles of files, so compression is implied
