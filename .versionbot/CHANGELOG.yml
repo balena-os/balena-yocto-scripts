@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io/upload-balena-release-asset action to v0.1.4
+      hash: 8c86439772badada857f6c982a77d9ce0ae6b8fc
+      body: |
+        Update balena-io/upload-balena-release-asset from 0.1.3 to 0.1.4
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.36.1
+  title: ""
+  date: 2025-07-10T18:37:30.402Z
+- commits:
     - subject: "minor: upload cyclonedx bom.json and vex.json as independend files"
       hash: f0302f4e650d917c71b846014e4fed65a7916c3a
       body: ""
