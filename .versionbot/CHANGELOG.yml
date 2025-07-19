@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.27.55
+      hash: 890cd7f14bc9e08776ff12ff54c02064a56d1b0f
+      body: |
+        Update aws/aws-cli from 2.27.54 to 2.27.55
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.36.10
+  title: ""
+  date: 2025-07-19T00:15:21.390Z
+- commits:
     - subject: Update unfor19/install-aws-cli-action digest to f5b46b7
       hash: 933ce489b7259ac6ba31610f4e5328ab3d0f2245
       body: |
