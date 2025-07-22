@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.27.56
+      hash: d593a3020c1917f777123a75a0b96a35264ae4e6
+      body: |
+        Update aws/aws-cli from 2.27.55 to 2.27.56
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.36.14
+  title: ""
+  date: 2025-07-22T06:07:44.657Z
+- commits:
     - subject: Update balena-io-examples/setup-balena-action action to v0.0.22
       hash: d0be6b655bb822fe703da7e679b634aee097d418
       body: |
