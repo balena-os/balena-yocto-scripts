@@ -2183,7 +2183,7 @@ jobs:
 
       # https://github.com/balena-os/leviathan/blob/master/action.yml
       - name: BalenaOS Leviathan Tests
-        uses: balena-os/leviathan@7d65b857885478360b686f7d5ee88f55de0e9c4f # v2.33.8
+        uses: balena-os/leviathan@16d10d912df8dfc12cdf9a7426d0b40b716c1395 # v2.34.0
         env:
           WORKSPACE: "${{ env.LEVIATHAN_WORKSPACE }}"
           # BALENA_API_TEST_KEY is a secret that should be specific to the runtime environment
