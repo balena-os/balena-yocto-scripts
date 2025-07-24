@@ -1,4 +1,23 @@
 - commits:
+    - subject: Use the leviathan action from the submodule in meta-balena
+      hash: edc051f80d18b6969f3a2d7bac7a5520ea6fb2c5
+      body: |
+        The action currently has dependencies on the leviathan base
+        project so we need to keep them aligned for now.
+
+        If a future revision of the action performs it's own fetch of
+        leviathan, we would revert this change.
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.37.0
+  title: ""
+  date: 2025-07-24T20:45:42.714Z
+- commits:
     - subject: "upload hostapp artifacts: include encrypted manifest"
       hash: eb5b915a8ff6d23aa207732519829fd0850fffea
       body: >
