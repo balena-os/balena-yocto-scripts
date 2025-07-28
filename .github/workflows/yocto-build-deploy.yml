@@ -1529,6 +1529,13 @@ jobs:
             unzip "${zip}" -d "$(dirname "${zip}")"
           done
 
+          # If balena.img is a symlink, replace it with the file it points to.
+          if [ -L "${DEPLOY_PATH}/image/balena.img" ]; then
+            target_file=$(readlink --canonicalize "${DEPLOY_PATH}/image/balena.img")
+            rm "${DEPLOY_PATH}/image/balena.img"
+            cp "${target_file}" "${DEPLOY_PATH}/image/balena.img"
+          fi
+
       # https://github.com/unfor19/install-aws-cli-action
       # https://github.com/aws/aws-cli/tags
       - name: Setup awscli
@@ -2130,7 +2137,16 @@ jobs:
 
           find "${DEPLOY_PATH}/image" -type f -name "*.img.zip"
 
-          unzip "${DEPLOY_PATH}/image/${BALENA_OS_IMAGE}.zip" -d "${DEPLOY_PATH}/image/"
+          for zip in "${DEPLOY_PATH}"/image/*.img.zip; do
+            unzip "${zip}" -d "$(dirname "${zip}")"
+          done
+
+          # If balena.img is a symlink, replace it with the file it points to.
+          if [ -L "${DEPLOY_PATH}/image/balena.img" ]; then
+            target_file=$(readlink --canonicalize "${DEPLOY_PATH}/image/balena.img")
+            rm "${DEPLOY_PATH}/image/balena.img"
+            cp "${target_file}" "${DEPLOY_PATH}/image/balena.img"
+          fi
 
       # Check out private contracts if this is a private device type - as these are required for the tests
       - name: Checkout private Contracts

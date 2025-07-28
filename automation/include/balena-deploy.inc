@@ -123,12 +123,22 @@ balena_deploy_artifacts () {
 	if [[ -n "${_deploy_flasher_artifact}" ]]; then
 		cp -v "$(readlink --canonicalize "${_yocto_build_deploy}/${_deploy_flasher_artifact}")" \
 			"${_deploy_dir}/image/balena-flasher.img"
+
+		# Deduplicate compressed flasher image files if they are the same source image.
+		if [[ "${_deploy_flasher_artifact}" = "${_deploy_artifact}" ]]; then
+			ln -sfv balena-flasher.img "${_deploy_dir}/image/balena.img"
+		fi
 	fi
 
 	# shellcheck disable=SC2312
 	if [[ -n "${_deploy_raw_artifact}" ]]; then
 		cp -v "$(readlink --canonicalize "${_yocto_build_deploy}/${_deploy_raw_artifact}")" \
 			"${_deploy_dir}/image/balena-raw.img"
+
+		# Deduplicate compressed raw image files if they are the same source image.
+		if [[ "${_deploy_raw_artifact}" = "${_deploy_artifact}" ]]; then
+			ln -sfv balena-raw.img "${_deploy_dir}/image/balena.img"
+		fi
 	fi
 
 	if [[ "${_compressed}" != 'true' ]]; then
@@ -140,6 +150,7 @@ balena_deploy_artifacts () {
 	_zip_flags+=("-v") # verbose operation/print version info
 	_zip_flags+=("-j") # junk (don't record) directory names
 	_zip_flags+=("-9") # compress better
+	_zip_flags+=("-y") # store symbolic links as the link instead of the referenced file
 
 	if [[ "${_remove_compressed_file}" = "true" ]]; then
 		_zip_flags+=("-m") # move into zipfile (delete OS files)
