@@ -964,9 +964,11 @@ jobs:
           compression-level: 0
           # Look for both the encrypted (.enc) and unencrypted file variants.
           # Do not upload uncompressed .img files as they can be restored from the compressed .zip files after download.
+          # We only care about the main "balena.img" artifact for testing, not the flasher/raw variants, as this is the artifact that will be
+          # uploaded and presented to users.
           path: |
-            ${{ env.S3_DEPLOY_PATH }}/image/*.img.zip
-            ${{ env.S3_DEPLOY_PATH }}/image/*.img.zip.enc
+            ${{ env.S3_DEPLOY_PATH }}/image/balena.img.zip
+            ${{ env.S3_DEPLOY_PATH }}/image/balena.img.zip.enc
             ${{ env.S3_DEPLOY_PATH }}/balena-image.docker
             ${{ env.S3_DEPLOY_PATH }}/balena-image.docker.enc
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
