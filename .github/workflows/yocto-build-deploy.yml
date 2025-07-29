@@ -951,26 +951,81 @@ jobs:
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz.enc
             ${{ env.S3_DEPLOY_PATH }}/secure-boot-lock.tar.gz.enc
 
-      # Upload artifacts for Leviathan test suites and for AMI creation.
-      # Primarily raw and flasher images, and the hostapp docker image, and the kernel module headers.
+      # Used by Leviathan to test kernel module loading.
       # https://github.com/actions/upload-artifact
-      - name: Upload testing artifacts
+      - name: Upload kernel-module-headers artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: testing-artifacts
+          name: kernel-module-headers
           if-no-files-found: error
           retention-days: 3
           # Use 0 compression to avoid corrupting the encrypted files
           compression-level: 0
           # Look for both the encrypted (.enc) and unencrypted file variants.
-          # Do not upload uncompressed .img files as they can be restored from the compressed .zip files after download.
           path: |
-            ${{ env.S3_DEPLOY_PATH }}/image/*.img.zip
-            ${{ env.S3_DEPLOY_PATH }}/image/*.img.zip.enc
-            ${{ env.S3_DEPLOY_PATH }}/balena-image.docker
-            ${{ env.S3_DEPLOY_PATH }}/balena-image.docker.enc
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
             ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz.enc
+
+      # Used by Leviathan to test HUP.
+      # https://github.com/actions/upload-artifact
+      - name: Upload balena-image.docker artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: balena-image.docker
+          if-no-files-found: error
+          retention-days: 3
+          # Use 0 compression to avoid corrupting the encrypted files
+          compression-level: 0
+          # Look for both the encrypted (.enc) and unencrypted file variants.
+          path: |
+            ${{ env.S3_DEPLOY_PATH }}/balena-image.docker
+            ${{ env.S3_DEPLOY_PATH }}/balena-image.docker.enc
+
+      # May be used by Leviathan to run OS and cloud suites depending on the value of test_image in the test matrix.
+      # Used for AMI creation.
+      # https://github.com/actions/upload-artifact
+      - name: Upload balena.img.zip artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: balena.img.zip
+          if-no-files-found: error
+          retention-days: 3
+          # Use 0 compression to avoid corrupting the encrypted files
+          compression-level: 0
+          # Look for both the encrypted (.enc) and unencrypted file variants.
+          path: |
+            ${{ env.S3_DEPLOY_PATH }}/image/balena.img.zip
+            ${{ env.S3_DEPLOY_PATH }}/image/balena.img.zip.enc
+
+      # May be used by Leviathan to run OS and cloud suites depending on the value of test_image in the test matrix.
+      # https://github.com/actions/upload-artifact
+      - name: Upload balena-flasher.img.zip artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: balena-flasher.img.zip
+          if-no-files-found: ignore
+          retention-days: 3
+          # Use 0 compression to avoid corrupting the encrypted files
+          compression-level: 0
+          # Look for both the encrypted (.enc) and unencrypted file variants.
+          path: |
+            ${{ env.S3_DEPLOY_PATH }}/image/balena-flasher.img.zip
+            ${{ env.S3_DEPLOY_PATH }}/image/balena-flasher.img.zip.enc
+
+      # May be used by Leviathan to run OS and cloud suites depending on the value of test_image in the test matrix.
+      # https://github.com/actions/upload-artifact
+      - name: Upload balena-raw.img.zip artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: balena-raw.img.zip
+          if-no-files-found: ignore
+          retention-days: 3
+          # Use 0 compression to avoid corrupting the encrypted files
+          compression-level: 0
+          # Look for both the encrypted (.enc) and unencrypted file variants.
+          path: |
+            ${{ env.S3_DEPLOY_PATH }}/image/balena-raw.img.zip
+            ${{ env.S3_DEPLOY_PATH }}/image/balena-raw.img.zip.enc
 
   ##############################
   # hostapp Deploy
@@ -1006,28 +1061,12 @@ jobs:
 
     steps:
 
-      # Use gh to download the build artifacts from the build job
-      # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
-      # https://cli.github.com/manual/gh_run_download
-      # https://cli.github.com/manual/gh_help_environment
+      # https://github.com/actions/download-artifact
       - name: Download hostapp artifacts
-        run: |
-          mkdir -p "${DEPLOY_PATH}"
-          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name hostapp-artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          GH_DEBUG: "true"
-          GH_PAGER: "cat"
-          GH_PROMPT_DISABLED: "true"
-          GH_SPINNER_DISABLED: "true"
-
-      # # https://github.com/actions/download-artifact
-      # - name: Download build artifacts
-      #   uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-      #   with:
-      #     name: build-artifacts
-      #     path: ${{ runner.temp }}
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b # v4.3.0
+        with:
+          name: hostapp-artifacts
+          path: ${{ env.DEPLOY_PATH }}
 
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
@@ -1326,28 +1365,12 @@ jobs:
 
     steps:
 
-      # Use gh to download the build artifacts from the build job
-      # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
-      # https://cli.github.com/manual/gh_run_download
-      # https://cli.github.com/manual/gh_help_environment
+      # https://github.com/actions/download-artifact
       - name: Download hostapp artifacts
-        run: |
-          mkdir -p "${DEPLOY_PATH}"
-          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name hostapp-artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          GH_DEBUG: "true"
-          GH_PAGER: "cat"
-          GH_PROMPT_DISABLED: "true"
-          GH_SPINNER_DISABLED: "true"
-
-      # # https://github.com/actions/download-artifact
-      # - name: Download build artifacts
-      #   uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-      #   with:
-      #     name: build-artifacts
-      #     path: ${{ runner.temp }}
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b # v4.3.0
+        with:
+          name: hostapp-artifacts
+          path: ${{ env.DEPLOY_PATH }}
 
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
@@ -1477,28 +1500,12 @@ jobs:
 
     steps:
 
-      # Use gh to download the build artifacts from the build job
-      # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
-      # https://cli.github.com/manual/gh_run_download
-      # https://cli.github.com/manual/gh_help_environment
-      - name: Download testing artifacts
-        run: |
-          mkdir -p "${DEPLOY_PATH}"
-          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name testing-artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          GH_DEBUG: "true"
-          GH_PAGER: "cat"
-          GH_PROMPT_DISABLED: "true"
-          GH_SPINNER_DISABLED: "true"
-
-      # # https://github.com/actions/download-artifact
-      # - name: Download build artifacts
-      #   uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-      #   with:
-      #     name: build-artifacts
-      #     path: ${{ runner.temp }}
+      # https://github.com/actions/download-artifact
+      - name: Download balena.img.zip artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b # v4.3.0
+        with:
+          name: balena.img.zip
+          path: ${{ env.DEPLOY_PATH }}/image
 
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
@@ -2082,28 +2089,26 @@ jobs:
           git checkout --force "${{ inputs.meta-balena-ref }}"
           git submodule update --init --recursive
 
-      # Use gh to download the build artifacts from the build job
-      # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
-      # https://cli.github.com/manual/gh_run_download
-      # https://cli.github.com/manual/gh_help_environment
-      - name: Download testing artifacts
-        run: |
-          mkdir -p "${DEPLOY_PATH}"
-          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name testing-artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          GH_DEBUG: "true"
-          GH_PAGER: "cat"
-          GH_PROMPT_DISABLED: "true"
-          GH_SPINNER_DISABLED: "true"
+      # https://github.com/actions/download-artifact
+      - name: Download ${{ env.BALENA_OS_IMAGE }}.zip artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b # v4.3.0
+        with:
+          name: ${{ env.BALENA_OS_IMAGE }}.zip
+          path: ${{ env.DEPLOY_PATH }}/image
 
-      # # https://github.com/actions/download-artifact
-      # - name: Download build artifacts
-      #   uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-      #   with:
-      #     name: build-artifacts
-      #     path: ${{ runner.temp }}
+      # https://github.com/actions/download-artifact
+      - name: Download balena-image.docker artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b # v4.3.0
+        with:
+          name: balena-image.docker
+          path: ${{ env.DEPLOY_PATH }}
+
+      # https://github.com/actions/download-artifact
+      - name: Download kernel-module-headers artifact
+        uses: actions/download-artifact@448e3f862ab3ef47aa50ff917776823c9946035b # v4.3.0
+        with:
+          name: kernel-module-headers
+          path: ${{ env.DEPLOY_PATH }}
 
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
