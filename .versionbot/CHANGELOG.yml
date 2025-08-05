@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws-actions/configure-aws-credentials action to v4.3.1
+      hash: fbd912e3d4bc7e4a5d33aa1455acb5e23669e8c9
+      body: |
+        Update aws-actions/configure-aws-credentials from 4.2.1 to 4.3.1
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.37.7
+  title: ""
+  date: 2025-08-05T01:38:57.517Z
+- commits:
     - subject: Update docker/login-action action to v3.5.0
       hash: 72cdde5fa2bbf24e730b8ff5934b4b2294d60e1c
       body: |
