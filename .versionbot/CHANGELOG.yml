@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.28.2
+      hash: 6c006146fae1734a825c57f5a7a2a44518848c0a
+      body: |
+        Update aws/aws-cli from 2.28.0 to 2.28.2
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.37.8
+  title: ""
+  date: 2025-08-05T04:51:17.094Z
+- commits:
     - subject: Update aws-actions/configure-aws-credentials action to v4.3.1
       hash: fbd912e3d4bc7e4a5d33aa1455acb5e23669e8c9
       body: |
