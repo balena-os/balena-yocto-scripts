@@ -481,7 +481,7 @@ jobs:
       # We don't use this session, it's just to check if the credentials are valid
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         continue-on-error: true # Don't fail at this point as there is still value in running builds and tests
         with:
           role-to-assume: ${{ vars.AWS_IAM_ROLE }}
@@ -823,7 +823,7 @@ jobs:
 
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ needs.source-mirror-setup.outputs.aws-iam-role }}
           role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -1384,7 +1384,7 @@ jobs:
 
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ env.AWS_IAM_ROLE }}
           role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -1541,7 +1541,7 @@ jobs:
 
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ env.AWS_IAM_ROLE }}
           role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
