@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io-examples/setup-balena-action action to v0.0.25
+      hash: 810f2e7f40ae887f548e16722546d1a6b2610fef
+      body: |
+        Update balena-io-examples/setup-balena-action from 0.0.24 to 0.0.25
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.37.9
+  title: ""
+  date: 2025-08-06T00:27:05.204Z
+- commits:
     - subject: Update aws/aws-cli to v2.28.2
       hash: 6c006146fae1734a825c57f5a7a2a44518848c0a
       body: |
