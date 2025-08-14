@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io-examples/setup-balena-action action to v0.0.30
+      hash: f83d638fae1e39707ff61567e835bc02050b564c
+      body: |
+        Update balena-io-examples/setup-balena-action from 0.0.29 to 0.0.30
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.37.18
+  title: ""
+  date: 2025-08-14T08:45:42.371Z
+- commits:
     - subject: Update actions/checkout action to v4.3.0
       hash: 13bdb912569170330feea3777b836e32717b0280
       body: |
