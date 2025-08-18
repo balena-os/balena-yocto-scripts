@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io/balena-cli to v22.2.4
+      hash: 275c8114c340817ce3c2c70c89fcb3b21291396d
+      body: |
+        Update balena-io/balena-cli from 22.2.2 to 22.2.4
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.1
+  title: ""
+  date: 2025-08-18T21:00:05.077Z
+- commits:
     - subject: Split testing artifacts into individual files
       hash: d682869435a2cc53bad572a8d11075d221c45cdc
       body: |
