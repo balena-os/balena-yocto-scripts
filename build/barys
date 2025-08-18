@@ -174,6 +174,29 @@ function check_machine {
     done
 }
 
+# Find the hishest priority layer to contain sample files
+# For the same priority, return the first sorted found
+function find_highest_prio_layer {
+	highest_priority=-1
+	highest_priority_path=""
+
+	while read -r layer_conf_file; do
+		priority=$(grep -E 'BBFILE_PRIORITY.*=.*"[0-9]+"' "$layer_conf_file" | awk -F '=' '{print $2}' | tr -d ' "')
+		if [ -z "$priority" ]; then
+			continue
+		fi
+		if (( priority > highest_priority )); then
+			# check that it has sample files
+			if [ ! -f "$(dirname "$layer_conf_file")/samples/bblayers.conf.sample" ]; then
+				continue
+			fi
+			highest_priority=$priority
+			highest_priority_path=$(dirname "$(dirname "$layer_conf_file")")
+		fi
+	done < <(find "${SCRIPTPATH}/../../layers" -type f -path "*/meta-balena-*/conf/layer.conf" | sort)
+	echo "${highest_priority_path}"
+}
+
 # Timer
 STARTTIME=$(date +%s)
 
@@ -480,9 +503,15 @@ else
 fi
 
 # make sure it contains templates
-TEMPLATECONF_PATH=$(dirname $(find ${TEMPLATECONF_PATH} -name bblayers.conf.sample))
 if [ "$(echo "${TEMPLATECONF_PATH}" | wc -w)" -gt "1" ]; then
-    log ERROR "Multiple bblayers.conf.sample files found in BSP integration layer. Please provide a custom path."
+    highest_prio_layer_path=$(find_highest_prio_layer)
+    TEMPLATECONF_PATH=$(find "${highest_prio_layer_path}" -name bblayers.conf.sample)
+    log INFO "Multiple bblayers.conf.sample files found no custom path provided - using ${TEMPLATECONF_PATH}."
+fi
+
+TEMPLATECONF_PATH=$(dirname $(find "${TEMPLATECONF_PATH}" -name bblayers.conf.sample))
+if [ ! -d "${TEMPLATECONF_PATH}" ]; then
+    log ERROR "The provided templates path does not exist: ${TEMPLATECONF_PATH}"
 fi
 
 # Configure build
