@@ -1,4 +1,22 @@
 - commits:
+    - subject: "barys: default to highest priority layers for template paths"
+      hash: ed52c9ec2bf0e3727e019103abc272bfaf806eb4
+      body: |
+        When different layers contains template files and no --template-path is
+        provided, use the highest priority layer.
+
+        This provides a default which is better for automation.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.37.20
+  title: ""
+  date: 2025-08-18T09:22:08.388Z
+- commits:
     - subject: Update aws/aws-cli to v2.28.10
       hash: 8e9a895cc872412a10e7200ca3f14f2826be1219
       body: |
