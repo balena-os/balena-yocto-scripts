@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/checkout action to v5
+      hash: c41ce053758486bc175b1ce024dae9157d1788d0
+      body: |
+        Update actions/checkout from 4.3.0 to 5.0.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.2
+  title: ""
+  date: 2025-08-19T00:45:29.248Z
+- commits:
     - subject: Update balena-io/balena-cli to v22.2.4
       hash: 275c8114c340817ce3c2c70c89fcb3b21291396d
       body: |
