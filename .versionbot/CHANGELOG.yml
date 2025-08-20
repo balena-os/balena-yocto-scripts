@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.28.13
+      hash: c78c7654ee815ff272a5066d17f0186881373377
+      body: |
+        Update aws/aws-cli from 2.28.10 to 2.28.13
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.3
+  title: ""
+  date: 2025-08-20T00:09:50.856Z
+- commits:
     - subject: Update actions/checkout action to v5
       hash: c41ce053758486bc175b1ce024dae9157d1788d0
       body: |
