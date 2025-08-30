@@ -1308,7 +1308,7 @@ jobs:
           fi
       
       - name: Upload release assets
-        uses: balena-io/upload-balena-release-asset@5b9b38e474891a8605cc02d4355f5816a39f094b # v0.1.4
+        uses: balena-io/upload-balena-release-asset@aa5c76210bde8edc08e21f35c56b05d56fada041 # v0.1.5
         continue-on-error: true
         with:
           balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
