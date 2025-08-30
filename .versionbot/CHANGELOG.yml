@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io/upload-balena-release-asset action to v0.1.5
+      hash: 91829993bcf4a32274ceedae83bff431b6cf3da7
+      body: |
+        Update balena-io/upload-balena-release-asset from 0.1.4 to 0.1.5
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.9
+  title: ""
+  date: 2025-08-30T06:33:21.257Z
+- commits:
     - subject: Update balena-io-examples/setup-balena-action action to v0.0.31
       hash: 8d21c543f392993bacf821739765c1614aa7820b
       body: |
