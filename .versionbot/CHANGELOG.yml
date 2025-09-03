@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws-actions/configure-aws-credentials action to v5
+      hash: f0f6f3493a57736daeb3a2b953a28be6e494f2ca
+      body: |
+        Update aws-actions/configure-aws-credentials from 4.3.1 to 5.0.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.14
+  title: ""
+  date: 2025-09-03T22:24:11.298Z
+- commits:
     - subject: Update balena-io/balena-cli to v22.4.1
       hash: 9ea702f501d4ee0580d50a96da1fe6149c7be214
       body: |
