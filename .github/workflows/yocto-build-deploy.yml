@@ -377,7 +377,7 @@ jobs:
       # is_private=$(${CURL} -XGET -H "Content-type: application/json" -H "Authorization: bearer ${BALENAOS_TOKEN}" --silent --retry 5 "https://api.${API_ENV}/${TRANSLATION}/device_type?\$filter=slug%20eq%20%27${device_slug}%27&\$select=slug,is_private" | jq -r '.d[0].is_private')
       # echo "is_private=${is_private}" >>"${GITHUB_OUTPUT}"
       - name: Check if device-type is private
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         id: is-private
         env:
           API_ENV: ${{ env.BALENARC_BALENA_URL }}
@@ -644,7 +644,7 @@ jobs:
       # The github-script action is a safer method of writing to outputs and variables, vs a shell step.
       # https://github.com/actions/github-script
       - name: Enable mirror tarballs
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             const currentValue = process.env.BARYS_ARGUMENTS_VAR || '';
