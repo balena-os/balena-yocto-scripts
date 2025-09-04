@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/github-script action to v8
+      hash: 3b22e3e976623ace4f926fd6f9c640409657cec4
+      body: |
+        Update actions/github-script from 7.0.1 to 8.0.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.17
+  title: ""
+  date: 2025-09-04T17:00:16.232Z
+- commits:
     - subject: Update aws/aws-cli to v2.28.23
       hash: c0eb18974b7a696cf3df976ad1b4e9905aa4117c
       body: |
