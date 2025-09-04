@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.28.24
+      hash: dc06cb788540372e0ee2d287186c66593810dfa8
+      body: |
+        Update aws/aws-cli from 2.28.23 to 2.28.24
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.18
+  title: ""
+  date: 2025-09-04T21:16:51.968Z
+- commits:
     - subject: Update actions/github-script action to v8
       hash: 3b22e3e976623ace4f926fd6f9c640409657cec4
       body: |
