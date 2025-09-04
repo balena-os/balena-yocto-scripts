@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io-examples/setup-balena-action action to v0.0.37
+      hash: e11d7f6cff3dd21abcea5417be55d2d3cffdad3d
+      body: |
+        Update balena-io-examples/setup-balena-action from 0.0.35 to 0.0.37
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.15
+  title: ""
+  date: 2025-09-04T03:26:03.258Z
+- commits:
     - subject: Update aws-actions/configure-aws-credentials action to v5
       hash: f0f6f3493a57736daeb3a2b953a28be6e494f2ca
       body: |
