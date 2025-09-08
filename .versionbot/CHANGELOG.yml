@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update Lock file maintenance
+      hash: 655009f9fbafeeda7712a58eb6c846830569a3e1
+      body: |
+        Update 
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.19
+  title: ""
+  date: 2025-09-08T02:26:35.161Z
+- commits:
     - subject: Update aws/aws-cli to v2.28.24
       hash: dc06cb788540372e0ee2d287186c66593810dfa8
       body: |
