@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.28.26
+      hash: 0f5c61bd0f8e86eea12686953547a3ef40125287
+      body: |
+        Update aws/aws-cli from 2.28.24 to 2.28.26
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.20
+  title: ""
+  date: 2025-09-08T21:45:44.663Z
+- commits:
     - subject: Update Lock file maintenance
       hash: 655009f9fbafeeda7712a58eb6c846830569a3e1
       body: |
