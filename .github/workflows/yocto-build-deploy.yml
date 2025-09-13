@@ -2125,6 +2125,32 @@ jobs:
           git checkout --force "${{ inputs.meta-balena-ref }}"
           git submodule update --init --recursive
 
+      # Use local S3 cache on self-hosted runners
+      # https://github.com/tespkg/actions-cache
+      # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+      - name: Restore test-artifacts cache
+        id: test-artifacts-restore
+        uses: tespkg/actions-cache/restore@a2e3f005921809689270625bc026d387f73017ae # v1.9.0
+        # Unset AWS credentials so they don't override the minio credentials
+        env:
+          AWS_ACCESS_KEY_ID: yocto-svcacct
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YOCTO_CACHE_SECRET_KEY }}
+          AWS_SESSION_TOKEN: ''
+          AWS_DEFAULT_REGION: local
+          AWS_REGION: local
+        with:
+          endpoint: minio
+          port: 9000
+          insecure: "true"
+          accessKey: yocto-svcacct
+          secretKey: ${{ secrets.YOCTO_CACHE_SECRET_KEY }}
+          bucket: yocto-cache
+          region: local
+          use-fallback: false
+          key: test-artifacts-${{ github.workflow }}-${{ github.run_id }}
+          path: |
+            ${{ env.DEPLOY_PATH }}
+
       # Use the gh CLI to download artifacts from the build job as we've seen issues with
       # the actions/download-artifact action not reporting any failures but files unable to be decrypted
       # suggesting they are not properly downloaded.
@@ -2133,6 +2159,7 @@ jobs:
       # https://cli.github.com/manual/gh_run_download
       # https://cli.github.com/manual/gh_help_environment
       - name: Download artifacts
+        if: steps.test-artifacts-restore.outputs.cache-hit != 'true'
         run: |
           mkdir -p "${DEPLOY_PATH}/image"
           gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}/image" --name ${BALENA_OS_IMAGE}.zip
@@ -2145,6 +2172,37 @@ jobs:
           GH_PAGER: "cat"
           GH_PROMPT_DISABLED: "true"
           GH_SPINNER_DISABLED: "true"
+
+      # Cache the downloaded artifacts for re-runs, or other jobs on the same host.
+      # Use local S3 cache on self-hosted runners.
+      # https://github.com/tespkg/actions-cache
+      # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+      - name: Save test-artifacts cache
+        uses: tespkg/actions-cache/save@a2e3f005921809689270625bc026d387f73017ae # v1.9.0
+        # Do not save cache for pull_request_target events
+        # as they run in the context of the main branch and would be vulnerable to cache poisoning.
+        # https://0xn3va.gitbook.io/cheat-sheets/ci-cd/github/actions#cache-poisoning
+        # https://adnanthekhan.com/2024/05/06/the-monsters-in-your-build-cache-github-actions-cache-poisoning/
+        if: steps.test-artifacts-restore.outputs.cache-hit != true && github.event_name != 'pull_request_target'
+        # Unset AWS credentials so they don't override the minio credentials
+        env:
+          AWS_ACCESS_KEY_ID: yocto-svcacct
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YOCTO_CACHE_SECRET_KEY }}
+          AWS_SESSION_TOKEN: ''
+          AWS_DEFAULT_REGION: local
+          AWS_REGION: local
+        with:
+          endpoint: minio
+          port: 9000
+          insecure: "true"
+          accessKey: yocto-svcacct
+          secretKey: ${{ secrets.YOCTO_CACHE_SECRET_KEY }}
+          bucket: yocto-cache
+          region: local
+          use-fallback: false
+          key: test-artifacts-${{ github.workflow }}-${{ github.run_id }}
+          path: |
+            ${{ env.DEPLOY_PATH }}/
 
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
