@@ -273,7 +273,7 @@ jobs:
       # This behvaiour is required for private submodules
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token
-        uses: actions/create-github-app-token@def152b8a737443d7af6c5722c6389146fe90c90 # v2.1.2
+        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
         id: app-token
         with:
           app-id: ${{ vars.BALENAOS_CI_APP_ID }}
@@ -284,7 +284,7 @@ jobs:
       # so we can checkout private contracts
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token (balena-io)
-        uses: actions/create-github-app-token@def152b8a737443d7af6c5722c6389146fe90c90 # v2.1.2
+        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
         id: app-token-balena-io
         with:
           app-id: ${{ vars.BALENAOS_CI_APP_ID }}
@@ -555,7 +555,7 @@ jobs:
       # This behvaiour is required for private submodules
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token
-        uses: actions/create-github-app-token@def152b8a737443d7af6c5722c6389146fe90c90 # v2.1.2
+        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
         id: app-token
         with:
           app-id: ${{ vars.BALENAOS_CI_APP_ID }}
@@ -566,7 +566,7 @@ jobs:
       # so we can checkout private contracts
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token (balena-io)
-        uses: actions/create-github-app-token@def152b8a737443d7af6c5722c6389146fe90c90 # v2.1.2
+        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
         id: app-token-balena-io
         with:
           app-id: ${{ vars.BALENAOS_CI_APP_ID }}
@@ -2074,7 +2074,7 @@ jobs:
       # Owner input to make token valid for all repositories in the org
       # This behvaiour is required for private submodules
       - name: Create GitHub App installation token
-        uses: actions/create-github-app-token@def152b8a737443d7af6c5722c6389146fe90c90 # v2.1.2
+        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
         id: app-token
         with:
           app-id: ${{ vars.BALENAOS_CI_APP_ID }}
@@ -2085,7 +2085,7 @@ jobs:
       # so we can checkout private contracts
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token (balena-io)
-        uses: actions/create-github-app-token@def152b8a737443d7af6c5722c6389146fe90c90 # v2.1.2
+        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
         id: app-token-balena-io
         with:
           app-id: ${{ vars.BALENAOS_CI_APP_ID }}
