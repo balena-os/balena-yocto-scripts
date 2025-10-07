@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.30.7
+      hash: bd2f9b78e7a4cbba3b4554864a21b1989b2deda2
+      body: |
+        Update aws/aws-cli from 2.30.3 to 2.30.7
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.37
+  title: ""
+  date: 2025-10-07T19:40:24.497Z
+- commits:
     - subject: Fix check for present test matrix when checking test results
       hash: 0518df044f76b0fcab1b1e5613d78489a7d68e3b
       body: ""
