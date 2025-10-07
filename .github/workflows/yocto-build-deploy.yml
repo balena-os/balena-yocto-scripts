@@ -416,41 +416,95 @@ jobs:
         # https://docs.github.com/en/actions/learn-github-actions/expressions#functions
         # this expression checks that the test_matrix input has a test suites defined - if there is no test_matrix input provided in the device-repo workflow file, test results won't be checked, and
         # the release can't be finlized
-        if: | 
-          github.event_name == 'push' && 
+        if: |
+          github.event_name == 'push' &&
           (
             join(fromJSON(inputs.test_matrix).test_suite) != '' ||
             join(fromJSON(inputs.test_matrix).include.*.test_suite) != ''
-          ) && 
+          ) &&
           inputs.finalize-on-push-if-tests-passed
         id: merge-test-result
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         env:
-          REPO: ${{ inputs.device-repo }}
           COMMIT: ${{ steps.set-merge-commit.outputs.merge_commit }}
-          # environment variables used by gh CLI
-          # https://cli.github.com/manual/gh_help_environment
-          GH_DEBUG: "true"
-          GH_PAGER: "cat"
-          GH_PROMPT_DISABLED: "true"
-          GH_REPO: "${{ github.repository }}"
-          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-        run: |
-          # Gets the PR number of the merge commit
-          prid=$(gh api -H "Accept: application/vnd.github+json" "/repos/${REPO}/commits/$COMMIT" --jq '.commit.message' | head -n1 | cut -d "#" -f2 | awk '{ print $1}')
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
+          script: |
+            const commit = process.env.COMMIT;
 
-          # Gets the head commit of the PR - needed to fetch workflows ran on that commit
-          head=$(gh api -H "Accept: application/vnd.github+json" "/repos/${REPO}/pulls/${prid}" --jq '.head.sha')
+            // Extract the workflow file name from the WORKFLOW_REF, e.g.
+            // balena-os/balena-yocto-scripts/.github/workflows/genericx86-64-ext.yml@refs/pull/789/merge
+            // gives genericx86-64-ext.yml
+            const workflowRefMatch = process.env.WORKFLOW_REF.match(/([^/]+\.yml)@/);
+            if (!workflowRefMatch) {
+              core.setFailed(`Could not extract workflow file name from WORKFLOW_REF: ${process.env.WORKFLOW_REF}`);
+              return;
+            }
+            const workflowName = workflowRefMatch[1];
 
-          # Fetching workflow runs and filtering by the commit of the head of the PR returns the latest attempts of the workflow for that commit
-          # Selecting for workflows with the same name as the workflow name ("github.workflow")
-          # There will be "pull_request" and "pull_request_trigger" triggered workflow runs in the response - one will be skipped, one will be success/fail
-          # So selecting for .conclusion==success will give us a response and evaluate to true in the following "if" statement if either we successful
-          passed="false"
-          conclusion="$(gh run list -w "${WORKFLOW_NAME}" -c "${head}" --json conclusion --jq '.[] | select(.conclusion == "success").conclusion')"
-          if [[ "${conclusion}" = "success" ]]; then
-            passed="true"
-          fi
-          echo "finalize=${passed}" >>"${GITHUB_OUTPUT}"
+            // Get the PR number from the merge commit message
+            const commitData = await github.rest.repos.getCommit({
+              ...context.repo,
+              ref: commit
+            });
+
+            const prMatch = commitData.data.commit.message.match(/#(\d+)/);
+            if (!prMatch) {
+              core.setFailed(`Could not extract PR number from commit message: ${commitData.data.commit.message}`);
+              return;
+            }
+            const prNumber = parseInt(prMatch[1]);
+
+            // Get the head commit of the PR
+            const pr = await github.rest.pulls.get({
+              ...context.repo,
+              pull_number: prNumber
+            });
+            const headSha = pr.data.head.sha;
+
+            // Fetch workflow runs for this commit and workflow
+            const workflowRuns = await github.rest.actions.listWorkflowRuns({
+              ...context.repo,
+              workflow_id: workflowName,
+              head_sha: headSha,
+              per_page: 20
+            });
+
+            // Filter for completed runs and sort by creation time
+            const completedRuns = workflowRuns.data.workflow_runs
+              .map(run => ({
+                id: run.id,
+                name: run.name,
+                event: run.event,
+                status: run.status,
+                conclusion: run.conclusion,
+                created_at: run.created_at,
+                html_url: run.html_url
+              }))
+              .filter(run => run.status === 'completed')
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            if (completedRuns.length < 1) {
+              core.warning(`Did not find any completed workflow runs for commit ${headSha}`);
+              core.setOutput('finalize', 'false');
+              return 'false';
+            }
+
+            console.log(`Found ${completedRuns.length} completed workflow runs for commit ${headSha}`);
+            console.log(JSON.stringify(completedRuns, null, 2));
+
+            const conclusions = completedRuns.map(run => run.conclusion);
+
+            // Check for at least one success and no failures
+            const hasSuccess = conclusions.some(c => c === 'success');
+            const hasFailure = conclusions.some(c => c === 'failure');
+
+            const passed = hasSuccess && !hasFailure;
+            console.log(`Set finalize output to: ${passed}`);
+            core.setOutput('finalize', passed.toString());
+            return passed.toString();
 
   # This job is used to separate the AWS environment from the build environment,
   # but still allow authentication to the AWS environment at build time.
