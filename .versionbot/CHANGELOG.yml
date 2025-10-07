@@ -1,4 +1,18 @@
 - commits:
+    - subject: Fix check for present test matrix when checking test results
+      hash: 0518df044f76b0fcab1b1e5613d78489a7d68e3b
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+  version: 1.38.36
+  title: ""
+  date: 2025-10-07T17:35:13.137Z
+- commits:
     - subject: Update balena-io/balena-cli to v22.4.8
       hash: 82f109dcbbdd43b84aa3aaa8ab6e423d46920016
       body: |
