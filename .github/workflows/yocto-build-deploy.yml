@@ -487,7 +487,7 @@ jobs:
       # We don't use this session, it's just to check if the credentials are valid
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
+        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
         continue-on-error: true # Don't fail at this point as there is still value in running builds and tests
         with:
           role-to-assume: ${{ vars.AWS_IAM_ROLE }}
@@ -829,7 +829,7 @@ jobs:
 
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
+        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
         with:
           role-to-assume: ${{ needs.source-mirror-setup.outputs.aws-iam-role }}
           role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -862,7 +862,7 @@ jobs:
       # login required to pull private balena/balena-img image
       # https://github.com/docker/login-action
       - name: Login to Docker Hub
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USER }}
@@ -1437,7 +1437,7 @@ jobs:
 
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
+        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
         with:
           role-to-assume: ${{ env.AWS_IAM_ROLE }}
           role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -1590,7 +1590,7 @@ jobs:
 
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
+        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
         with:
           role-to-assume: ${{ env.AWS_IAM_ROLE }}
           role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
