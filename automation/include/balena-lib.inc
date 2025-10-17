@@ -361,6 +361,7 @@ resolve_aliases() {
 		"raspberrypi2") echo "raspberry-pi2" ;;
 		"beaglebone") echo "beaglebone-black" ;;
 		"edison") echo "intel-edison" ;;
+		"kontron-come-xelx-64") echo "kontron-come-xelx" ;;
 		*) echo "${_device_type}";;
 	esac
 }
