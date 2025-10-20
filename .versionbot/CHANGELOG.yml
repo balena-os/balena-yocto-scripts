@@ -1,4 +1,34 @@
 - commits:
+    - subject: Update acceptable states for previous test runs
+      hash: 736cb72e967d4e5e814b0d49a577283d0b4b5a76
+      body: |
+        This makes the test run check more robust and handles
+        cases where we may see unexpected results like more or
+        fewer test runs with varying conclusions.
+
+        Github script is also more secure and less prone
+        to string processing issues than bash CLI commands.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Fix AMI decrypt step paths
+      hash: 8257cae6fef47b7dd5fb5ec3693e893fc6b1314d
+      body: ""
+      footer:
+        CHange-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.38.54
+  title: ""
+  date: 2025-10-20T21:05:57.787Z
+- commits:
     - subject: Update balena-io-examples/setup-balena-action action to v0.0.51
       hash: ebdc564154f07898e858e65f99acf4c344b34a74
       body: |
