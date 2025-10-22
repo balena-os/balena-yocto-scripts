@@ -418,6 +418,7 @@ jobs:
         # the release can't be finlized
         if: |
           github.event_name == 'push' &&
+          inputs.test_matrix &&
           (
             join(fromJSON(inputs.test_matrix).test_suite) != '' ||
             join(fromJSON(inputs.test_matrix).include.*.test_suite) != ''
