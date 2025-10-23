@@ -878,7 +878,7 @@ jobs:
         uses: unfor19/install-aws-cli-action@f5b46b7f32cf5e7ebd652656c5036bf83dd1e60c # v1
         env:
           # renovate: datasource=github-tags depName=aws/aws-cli
-          AWSCLI_VERSION: 2.31.20
+          AWSCLI_VERSION: 2.31.21
         with:
           version: "${{ env.AWSCLI_VERSION }}"
 
@@ -1486,7 +1486,7 @@ jobs:
         uses: unfor19/install-aws-cli-action@f5b46b7f32cf5e7ebd652656c5036bf83dd1e60c # v1
         env:
           # renovate: datasource=github-tags depName=aws/aws-cli
-          AWSCLI_VERSION: 2.31.20
+          AWSCLI_VERSION: 2.31.21
         with:
           version: "${{ env.AWSCLI_VERSION }}"
 
@@ -1638,7 +1638,7 @@ jobs:
         uses: unfor19/install-aws-cli-action@f5b46b7f32cf5e7ebd652656c5036bf83dd1e60c # v1
         env:
           # renovate: datasource=github-tags depName=aws/aws-cli
-          AWSCLI_VERSION: 2.31.20
+          AWSCLI_VERSION: 2.31.21
         with:
           version: "${{ env.AWSCLI_VERSION }}"
 
