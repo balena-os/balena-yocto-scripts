@@ -1,4 +1,23 @@
 - commits:
+    - subject: Check test_matrix is non-null before transforming as JSON
+      hash: 4cc46babdc2d3974565eee17164551bec111ee9e
+      body: >
+        Currently breaks on merge for device types without test_matrix defined.
+
+
+        > The template is not valid. Newtonsoft.Json.JsonReaderException: Error
+        reading JToken from JsonReader.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.38.57
+  title: ""
+  date: 2025-10-23T07:15:46.580Z
+- commits:
     - subject: Update aws/aws-cli to v2.31.19
       hash: a1c6d0446605c448dd3fe4b5f28cfbe7667ce24f
       body: |
