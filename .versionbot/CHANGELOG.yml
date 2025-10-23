@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io/balena-cli to v22.4.15
+      hash: 1f95e7a8f499a23b880f8398d9a6317e70b8352b
+      body: |
+        Update balena-io/balena-cli from 22.4.14 to 22.4.15
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.58
+  title: ""
+  date: 2025-10-23T11:06:03.538Z
+- commits:
     - subject: Check test_matrix is non-null before transforming as JSON
       hash: 4cc46babdc2d3974565eee17164551bec111ee9e
       body: >
