@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/upload-artifact action to v5
+      hash: 7362bb09e978a783076f5c9a24f143dbe8d7567e
+      body: |
+        Update actions/upload-artifact from 4.6.2 to 5.0.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.61
+  title: ""
+  date: 2025-10-25T02:56:18.502Z
+- commits:
     - subject: Update aws/aws-cli to v2.31.21
       hash: 96890cceffc759bb4ce873dbfe883eac03fd189b
       body: |
