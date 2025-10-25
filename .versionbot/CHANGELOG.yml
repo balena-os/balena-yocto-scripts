@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io-examples/setup-balena-action action to v0.0.52
+      hash: afaa9a2a4b9cff9fec27d921563c306d0ce983ca
+      body: |
+        Update balena-io-examples/setup-balena-action from 0.0.51 to 0.0.52
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.62
+  title: ""
+  date: 2025-10-25T09:15:29.204Z
+- commits:
     - subject: Update actions/upload-artifact action to v5
       hash: 7362bb09e978a783076f5c9a24f143dbe8d7567e
       body: |
