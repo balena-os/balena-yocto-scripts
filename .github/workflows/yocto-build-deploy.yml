@@ -797,6 +797,9 @@ jobs:
           HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
           SHARED_BUILD_DIR: ${{ github.workspace }}/shared
           YOCTO_SSH_PRIVATE_KEY_B64: ${{ secrets.YOCTO_SSH_PRIVATE_KEY_B64 }}
+          # Use the target deploy environment (balena-cloud.com, balena-staging.com, balena-dev.com...) to
+          # preload the supervisor from the correct registry
+          DEPLOY_ENV: ${{ needs.balena-lib.outputs.balena_host }}
         run: |
           # When building for non-x86 device types, meson, after building binaries must try to run them via qemu if possible , maybe as some sanity check or test?
           # Therefore qemu must be used - and our runner mmap_min_addr is set to 4096 (default, set here: https://github.com/product-os/github-runner-kernel/blob/ef5a66951599dc64bf2920d896c36c6d9eda8df6/config/5.10/microvm-kernel-x86_64-5.10.config#L858
@@ -817,6 +820,7 @@ jobs:
 
           ./balena-yocto-scripts/build/balena-build.sh \
             -d "${MACHINE}" \
+            -a "${DEPLOY_ENV}" \
             -s "${SHARED_BUILD_DIR}" \
             -g "${BARYS_ARGUMENTS_VAR}" | tee balena-build.log
 
