@@ -827,7 +827,7 @@ jobs:
       # We don't need to encrypt these as they are not sensitive if the repo is public anyway.
       # https://github.com/actions/upload-artifact
       - name: Upload build logs
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         # always upload build logs, even if the build fails
         if: always()
         with:
@@ -985,7 +985,7 @@ jobs:
       # Primarily deflate files, and licenses, and manifests.
       # https://github.com/actions/upload-artifact
       - name: Upload hostapp artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || inputs.force-finalize
         with:
           name: hostapp-artifacts
@@ -1015,7 +1015,7 @@ jobs:
       # Used by Leviathan to test kernel module loading.
       # https://github.com/actions/upload-artifact
       - name: Upload kernel-module-headers artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: kernel-module-headers
           if-no-files-found: error
@@ -1030,7 +1030,7 @@ jobs:
       # Used by Leviathan to test HUP.
       # https://github.com/actions/upload-artifact
       - name: Upload balena-image.docker artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: balena-image.docker
           if-no-files-found: error
@@ -1046,7 +1046,7 @@ jobs:
       # Used for AMI creation.
       # https://github.com/actions/upload-artifact
       - name: Upload balena.img.zip artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: balena.img.zip
           if-no-files-found: error
@@ -1061,7 +1061,7 @@ jobs:
       # May be used by Leviathan to run OS and cloud suites depending on the value of test_image in the test matrix.
       # https://github.com/actions/upload-artifact
       - name: Upload balena-flasher.img.zip artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: balena-flasher.img.zip
           if-no-files-found: ignore
@@ -1076,7 +1076,7 @@ jobs:
       # May be used by Leviathan to run OS and cloud suites depending on the value of test_image in the test matrix.
       # https://github.com/actions/upload-artifact
       - name: Upload balena-raw.img.zip artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: balena-raw.img.zip
           if-no-files-found: ignore
