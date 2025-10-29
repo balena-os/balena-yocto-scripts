@@ -1,4 +1,20 @@
 - commits:
+    - subject: Use the target deploy env to preload the supervisor
+      hash: b42cffcaa6f359dc2392c4ce71c67bf77609bff8
+      body: |
+        This fixes a regression introduced by this workflow when
+        we split the build and deploy environments.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.38.64
+  title: ""
+  date: 2025-10-29T10:10:20.465Z
+- commits:
     - subject: Update aws/aws-cli to v2.31.22
       hash: 457167948c39a722aa9e2e12d680ae451081cf6a
       body: |
