@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.31.24
+      hash: 45a4a630bf7343d7a07b11bad46e83f080233130
+      body: |
+        Update aws/aws-cli from 2.31.22 to 2.31.24
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.65
+  title: ""
+  date: 2025-10-29T13:18:11.389Z
+- commits:
     - subject: Use the target deploy env to preload the supervisor
       hash: b42cffcaa6f359dc2392c4ce71c67bf77609bff8
       body: |
