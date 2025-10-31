@@ -1,4 +1,20 @@
 - commits:
+    - subject: Switch back to official actions/download-artifact action @ v6.0.0
+      hash: 7b867eee714917517027d715c11e76287a0e0fdd
+      body: |
+        The original issue where promises were not rejected when a download
+        timeout was reached was fixed by actions/toolkit#2124
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.38.69
+  title: ""
+  date: 2025-10-31T18:22:38.774Z
+- commits:
     - subject: Update aws/aws-cli to v2.31.26
       hash: 5f38abcb1a79e476cc8f459884cedda04a507b3e
       body: |
