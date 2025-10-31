@@ -1126,24 +1126,11 @@ jobs:
 
     steps:
 
-      # Use the gh CLI to download artifacts from the build job as we've seen issues with
-      # the actions/download-artifact action not reporting any failures but files unable to be decrypted
-      # suggesting they are not properly downloaded.
-      # Whereas the gh CLI will report any failures and bail out.
-      # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
-      # https://cli.github.com/manual/gh_run_download
-      # https://cli.github.com/manual/gh_help_environment
-      - name: Download hostapp artifacts
-        run: |
-          mkdir -p "${DEPLOY_PATH}"
-          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name hostapp-artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          GH_DEBUG: "true"
-          GH_PAGER: "cat"
-          GH_PROMPT_DISABLED: "true"
-          GH_SPINNER_DISABLED: "true"
+      - name: Download artifacts
+        uses: actions/download-artifact@v6.0.0
+        with:
+          name: hostapp-artifacts
+          path: ${{ env.DEPLOY_PATH }}
 
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
@@ -1442,24 +1429,11 @@ jobs:
 
     steps:
 
-      # Use the gh CLI to download artifacts from the build job as we've seen issues with
-      # the actions/download-artifact action not reporting any failures but files unable to be decrypted
-      # suggesting they are not properly downloaded.
-      # Whereas the gh CLI will report any failures and bail out.
-      # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
-      # https://cli.github.com/manual/gh_run_download
-      # https://cli.github.com/manual/gh_help_environment
       - name: Download artifacts
-        run: |
-          mkdir -p "${DEPLOY_PATH}"
-          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name hostapp-artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          GH_DEBUG: "true"
-          GH_PAGER: "cat"
-          GH_PROMPT_DISABLED: "true"
-          GH_SPINNER_DISABLED: "true"
+        uses: actions/download-artifact@v6.0.0
+        with:
+          name: hostapp-artifacts
+          path: ${{ env.DEPLOY_PATH }}
 
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
@@ -1589,24 +1563,11 @@ jobs:
 
     steps:
 
-      # Use the gh CLI to download artifacts from the build job as we've seen issues with
-      # the actions/download-artifact action not reporting any failures but files unable to be decrypted
-      # suggesting they are not properly downloaded.
-      # Whereas the gh CLI will report any failures and bail out.
-      # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
-      # https://cli.github.com/manual/gh_run_download
-      # https://cli.github.com/manual/gh_help_environment
       - name: Download artifacts
-        run: |
-          mkdir -p "${DEPLOY_PATH}/image"
-          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}/image" --name balena.img.zip
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          GH_DEBUG: "true"
-          GH_PAGER: "cat"
-          GH_PROMPT_DISABLED: "true"
-          GH_SPINNER_DISABLED: "true"
+        uses: actions/download-artifact@v6.0.0
+        with:
+          name: balena.img.zip
+          path: ${{ env.DEPLOY_PATH }}/image
 
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
@@ -2189,26 +2150,23 @@ jobs:
           git checkout --force "${{ inputs.meta-balena-ref }}"
           git submodule update --init --recursive
 
-      # Use the gh CLI to download artifacts from the build job as we've seen issues with
-      # the actions/download-artifact action not reporting any failures but files unable to be decrypted
-      # suggesting they are not properly downloaded.
-      # Whereas the gh CLI will report any failures and bail out.
-      # https://github.com/actions/download-artifact/issues/396#issuecomment-2796144940
-      # https://cli.github.com/manual/gh_run_download
-      # https://cli.github.com/manual/gh_help_environment
       - name: Download artifacts
-        run: |
-          mkdir -p "${DEPLOY_PATH}/image"
-          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}/image" --name ${BALENA_OS_IMAGE}.zip
-          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name balena-image.docker
-          gh run download "${GITHUB_RUN_ID}" --dir "${DEPLOY_PATH}" --name kernel-module-headers
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          GH_DEBUG: "true"
-          GH_PAGER: "cat"
-          GH_PROMPT_DISABLED: "true"
-          GH_SPINNER_DISABLED: "true"
+        uses: actions/download-artifact@v6.0.0
+        with:
+          name: ${{ env.BALENA_OS_IMAGE }}.zip
+          path: ${{ env.DEPLOY_PATH }}/image
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v6.0.0
+        with:
+          name: balena-image.docker
+          path: ${{ env.DEPLOY_PATH }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v6.0.0
+        with:
+          name: kernel-module-headers
+          path: ${{ env.DEPLOY_PATH }}
 
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
