@@ -16,7 +16,7 @@ Usage: ${script_name} [OPTIONS]
     -g Barys extra arguments (optional, for example '-g "-a VARIABLE=value"')
     -a Balena API environment (defaults to "balena-cloud.com")
     -t Balena API token (optional - private apps access)
-    -k Keep local containers (optional - by default container iamges are removed)
+    -k Keep local containers (optional - by default container images are removed)
     -h Display usage
 EOF
 	exit 0
