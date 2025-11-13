@@ -1,4 +1,16 @@
 - commits:
+    - subject: "balena-build: Fix typo"
+      hash: 718ad2c049ca031a4b808f2c5107a7291e76789e
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Atanas Bunchev
+      nested: []
+  version: 1.38.80
+  title: ""
+  date: 2025-11-13T17:47:44.068Z
+- commits:
     - subject: Update balena-io/balena-cli to v22.5.0
       hash: 550595f7f552d9817c01e2c29ad941bd57fa56c8
       body: |
