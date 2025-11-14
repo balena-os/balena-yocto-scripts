@@ -116,6 +116,11 @@ on:
         required: false
         type: boolean
         default: false # Always false by default, override on specific device types which this is relevant in the device repo
+      extra_signing_key:
+        description: Whether to verify that an extra kernel module signing key is provided and made it through the kernel build
+        required: false
+        type: boolean
+        default: false
       build-args:
         description: Extra barys build arguments
         required: false
@@ -827,6 +832,193 @@ jobs:
           if ! grep -q "Build for ${{ inputs.machine }} suceeded" balena-build.log; then
             exit 1
           fi
+
+      - name: Verify kernel module signing key
+        if: inputs.sign-image == true && inputs.extra_signing_key == true
+        env:
+          automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
+          HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
+          SHARED_BUILD_DIR: ${{ github.workspace }}/shared
+          SIGN_KMOD_KEY_APPEND: "${{ secrets.SIGN_KMOD_KEY_APPEND }}"
+          INSTALL_DIR: /work
+          BUILD_DIR: build
+        run: |
+          if [ -z "${SIGN_KMOD_KEY_APPEND}" ]; then
+            echo "SIGN_KMOD_KEY_APPEND is expected but not set, verify that SIGN_KMOD_KEY_APPEND secret was set"
+            exit 1
+          fi
+
+          # This step verifies that the extra kernel module signing key is actually embedded in the kernel image.
+
+          # First it re-enters the Yocto helper container, as the "builder" user, and runs `bitbake -e virtual/kernel`
+          # to extract the kernel build (`B`) and source (`S`) directories from the real bitbake environment.
+          # It then maps those paths back to the runner and checks that the extra signing key
+          # provided via SIGN_KMOD_KEY_APPEND is actually embedded in at least one built `vmlinux`.
+
+          mkdir -p "${SHARED_BUILD_DIR}"
+
+          # Source balena-lib to get helper functions
+          source "${automation_dir}/include/balena-lib.inc"
+
+          # Pull the helper image
+          if ! balena_lib_docker_pull_helper_image "${HELPER_IMAGE_REPO}" "" "yocto-build-env" helper_image_id; then
+            echo "Failed to pull helper image"
+            exit 1
+          fi
+
+          # Create script to create the "builder" user
+          CREATE_BUILDER_USER_SCRIPT="/tmp/create-builder-user.sh"
+          cat > "${CREATE_BUILDER_USER_SCRIPT}" <<- 'CREATE_USER_EOF'
+          	#!/bin/bash
+          	set -e
+          	groupadd -g $BUILDER_GID builder 2>/dev/null || true
+          	if ! cat /etc/group | grep docker > /dev/null; then
+          	  groupadd docker
+          	fi
+          	useradd -m -u $BUILDER_UID -g $BUILDER_GID -G docker builder 2>/dev/null || true
+          CREATE_USER_EOF
+          chmod +x "${CREATE_BUILDER_USER_SCRIPT}"
+
+          # Create script to extract bitbake environment
+          GET_BITBAKE_ENV_SCRIPT="/tmp/get-bitbake-env.sh"
+          cat > "${GET_BITBAKE_ENV_SCRIPT}" <<- 'GET_ENV_EOF'
+          	#!/bin/bash
+          	set -e
+          	if [ ! -f "${INSTALL_DIR}/layers/poky/oe-init-build-env" ]; then
+          	  echo "Error: Yocto environment not found" >&2
+          	  exit 1
+          	fi
+          	source "${INSTALL_DIR}/layers/poky/oe-init-build-env" "${INSTALL_DIR}/${BUILD_DIR}" > /dev/null 2>&1
+          	BITBAKE_ENV=$(MACHINE=${MACHINE} bitbake -e virtual/kernel 2>&1)
+          	BITBAKE_EXIT=$?
+          	if [ $BITBAKE_EXIT -eq 0 ] && [ -n "$BITBAKE_ENV" ]; then
+          	  echo "$BITBAKE_ENV" | grep -E '^(B=|S=)'
+          	  exit 0
+          	else
+          	  echo "Error: bitbake command failed or returned empty output" >&2
+          	  exit 1
+          	fi
+          GET_ENV_EOF
+          chmod +x "${GET_BITBAKE_ENV_SCRIPT}"
+
+          DL_DIR="${SHARED_BUILD_DIR}/shared-downloads"
+          SSTATE_DIR="${SHARED_BUILD_DIR}/${MACHINE}/sstate"
+
+          # Re-enter the Yocto container with the same mounts as the build to run bitbake commands
+          # Output is captured to extract kernel build/source directory paths
+          BITBAKE_ENV_OUTPUT=$(docker run --rm \
+            -v "${{ github.workspace }}":/work \
+            -v "${DL_DIR}":/yocto/shared-downloads \
+            -v "${SSTATE_DIR}":/yocto/shared-sstate \
+            -v "${CREATE_BUILDER_USER_SCRIPT}":/create-builder-user.sh:ro \
+            -v "${GET_BITBAKE_ENV_SCRIPT}":/get-bitbake-env.sh:ro \
+            -e BUILDER_UID="$(id -u)" \
+            -e BUILDER_GID="$(id -g)" \
+            -e INSTALL_DIR="${INSTALL_DIR}" \
+            -e BUILD_DIR="${BUILD_DIR}" \
+            -e MACHINE="${MACHINE}" \
+            --privileged \
+            "${helper_image_id}" \
+            /bin/bash -c "/create-builder-user.sh >/dev/null && su builder -c /get-bitbake-env.sh" 2>&1)
+          DOCKER_EXIT_CODE=$?
+
+          if [ $DOCKER_EXIT_CODE -ne 0 ]; then
+            echo "Error: Container failed to run (exit code: $DOCKER_EXIT_CODE)" >&2
+            echo "Output:" >&2
+            echo "$BITBAKE_ENV_OUTPUT" >&2
+            rm -f "${CREATE_BUILDER_USER_SCRIPT}" "${GET_BITBAKE_ENV_SCRIPT}"
+            exit 1
+          fi
+
+          rm -f "${CREATE_BUILDER_USER_SCRIPT}" "${GET_BITBAKE_ENV_SCRIPT}"
+
+          # Extract the kernel build and source directories from the bitbake environment
+          KERNEL_BUILD_DIR_CONTAINER=$(echo "$BITBAKE_ENV_OUTPUT" | awk -F'"' '/^B="/{print $2}')
+          KERNEL_SRC_DIR_CONTAINER=$(echo "$BITBAKE_ENV_OUTPUT" | awk -F'"' '/^S="/{print $2}')
+
+          if [ -z "$KERNEL_BUILD_DIR_CONTAINER" ] || [ -z "$KERNEL_SRC_DIR_CONTAINER" ]; then
+            echo "Error: Failed to extract KERNEL_BUILD_DIR or KERNEL_SRC_DIR from bitbake output" >&2
+            echo "Output:" >&2
+            echo "$BITBAKE_ENV_OUTPUT" >&2
+            exit 1
+          fi
+
+          # Convert container paths to runner paths
+          KERNEL_BUILD_DIR="${KERNEL_BUILD_DIR_CONTAINER#/work}"
+          KERNEL_BUILD_DIR="${{ github.workspace }}${KERNEL_BUILD_DIR}"
+          KERNEL_SRC_DIR="${KERNEL_SRC_DIR_CONTAINER#/work}"
+          KERNEL_SRC_DIR="${{ github.workspace }}${KERNEL_SRC_DIR}"
+
+          # Verify converted paths exist on runner
+          if [ ! -d "$KERNEL_BUILD_DIR" ]; then
+            echo "Error: KERNEL_BUILD_DIR does not exist: $KERNEL_BUILD_DIR" >&2
+            exit 1
+          fi
+          if [ ! -d "$KERNEL_SRC_DIR" ]; then
+            echo "Error: KERNEL_SRC_DIR does not exist: $KERNEL_SRC_DIR" >&2
+            exit 1
+          fi
+
+          # Temporary files for the certificate extraction
+          EXTRACTED_CERT="/tmp/certs.der"
+          ORIGINAL_CERT_DER="/tmp/original_cert.der"
+          ORIGINAL_CERT_PEM="/tmp/original_cert.pem"
+
+          if ! touch "$EXTRACTED_CERT" 2>/dev/null; then
+            echo "Error: Cannot write to $EXTRACTED_CERT" >&2
+            exit 1
+          fi
+
+          # Reconstruct PEM format from base64 input
+          echo "-----BEGIN CERTIFICATE-----" > "$ORIGINAL_CERT_PEM"
+          echo "${SIGN_KMOD_KEY_APPEND}" >> "$ORIGINAL_CERT_PEM"
+          echo "-----END CERTIFICATE-----" >> "$ORIGINAL_CERT_PEM"
+
+          # Convert original PEM cert to DER for binary comparison
+          if ! openssl x509 -in "$ORIGINAL_CERT_PEM" -outform DER -out "$ORIGINAL_CERT_DER" 2>/dev/null; then
+            echo "Error: Could not convert original certificate to DER format" >&2
+            rm -f "$ORIGINAL_CERT_PEM" "$ORIGINAL_CERT_DER"
+            exit 2
+          fi
+
+          # Find all vmlinux files
+          mapfile -t VMLINUX_FILES < <(find "$KERNEL_BUILD_DIR" -type f -name "vmlinux" 2>/dev/null)
+          if [[ ${#VMLINUX_FILES[@]} -eq 0 ]]; then
+            echo "Error: No vmlinux files found under $KERNEL_BUILD_DIR" >&2
+            rm -f "$EXTRACTED_CERT" "$ORIGINAL_CERT_PEM" "$ORIGINAL_CERT_DER"
+            exit 3
+          fi
+
+          # For every vmlinux file, verify that at least one of them contains the original certificate
+          # there's generally two vmlinux file in the build directory, one of them has the kernel module signing key embedded
+          found_match=false
+          for vmlinux in "${VMLINUX_FILES[@]}"; do
+            echo "Testing vmlinux at: $vmlinux"
+
+            if ! "$KERNEL_SRC_DIR/scripts/extract-sys-certs.pl" "$vmlinux" "$EXTRACTED_CERT" 2>/dev/null; then
+              echo "Skipping: could not extract certs from $vmlinux"
+              continue
+            fi
+
+            # Check if the DER cert is present in the extracted binary blob
+            if grep -qFf "$ORIGINAL_CERT_DER" "$EXTRACTED_CERT" 2>/dev/null; then
+              echo "Match found in: $vmlinux"
+              found_match=true
+              break
+            else
+              echo "No match for $vmlinux"
+            fi
+          done
+
+          if [[ "$found_match" = false ]]; then
+            echo "No matching certificate found in any vmlinux under $KERNEL_BUILD_DIR" >&2
+            rm -f "$EXTRACTED_CERT" "$ORIGINAL_CERT_PEM" "$ORIGINAL_CERT_DER"
+            exit 4
+          fi
+
+          echo "Certificate verification successful"
+          rm -f "$EXTRACTED_CERT" "$ORIGINAL_CERT_PEM" "$ORIGINAL_CERT_DER"
+          exit 0
 
       # We don't need to encrypt these as they are not sensitive if the repo is public anyway.
       # https://github.com/actions/upload-artifact
