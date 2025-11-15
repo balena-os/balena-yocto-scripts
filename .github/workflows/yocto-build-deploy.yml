@@ -828,6 +828,20 @@ jobs:
             exit 1
           fi
 
+      - name: Verify kernel module signing key
+        if: inputs.sign-image == true
+        env:
+          SIGN_KMOD_KEY_APPEND: ${{ secrets.SIGN_KMOD_KEY_APPEND }}
+        run: |
+          if [ -z "${SIGN_KMOD_KEY_APPEND}" ]; then
+            echo "SIGN_KMOD_KEY_APPEND is not set, skipping verification"
+            exit 0
+          fi
+          ./balena-yocto-scripts/build/verify-kernel-keys.sh \
+            -d "${MACHINE}" \
+            -s "${SHARED_BUILD_DIR}" \
+            -c "${SIGN_KMOD_KEY_APPEND}"
+
       # We don't need to encrypt these as they are not sensitive if the repo is public anyway.
       # https://github.com/actions/upload-artifact
       - name: Upload build logs
