@@ -50,7 +50,7 @@ main() {
 		_device_type="${_device_type:-"${MACHINE}"}"
 		[ -z "${_device_type}" ] && echo "Device type is required" && exit 1
 		[ -z "${_shared_dir}" ] && echo "Shared directory is required" && exit 1
-		[ -z "${_cert_base64}" ] && echo "Certificate (base64) is required" && exit 1
+		# [ -z "${_cert_base64}" ] && echo "Certificate (base64) is required" && exit 1
 
 		_api_env="${_api_env:-$(balena_lib_environment)}"
 		_dl_dir="${_shared_dir}/shared-downloads"

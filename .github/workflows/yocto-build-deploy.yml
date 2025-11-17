@@ -831,12 +831,20 @@ jobs:
       - name: Verify kernel module signing key
         # if: inputs.sign-image == true
         env:
+          HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
+          SHARED_BUILD_DIR: ${{ github.workspace }}/shared
           SIGN_KMOD_KEY_APPEND: ${{ secrets.SIGN_KMOD_KEY_APPEND }}
         run: |
           # if [ -z "${SIGN_KMOD_KEY_APPEND}" ]; then
           #   echo "SIGN_KMOD_KEY_APPEND is not set, skipping verification"
           #   exit 0
           # fi
+
+          sudo sysctl -w vm.mmap_min_addr=65536
+          sysctl vm.mmap_min_addr
+
+          mkdir -p "${SHARED_BUILD_DIR}"
+
           ./balena-yocto-scripts/build/verify-kernel-keys.sh \
             -d "${MACHINE}" \
             -s "${SHARED_BUILD_DIR}" \
