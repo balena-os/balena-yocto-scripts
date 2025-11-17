@@ -1,6 +1,9 @@
 #!/bin/bash
 set -uo pipefail
 
+# Debug mode for now
+set -x
+
 # ORIGINAL_CERT_BASE64=$1
 BUILD_DIR="${BUILD_DIR:-build}"
 
@@ -13,9 +16,12 @@ BUILD_DIR="${BUILD_DIR:-build}"
 INSTALL_DIR="${INSTALL_DIR:-/work}"
 
 # Source Yocto environment (same pattern as barys)
+# Temporarily disable -u flag as oe-init-build-env may reference unset variables
 echo "[INFO] Sourcing Yocto environment..."
 if [ -f "${INSTALL_DIR}/layers/poky/oe-init-build-env" ]; then
+    set +u
     source "${INSTALL_DIR}/layers/poky/oe-init-build-env" "${INSTALL_DIR}/${BUILD_DIR}"
+    set -u
 else
     echo "Error: Yocto environment not found at ${INSTALL_DIR}/layers/poky/oe-init-build-env" >&2
     exit 1
