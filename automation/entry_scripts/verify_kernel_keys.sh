@@ -22,7 +22,7 @@ echo "[INFO] The configured git credentials for user builder are:"
 sudo -H -u builder git config --get user.name
 sudo -H -u builder git config --get user.email
 
-sudo -H -u builder "/compare_kernel_certs.sh" "$@" &
+sudo -H -u builder "${INSTALL_DIR}/balena-yocto-scripts/build/compare_kernel_certs.sh" "$@" &
 
 compare_kernel_certs_pid=$!
 wait $compare_kernel_certs_pid || true

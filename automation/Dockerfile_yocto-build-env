@@ -41,7 +41,6 @@ RUN curl -fsSL https://github.com/balena-io/balena-cli/releases/download/${BALEN
 COPY include/balena-docker.inc /
 COPY entry_scripts/prepare-and-start.sh /
 COPY entry_scripts/verify_kernel_keys.sh /
-COPY entry_scripts/compare_kernel_certs.sh /
 
 # scripts and packages required for AMI publishing
 COPY include/balena-api.inc include/balena-lib.inc entry_scripts/balena-generate-ami.sh /
