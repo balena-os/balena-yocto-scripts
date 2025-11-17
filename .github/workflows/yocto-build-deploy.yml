@@ -829,14 +829,14 @@ jobs:
           fi
 
       - name: Verify kernel module signing key
-        if: inputs.sign-image == true
+        # if: inputs.sign-image == true
         env:
           SIGN_KMOD_KEY_APPEND: ${{ secrets.SIGN_KMOD_KEY_APPEND }}
         run: |
-          if [ -z "${SIGN_KMOD_KEY_APPEND}" ]; then
-            echo "SIGN_KMOD_KEY_APPEND is not set, skipping verification"
-            exit 0
-          fi
+          # if [ -z "${SIGN_KMOD_KEY_APPEND}" ]; then
+          #   echo "SIGN_KMOD_KEY_APPEND is not set, skipping verification"
+          #   exit 0
+          # fi
           ./balena-yocto-scripts/build/verify-kernel-keys.sh \
             -d "${MACHINE}" \
             -s "${SHARED_BUILD_DIR}" \

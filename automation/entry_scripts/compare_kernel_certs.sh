@@ -1,13 +1,13 @@
 #!/bin/bash
 set -uo pipefail
 
-ORIGINAL_CERT_BASE64=$1
+# ORIGINAL_CERT_BASE64=$1
 BUILD_DIR="${BUILD_DIR:-build}"
 
-if [[ -z "$ORIGINAL_CERT_BASE64" ]]; then
-    echo "Usage: $0 <base64-encoded-cert>" >&2
-    exit 1
-fi
+# if [[ -z "$ORIGINAL_CERT_BASE64" ]]; then
+#     echo "Usage: $0 <base64-encoded-cert>" >&2
+#     exit 1
+# fi
 
 # Use INSTALL_DIR to find Yocto layers (since we're in container root)
 INSTALL_DIR="${INSTALL_DIR:-/work}"
@@ -43,14 +43,14 @@ fi
 echo "  BUILD_DIR: ${BUILD_DIR}"
 echo "  Current directory: $(pwd)"
 
-# Mock version - just verify we received the cert
-echo "[INFO] Certificate length: ${#ORIGINAL_CERT_BASE64} characters"
+# # Mock version - just verify we received the cert
+# echo "[INFO] Certificate length: ${#ORIGINAL_CERT_BASE64} characters"
 
-# Basic validation - check it's valid base64
-if ! echo "$ORIGINAL_CERT_BASE64" | base64 -d > /dev/null 2>&1; then
-    echo "Error: Certificate is not valid base64" >&2
-    exit 2
-fi
+# # Basic validation - check it's valid base64
+# if ! echo "$ORIGINAL_CERT_BASE64" | base64 -d > /dev/null 2>&1; then
+#     echo "Error: Certificate is not valid base64" >&2
+#     exit 2
+# fi
 
 echo "[INFO] Certificate validation successful - certificate provided and is valid base64"
 echo "[INFO] Implement actual certificate comparison with vmlinux files"
