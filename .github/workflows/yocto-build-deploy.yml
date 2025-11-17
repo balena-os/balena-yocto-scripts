@@ -834,6 +834,7 @@ jobs:
           HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
           SHARED_BUILD_DIR: ${{ github.workspace }}/shared
           SIGN_KMOD_KEY_APPEND: ${{ secrets.SIGN_KMOD_KEY_APPEND }}
+          BALENA_YOCTO_SCRIPTS_VERSION: build-${{ github.event.pull_request.head.sha }}
         run: |
           # if [ -z "${SIGN_KMOD_KEY_APPEND}" ]; then
           #   echo "SIGN_KMOD_KEY_APPEND is not set, skipping verification"
