@@ -1,4 +1,26 @@
 - commits:
+    - subject: Update actions/checkout action to v6
+      hash: 94a11b9ac52beea5c8ad31f69ab86f9fe00423ac
+      body: |
+        Update actions/checkout from 5.0.0 to 6.0.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+    - subject: Update balena-io/balena-cli to v23.2.0
+      hash: 248b6afef2df0b6cba918edadb805200d3063368
+      body: |
+        Update balena-io/balena-cli from 23.1.2 to 23.2.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.94
+  title: ""
+  date: 2025-11-22T09:43:26.840Z
+- commits:
     - subject: Update aws/aws-cli to v2.32.3
       hash: def39fbf1a9cb409e275234764db7cb1a295f030
       body: |
