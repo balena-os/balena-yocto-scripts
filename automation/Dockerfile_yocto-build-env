@@ -5,10 +5,10 @@ ARG DEBIAN_FRONTEND=noninteractive
 # Install the following utilities (required by poky)
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential chrpath curl diffstat gcc-multilib gawk git-core locales zstd liblz4-tool \
-                                         texinfo unzip wget xterm cpio file python3 openssh-client iputils-ping iproute2 \
-                                         python3-distutils python3-pip python3-pexpect python3-git python3-jinja2 python3-subunit \
-                                         gawk socat xz-utils libegl1-mesa libsdl1.2-dev pylint mesa-common-dev debianutils screen rsync sharutils \
-                                         && rm -rf /var/lib/apt/lists/*
+    texinfo unzip wget xterm cpio file python3 openssh-client iputils-ping iproute2 \
+    python3-distutils python3-pip python3-pexpect python3-git python3-jinja2 python3-subunit \
+    gawk socat xz-utils libegl1-mesa libsdl1.2-dev pylint mesa-common-dev debianutils screen rsync sharutils \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set the locale to UTF-8 for bulding with poky morty
 RUN locale-gen en_US.UTF-8
@@ -30,11 +30,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends dos2unix && rm 
 RUN apt-get update && apt-get install -y --no-install-recommends iptables procps e2fsprogs xfsprogs xz-utils git kmod apt-transport-https ca-certificates curl gnupg lsb-release docker.io && rm -rf /var/lib/apt/lists/*
 VOLUME /var/lib/docker
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # Install balena-cli
 # renovate: datasource=github-releases depName=balena-io/balena-cli
 ENV BALENA_CLI_VERSION=v23.2.0
 RUN curl -fsSL https://github.com/balena-io/balena-cli/releases/download/${BALENA_CLI_VERSION}/balena-cli-${BALENA_CLI_VERSION}-linux-x64-standalone.tar.gz | tar -xzf - && \
-    cp -a balena /usr/lib/balena && \
+    mv balena /usr/lib/balena && \
     ln -sf /usr/lib/balena/bin/balena /usr/bin/balena && \
     balena version
 
