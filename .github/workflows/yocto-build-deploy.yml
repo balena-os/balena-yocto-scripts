@@ -828,6 +828,177 @@ jobs:
             exit 1
           fi
 
+      - name: Verify kernel module signing key
+        if: inputs.sign-image == true
+        env:
+          automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
+          HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
+          SHARED_BUILD_DIR: ${{ github.workspace }}/shared
+          SIGN_KMOD_KEY_APPEND: "${{ secrets.SIGN_KMOD_KEY_APPEND }}"
+        run: |
+          if [ -z "${SIGN_KMOD_KEY_APPEND}" ]; then
+            echo "SIGN_KMOD_KEY_APPEND is not set, skipping verification"
+            exit 0
+          fi
+
+          sudo sysctl -w vm.mmap_min_addr=65536
+          sysctl vm.mmap_min_addr
+
+          mkdir -p "${SHARED_BUILD_DIR}"
+
+          # Source balena-lib to get helper functions
+          source "${automation_dir}/include/balena-lib.inc"
+
+          # Pull the helper image
+          if ! balena_lib_docker_pull_helper_image "${HELPER_IMAGE_REPO}" "" "yocto-build-env" helper_image_id; then
+            echo "Failed to pull helper image"
+            exit 1
+          fi
+
+          # Set up directories
+          DL_DIR="${SHARED_BUILD_DIR}/shared-downloads"
+          SSTATE_DIR="${SHARED_BUILD_DIR}/${MACHINE}/sstate"
+
+          # Step 1: Set up container
+          CONTAINER_NAME="verify-kernel-keys-$$"
+          docker run -d \
+            -v "${{ github.workspace }}":/work \
+            -v "${DL_DIR}":/yocto/shared-downloads \
+            -v "${SSTATE_DIR}":/yocto/shared-sstate \
+            -e BUILDER_UID="$(id -u)" \
+            -e VERBOSE="${VERBOSE}" \
+            -e BUILDER_GID="$(id -g)" \
+            --name "${CONTAINER_NAME}" \
+            --privileged \
+            "${helper_image_id}" \
+            sleep infinity || {
+            echo "Failed to start container"
+            exit 1
+          }
+
+          # Cleanup function
+          cleanup() {
+            docker stop "${CONTAINER_NAME}" 2>/dev/null || true
+            docker rm "${CONTAINER_NAME}" 2>/dev/null || true
+            # clean up temporary files
+            rm -f "$EXTRACTED_CERT" "$ORIGINAL_CERT_DER" "$ORIGINAL_CERT_PEM"
+          }
+          trap cleanup EXIT
+
+          # Step 2: Set up user (as root)
+          docker exec "${CONTAINER_NAME}" bash -c "set -e; \
+            groupadd -g \$BUILDER_GID builder 2>/dev/null || true; \
+            if ! cat /etc/group | grep docker > /dev/null; then groupadd docker; fi; \
+            useradd -m -u \$BUILDER_UID -g \$BUILDER_GID -G docker builder 2>/dev/null || true" || {
+            echo "Failed to set up container environment"
+            cleanup
+            exit 1
+          }
+
+          # Step 3: Extract bitbake environment as builder user
+          BITBAKE_ENV_OUTPUT=$(docker exec --user "$(id -u):$(id -g)" "${CONTAINER_NAME}" bash -c " \
+            INSTALL_DIR=/work; \
+            BUILD_DIR=build; \
+            if [ -f \${INSTALL_DIR}/layers/poky/oe-init-build-env ]; then \
+              source \${INSTALL_DIR}/layers/poky/oe-init-build-env \${INSTALL_DIR}/\${BUILD_DIR} > /dev/null 2>&1; \
+            else \
+              exit 1; \
+            fi; \
+            BITBAKE_ENV=\$(MACHINE=${MACHINE} bitbake -e virtual/kernel 2>&1); \
+            BITBAKE_EXIT=\$?; \
+            if [ \$BITBAKE_EXIT -eq 0 ] && [ -n \"\$BITBAKE_ENV\" ]; then \
+              echo \"\$BITBAKE_ENV\" | grep -E '^(B=|S=)'; \
+              exit 0; \
+            else \
+              exit 1; \
+            fi") || {
+            echo "Failed to extract bitbake environment"
+            cleanup
+            exit 1
+          }
+
+          # Extract variables from filtered bitbake output
+          KERNEL_BUILD_DIR_CONTAINER=$(echo "$BITBAKE_ENV_OUTPUT" | awk -F'"' '/^B="/{print $2}')
+          KERNEL_SRC_DIR_CONTAINER=$(echo "$BITBAKE_ENV_OUTPUT" | awk -F'"' '/^S="/{print $2}')
+
+          # Convert container paths to runner paths
+          KERNEL_BUILD_DIR="${KERNEL_BUILD_DIR_CONTAINER#/work}"
+          KERNEL_BUILD_DIR="${{ github.workspace }}${KERNEL_BUILD_DIR}"
+          KERNEL_SRC_DIR="${KERNEL_SRC_DIR_CONTAINER#/work}"
+          KERNEL_SRC_DIR="${{ github.workspace }}${KERNEL_SRC_DIR}"
+
+          # Verify converted paths exist on runner
+          if [ ! -d "$KERNEL_BUILD_DIR" ]; then
+            echo "Error: KERNEL_BUILD_DIR does not exist: $KERNEL_BUILD_DIR" >&2
+            cleanup
+            exit 1
+          fi
+          if [ ! -d "$KERNEL_SRC_DIR" ]; then
+            echo "Error: KERNEL_SRC_DIR does not exist: $KERNEL_SRC_DIR" >&2
+            cleanup
+            exit 1
+          fi
+
+          # Step 4: Verify certificate on runner
+          EXTRACTED_CERT="/tmp/certs.der"
+          ORIGINAL_CERT_DER="/tmp/original_cert.der"
+          ORIGINAL_CERT_PEM="/tmp/original_cert.pem"
+
+          if ! touch "$EXTRACTED_CERT" 2>/dev/null; then
+            echo "Error: Cannot write to $EXTRACTED_CERT" >&2
+            cleanup
+            exit 1
+          fi
+
+          # Reconstruct PEM format from base64 input
+          echo "-----BEGIN CERTIFICATE-----" > "$ORIGINAL_CERT_PEM"
+          echo "${SIGN_KMOD_KEY_APPEND}" >> "$ORIGINAL_CERT_PEM"
+          echo "-----END CERTIFICATE-----" >> "$ORIGINAL_CERT_PEM"
+
+          # Convert original PEM cert to DER for binary comparison
+          if ! openssl x509 -in "$ORIGINAL_CERT_PEM" -outform DER -out "$ORIGINAL_CERT_DER" 2>/dev/null; then
+            echo "Error: Could not convert original certificate to DER format" >&2
+            cleanup
+            exit 2
+          fi
+
+          # Find all vmlinux files
+          mapfile -t VMLINUX_FILES < <(find "$KERNEL_BUILD_DIR" -type f -name "vmlinux" 2>/dev/null)
+          if [[ ${#VMLINUX_FILES[@]} -eq 0 ]]; then
+            echo "Error: No vmlinux files found under $KERNEL_BUILD_DIR" >&2
+            cleanup
+            exit 3
+          fi
+
+          found_match=false
+          for vmlinux in "${VMLINUX_FILES[@]}"; do
+            echo "Testing vmlinux at: $vmlinux"
+
+            if ! "$KERNEL_SRC_DIR/scripts/extract-sys-certs.pl" "$vmlinux" "$EXTRACTED_CERT" 2>/dev/null; then
+              echo "Skipping: could not extract certs from $vmlinux"
+              continue
+            fi
+
+            # Check if the DER cert is present in the extracted binary blob
+            if grep -qFf "$ORIGINAL_CERT_DER" "$EXTRACTED_CERT" 2>/dev/null; then
+              echo "Match found in: $vmlinux"
+              found_match=true
+              break
+            else
+              echo "No match for $vmlinux"
+            fi
+          done
+
+          if [[ "$found_match" = false ]]; then
+            echo "No matching certificate found in any vmlinux under $KERNEL_BUILD_DIR" >&2
+            cleanup
+            exit 4
+          fi
+
+          echo "Certificate verification successful"
+
+          cleanup
+
       # We don't need to encrypt these as they are not sensitive if the repo is public anyway.
       # https://github.com/actions/upload-artifact
       - name: Upload build logs
