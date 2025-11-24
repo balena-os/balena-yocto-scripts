@@ -1,4 +1,32 @@
 - commits:
+    - subject: "workflows: Add Generic x86_64 (GPT) and Generic AARCH64 device tests"
+      hash: 275e4dd5f5cef11e410c9713cf8e6ad23ec45071
+      body: |
+        These provide better test coverage of the workflow, including
+        - signed/unsigned
+        - aarch64/amd64
+        - AMI deploy
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: "Dockerfile_yocto-build-env: Avoid balena CLI duplicate install"
+      hash: 269850acff96b92c871756555d05ee4178c76aa4
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.38.96
+  title: ""
+  date: 2025-11-24T17:20:16.243Z
+- commits:
     - subject: Update actions/create-github-app-token action to v2.2.0
       hash: f6d1b81b5228dcbfc748dc76e50f26609349db5e
       body: |
