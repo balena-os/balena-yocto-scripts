@@ -1,4 +1,26 @@
 - commits:
+    - subject: Update GitHub Actions
+      hash: cba31254b3639ad0340d02ae5090ee3e2788ec5f
+      body: |
+        Update aws-actions/configure-aws-credentials from 5.1.0 to 5.1.1
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+    - subject: Update aws/aws-cli to v2.32.4
+      hash: 5b1bf73433b20a3b27a132d0d8e501b5cca68a3c
+      body: |
+        Update aws/aws-cli from 2.32.3 to 2.32.4
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.38.97
+  title: ""
+  date: 2025-11-29T04:55:21.586Z
+- commits:
     - subject: "workflows: Add Generic x86_64 (GPT) and Generic AARCH64 device tests"
       hash: 275e4dd5f5cef11e410c9713cf8e6ad23ec45071
       body: |
