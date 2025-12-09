@@ -1120,7 +1120,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # TODO: Unroll balena_deploy_artifacts into the workflow shell directly
-      # and only package up what is needed for s3 deploy, hostapp deploy, and leviathan tests.
+      # and only package up what is needed for ami deploy, hostapp deploy, and leviathan tests.
       # https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/include/balena-deploy.inc#L23
       - name: Prepare hostapp artifacts
         env:
@@ -1138,8 +1138,8 @@ jobs:
 
           find "${DEPLOY_PATH}" -exec ls -lh {} \;
 
-      # Deflate files are the main image artifact for S3 / webresource deploy
-      # is they are used by the img-maker and os download endpoints.
+      # Deflate files are the main image artifact for hostapp deploy
+      # as they are used by the img-maker and os download endpoints.
       - name: Prepare deflate files
         env:
           HELPER_IMAGE: balena/balena-img:6.20.26
@@ -1177,7 +1177,7 @@ jobs:
             rm "${file}"
           done
 
-      # Upload artifacts to be deployed to S3 / webresources along with the hostapp release.
+      # Upload artifacts to be deployed to hostapps
       # Primarily deflate files, and licenses, and manifests.
       # https://github.com/actions/upload-artifact
       - name: Upload hostapp artifacts
@@ -1292,14 +1292,12 @@ jobs:
     name: Deploy hostApp
     runs-on: ${{ fromJSON(inputs.build-runs-on) }}
     # We want to push a hostapp on push events (PR merge) or dispatch
-    # These conditions should match s3-deploy
     # Force finlize will finalize no matter what - so we want to make sure there is something to finlize - so it will always trigger this if true
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || inputs.force-finalize
     needs:
       - approved-commit
       - build
       - balena-lib
-      - s3-deploy
 
     # This environment should contain the following variables:
     # - BALENA_HOST
@@ -1569,143 +1567,6 @@ jobs:
             ${{ env.DEPLOY_PATH }}/licenses.tar.gz
             ${{ env.DEPLOY_PATH }}/cyclonedx/*/*.json
             ${{ env.DEPLOY_PATH }}/secure-boot-lock.tar.gz
-
-  ##############################
-  # S3 Deploy
-  ##############################
-
-  s3-deploy:
-    name: Deploy to S3
-    runs-on: ${{ fromJSON(inputs.build-runs-on) }}
-    # We want to push a hostapp on push events (PR merge) or dispatch
-    # These conditions should match hostapp-deploy
-    # Force finlize will finalize no matter what - so we want to make sure there is something to finlize - so it will always trigger this if true
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || inputs.force-finalize
-    needs:
-      - approved-commit
-      - build
-      - balena-lib
-
-    # This environment should contain the following variables:
-    # - AWS_SECURITY_GROUP: AWS security group to use for AMI testing
-    # - AWS_SUBNET: AWS subnet for AMI testing
-    # - AWS_KMS_KEY_ID: AWS KMS key ID make AMIs public
-    # - AWS_REGION: AWS region for S3 image deployment
-    # - AWS_IAM_ROLE: AWS IAM role to assume for S3 image deployment, AMI deployment
-    # - AWS_S3_BUCKET: AWS S3 bucket for image deployment, and AMI deployment
-    # - AWS_S3_SSE_ALGORITHM: AWS S3 server-side encryption algorithm
-    environment: ${{ inputs.deploy-environment }}
-
-    env:  
-      # Include a number of similar variable keys to allow for flexibility in the environment and backwards compatibility
-      AWS_IAM_ROLE: ${{ vars.AWS_IAM_ROLE }}
-      AWS_REGION: ${{ vars.AWS_REGION || vars.AWS_S3_REGION || vars.S3_REGION || 'us-east-1' }}
-      AWS_SECURITY_GROUP_ID: ${{ vars.AWS_SECURITY_GROUP_ID || vars.AWS_SECURITY_GROUP || 'sg-057937f4d89d9d51c' }}
-      AWS_SUBNET_ID: ${{ vars.AWS_SUBNET_ID || vars.AWS_SUBNET || 'subnet-02d18a08ea4058574' }}
-      AWS_KMS_KEY_ID: ${{ vars.AWS_KMS_KEY_ID || vars.AWS_KMS_KEY }}
-      AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}
-      AWS_S3_SSE_ALGORITHM: ${{ vars.SOURCE_MIRROR_S3_SSE_ALGORITHM || vars.AWS_S3_SSE_ALGORITHM || vars.S3_SSE_ALGORITHM || vars.SSE_ALGORITHM || vars.SSE || 'AES256' }}
-
-      # For this job only, the DEPLOY_PATH is the same as the S3_DEPLOY_PATH
-      DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}
-      # S3_DEPLOY_PATH is the DEPLOY_PATH + the device slug and os version as is expected by the prepare.ts script from image maker
-      S3_DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}
-
-    # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
-    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
-    # https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect#adding-permissions-settings
-    permissions:
-      id-token: write # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
-      actions: read # Required to download artifacts from build job for private repos:- https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28#download-an-artifact 
-
-    steps:
-
-      - name: Download artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
-        with:
-          name: hostapp-artifacts
-          path: ${{ env.DEPLOY_PATH }}
-
-      - name: Decrypt artifacts
-        if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
-        env:
-          PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
-          PATHS_TO_DECRYPT: |
-            ${{ env.DEPLOY_PATH }}/*.enc
-            ${{ env.DEPLOY_PATH }}/**/*.enc
-        run: |
-          set -x
-          for enc in $(echo "${PATHS_TO_DECRYPT}" | tr '\n' ' '); do
-            openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${enc}" -out "${enc%.enc}"
-          done
-
-      # Unzip the raw image files that were zipped and removed before uploading.
-      - name: Decompress artifacts
-        run: |
-          set -x
-
-          if ! command -v unzip; then
-            sudo apt-get update
-            sudo apt-get install -y unzip
-          fi
-
-      # https://github.com/unfor19/install-aws-cli-action
-      # https://github.com/aws/aws-cli/tags
-      - name: Setup awscli
-        uses: unfor19/install-aws-cli-action@f5b46b7f32cf5e7ebd652656c5036bf83dd1e60c # v1
-        env:
-          # renovate: datasource=github-tags depName=aws/aws-cli
-          AWSCLI_VERSION: 2.32.8
-        with:
-          version: "${{ env.AWSCLI_VERSION }}"
-
-      # https://github.com/aws-actions/configure-aws-credentials
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
-        with:
-          role-to-assume: ${{ env.AWS_IAM_ROLE }}
-          role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
-          aws-region: ${{ env.AWS_REGION }}
-          # https://github.com/orgs/community/discussions/26636#discussioncomment-3252664
-          mask-aws-account-id: false
-
-      - name: Set S3 ACL to private
-        id: s3-acl-private
-        if: needs.balena-lib.outputs.is_private != 'false'
-        run: echo "string=private" >>"${GITHUB_OUTPUT}"
-
-      - name: Set S3 ESR destination directory
-        id: s3-esr-images-dir
-        if: needs.balena-lib.outputs.is_esr == 'true'
-        run: echo "string=esr-images" >>"${GITHUB_OUTPUT}"
-
-      # "If no keys are provided, but an IAM role is associated with the EC2 instance, it will be used transparently".
-      # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/rm.html
-      # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/cp.html
-      # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/sync.html
-      - name: Deploy to S3
-        env:
-          S3_ACL: ${{ steps.s3-acl-private.outputs.string || 'public-read' }}
-          S3_SSE: ${{ env.AWS_S3_SSE_ALGORITHM }}
-          S3_URL: "s3://${{ env.AWS_S3_BUCKET }}/${{ steps.s3-esr-images-dir.outputs.string || 'images' }}"
-          S3_REGION: ${{ env.AWS_REGION }}
-          SLUG: ${{ needs.balena-lib.outputs.device_slug }}
-          VERSION: ${{ needs.balena-lib.outputs.os_version }}
-          SOURCE_DIR: ${{ github.workspace }}/deploy
-        run: |
-          if [ -n "$(aws s3 ls "${S3_URL}/${SLUG}/${VERSION}/")" ] && [ -z "$($S3_CMD ls "${S3_URL}/${SLUG}/${VERSION}/IGNORE")" ]; then
-            echo "::warning::Deployment already exists at ${S3_URL}/${VERSION}"
-            exit 0
-          fi
-
-          echo "${VERSION}" > "${SOURCE_DIR}/${SLUG}/latest"
-          touch "${SOURCE_DIR}/${SLUG}/${VERSION}/IGNORE"
-
-          aws s3 rm --recursive "${S3_URL}/${SLUG}/${VERSION}"
-          aws s3 cp --no-progress --sse="${S3_SSE}" --acl="${S3_ACL}" "${SOURCE_DIR}/${SLUG}/${VERSION}/IGNORE" "${S3_URL}/${SLUG}/${VERSION}/"
-          aws s3 sync --no-progress --sse="${S3_SSE}" --acl="${S3_ACL}" "${SOURCE_DIR}/${SLUG}/${VERSION}/" "${S3_URL}/${SLUG}/${VERSION}/"
-          aws s3 cp --no-progress --sse="${S3_SSE}" --acl=public-read "${SOURCE_DIR}/${SLUG}/latest" "${S3_URL}/${SLUG}/"
-          aws s3 rm "${S3_URL}/${SLUG}/${VERSION}/IGNORE"
 
   ##############################
   # AMI Deploy
@@ -2457,7 +2318,6 @@ jobs:
       - approved-commit
       - balena-lib
       - build
-      - s3-deploy
       - ami-deploy
       - hostapp-deploy
       - test
