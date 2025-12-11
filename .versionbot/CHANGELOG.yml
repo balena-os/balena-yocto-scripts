@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.32.15
+      hash: b151aac8b6c210e63225a6b554d36b19f1bdcae5
+      body: |
+        Update aws/aws-cli from 2.32.8 to 2.32.15
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.39.1
+  title: ""
+  date: 2025-12-11T23:28:40.309Z
+- commits:
     - subject: verify that keys from SIGN_KMOD_KEY_APPEND ends up properly in kernel
       hash: 25cbd8c85b7acc45c3d117b2a7f260b6e67419d1
       body: ""
