@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.32.25
+      hash: b77b9b88998bf72ee3c613f313f9b8527ef31b3f
+      body: |
+        Update aws/aws-cli from 2.32.21 to 2.32.25
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.39.5
+  title: ""
+  date: 2025-12-29T22:42:24.107Z
+- commits:
     - subject: Update GitHub Actions
       hash: 903567ebe732b29780f63a255f3be2c52a4fef53
       body: |
