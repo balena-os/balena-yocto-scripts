@@ -1,4 +1,19 @@
 - commits:
+    - subject: Fix condition to check for test suites in workflow
+      hash: e26c0f3b25eecba877b789620ef08b8293773c15
+      body: |
+        Check that test_matrix is truthy before attempting to parse as JSON to avoid the error:
+
+        > Error when evaluating 'if' for job 'test'. balena-os/balena-yocto-scripts/.github/workflows/yocto-build-deploy.yml@master (Line: 2239, Col: 9): could not get operand for index access: Error from function 'fromJSON': empty input
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Kyle Harding
+      nested: []
+  version: 1.39.6
+  title: ""
+  date: 2025-12-30T18:18:07.761Z
+- commits:
     - subject: Update aws/aws-cli to v2.32.25
       hash: b77b9b88998bf72ee3c613f313f9b8527ef31b3f
       body: |
