@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update Lock file maintenance
+      hash: f91307783b6b706cb921b194c88403f25e37ac3c
+      body: |
+        Update 
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.39.7
+  title: ""
+  date: 2025-12-31T00:43:20.659Z
+- commits:
     - subject: Fix condition to check for test suites in workflow
       hash: e26c0f3b25eecba877b789620ef08b8293773c15
       body: |
