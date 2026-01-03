@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/download-artifact action to v7
+      hash: 28fef45074b612d63316f1ec110ca8f17543e0ac
+      body: |
+        Update actions/download-artifact from 6.0.0 to 7.0.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.39.9
+  title: ""
+  date: 2026-01-03T06:06:39.873Z
+- commits:
     - subject: Update balena-io/balena-cli to v23.2.14
       hash: e2135db12b819cb07cb52bf8067fc38096cc5104
       body: |
