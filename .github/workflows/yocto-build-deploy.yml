@@ -1034,8 +1034,8 @@ jobs:
           path: |
             balena-build.log
             build/tmp/log/**/*.log
-            build/tmp/work/**/run.*
-            build/tmp/work/**/log.*
+            build/tmp/work/*/*/*/temp/run.*
+            build/tmp/work/*/*/*/temp/log.*
 
       # If there was a cache miss for this key, save a new cache.
       # Use local S3 cache on self-hosted runners.
