@@ -1350,7 +1350,7 @@ jobs:
           cp -v "${DEPLOY_PATH}/balena.yml" "${WORKSPACE}/balena.yml"
 
       - name: Setup balena CLI
-        uses: balena-io-examples/setup-balena-action@3fc4f78eaf0d9e6a1691a06e193a29172b0caa3c # v0.0.75
+        uses: balena-io-examples/setup-balena-action@c716790586d02f55fc579669b47a0efe529e4424 # v0.0.79
         env:
           # renovate: datasource=github-releases depName=balena-io/balena-cli
           BALENA_CLI_VERSION: v23.2.14
@@ -1829,7 +1829,7 @@ jobs:
             echo "AMI_NAME=balenaOS-${VERSION}-${SLUG}" | sed 's/+/-/g' >>"${GITHUB_ENV}"
 
       - name: Setup balena CLI
-        uses: balena-io-examples/setup-balena-action@3fc4f78eaf0d9e6a1691a06e193a29172b0caa3c # v0.0.75
+        uses: balena-io-examples/setup-balena-action@c716790586d02f55fc579669b47a0efe529e4424 # v0.0.79
         env:
           # renovate: datasource=github-releases depName=balena-io/balena-cli
           BALENA_CLI_VERSION: v23.2.14
