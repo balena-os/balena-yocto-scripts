@@ -1,4 +1,24 @@
 - commits:
+    - subject: "yocto-build-deploy.yml: Search for build logs only in the location
+        where they are produced"
+      hash: 41e750de0d3e3467bcb84b2e82da795873e8873d
+      body: |
+        Fixes the following error when uploading the build logs:
+
+        Error: ELOOP: too many symbolic links encountered, stat '/home/runner/_work/balena-tm3/balena-tm3/build/tmp/work/cortexa53-crypto-poky-linux/libtool-cross/2.4.7-r0/image/false'
+
+        The logs are creatd only in specific directories so there is no point in searching for them in the entire workspace
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Florin Sarbu <florin@balena.io>
+        signed-off-by: Florin Sarbu <florin@balena.io>
+      author: Florin Sarbu
+      nested: []
+  version: 1.39.10
+  title: ""
+  date: 2026-01-13T20:45:13.135Z
+- commits:
     - subject: Update actions/download-artifact action to v7
       hash: 28fef45074b612d63316f1ec110ca8f17543e0ac
       body: |
