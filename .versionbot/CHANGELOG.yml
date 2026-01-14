@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/upload-artifact action to v6
+      hash: f29e9ca8e2677d74543a9c8f8bdb849240a3fae5
+      body: |
+        Update actions/upload-artifact from 5.0.0 to 6.0.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.39.11
+  title: ""
+  date: 2026-01-14T11:48:56.107Z
+- commits:
     - subject: "yocto-build-deploy.yml: Search for build logs only in the location
         where they are produced"
       hash: 41e750de0d3e3467bcb84b2e82da795873e8873d
