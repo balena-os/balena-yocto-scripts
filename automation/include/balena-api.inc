@@ -67,9 +67,7 @@ balena_api_appID_from_appName() {
 	local _json=""
 	# Unauthenticated only shows public apps
 	if [ -z "${_token}" ]; then
-		if [ -f "${HOME}/.balena/token" ]; then
-			_token=$(cat "${HOME}/.balena/token")
-		fi
+		_token=$(balena_lib_token "${_apiEnv}")
 	fi
 	if [ "${_token}" ]; then
 		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/application?\$filter=(slug%20eq%20'${_admin}/${_appName}')" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}")
@@ -674,9 +672,7 @@ balena_api_is_bootable() {
 	local _json=""
 	# Unauthenticated only shows public apps
 	if [ -z "${_token}" ]; then
-		if [ -f "${HOME}/.balena/token" ]; then
-			_token=$(cat "${HOME}/.balena/token")
-		fi
+		_token=$(balena_lib_token "${_apiEnv}")
 	fi
 	if [ -n "${_token}" ]; then
 		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/application?\$filter=(slug%20eq%20%27${_admin}/${_appName}%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}")
@@ -708,9 +704,7 @@ balena_api_appUUID_from_appName() {
 	local _json=""
 	# Unauthenticated only shows public apps
 	if [ -z "${_token}" ]; then
-		if [ -f "${HOME}/.balena/token" ]; then
-			_token=$(cat "${HOME}/.balena/token")
-		fi
+		_token=$(balena_lib_token "${_apiEnv}")
 	fi
 	if [ "${_token}" ]; then
 		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/application?\$filter=(slug%20eq%20'${_admin}/${_appName}')" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}")
@@ -946,9 +940,7 @@ balena_api_release_tag_exists() {
 	local _json=""
 	# Unauthenticated only shows public apps
 	if [ -z "${_token}" ]; then
-		if [ -f "${HOME}/.balena/token" ]; then
-			_token=$(cat "${HOME}/.balena/token")
-		fi
+		_token=$(balena_lib_token "${_apiEnv}")
 	fi
 	if [ -n "${_token}" ]; then
 		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/release_tag?\$filter=(release/belongs_to__application/slug%20eq%20%27${_slug}%27)%20and%20(tag_key%20eq%20%27${_tagName}%27)%20and%20(value%20eq%20%27${_tagValue}%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}")
@@ -984,9 +976,7 @@ balena_api_fleet_tag_exists() {
 	local _json=""
 	# Unauthenticated only shows public apps
 	if [ -z "${_token}" ]; then
-		if [ -f "${HOME}/.balena/token" ]; then
-			_token=$(cat "${HOME}/.balena/token")
-		fi
+		_token=$(balena_lib_token "${_apiEnv}")
 	fi
 	if [ -n "${_token}" ]; then
 		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/application_tag?\$filter=(application/app_name%20eq%20%27${_slug}%27)%20and%20(tag_key%20eq%20%27${_tagName}%27)%20and%20(value%20eq%20%27${_tagValue}%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}")
@@ -1023,9 +1013,7 @@ balena_api_fetch_fleet_tag() {
 	local _json=""
 	# Unauthenticated only shows public apps
 	if [ -z "${_token}" ]; then
-		if [ -f "${HOME}/.balena/token" ]; then
-			_token=$(cat "${HOME}/.balena/token")
-		fi
+		_token=$(balena_lib_token "${_apiEnv}")
 	fi
 	if [ -n "${_token}" ]; then
 		_json=$(${CURL} -XGET "https://api.${_apiEnv}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${_slug}%27)%20and%20(tag_key%20eq%20%27${_tagName}%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${_token}")

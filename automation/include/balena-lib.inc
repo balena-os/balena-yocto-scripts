@@ -219,6 +219,7 @@ balena_lib_token() {
 	fi
 	if [ -z "${_token}" ]; then
 		if [ -f "${HOME}/.balena/token" ]; then
+			>&2 echo "[balena_lib_token]: Using cached credentials"
 			_token="$(cat "${HOME}/.balena/token")"
 		else
 			return 0
