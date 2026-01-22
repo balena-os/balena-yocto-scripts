@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.33.5
+      hash: 71ada1ed0ab14a08fd307a145b3e207d02f97e33
+      body: |
+        Update aws/aws-cli from 2.33.2 to 2.33.5
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.39.17
+  title: ""
+  date: 2026-01-22T23:17:24.424Z
+- commits:
     - subject: Update Lock file maintenance
       hash: e0f5cf7d521957afccf806f34e5c9eb4302762c2
       body: |
