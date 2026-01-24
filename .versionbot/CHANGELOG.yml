@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/checkout action to v6.0.2
+      hash: f0c37854d11f860dde63b8b7b03b8a186b88f26c
+      body: |
+        Update actions/checkout from 6.0.1 to 6.0.2
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.39.18
+  title: ""
+  date: 2026-01-24T05:06:17.023Z
+- commits:
     - subject: Update aws/aws-cli to v2.33.5
       hash: 71ada1ed0ab14a08fd307a145b3e207d02f97e33
       body: |
