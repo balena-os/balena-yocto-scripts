@@ -125,6 +125,11 @@ on:
         description: Extra barys build arguments
         required: false
         type: string
+      extensions:
+        description: Space-separated list of OS block extensions in app:version format (e.g., 'kernel-modules-raspberrypi4-64:v1.0.0')
+        required: false
+        type: string
+        default: ''
       # Supported fields for the test matrix:
       # - test_suite: (required) The test suite to run. The valid test suites are `os`, `hup`, and `cloud`
       # - environment: (required) The balenaCloud environment to use for testing, e.g. `bm.balena-dev.com` or `balena-cloud.com`
@@ -733,6 +738,14 @@ jobs:
           BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_KMOD_KEY_APPEND=${SIGN_KMOD_KEY_APPEND}"
           BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_HAB_PKI_ID=${SIGN_HAB_PKI_ID}"
           BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a SIGN_RSA_KEY_ID=${SIGN_RSA_KEY_ID}"
+          echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR}" >>"${GITHUB_ENV}"
+
+      - name: Configure OS block extensions
+        if: inputs.extensions != ''
+        env:
+          EXTENSIONS: ${{ inputs.extensions }}
+        run: |
+          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a HOSTEXT_IMAGES=\"${EXTENSIONS}\""
           echo "BARYS_ARGUMENTS_VAR=${BARYS_ARGUMENTS_VAR}" >>"${GITHUB_ENV}"
 
       # https://docs.yoctoproject.org/4.0.10/ref-manual/classes.html?highlight=source_mirror#own-mirrors-bbclass
@@ -1459,6 +1472,33 @@ jobs:
                 io.balena.update.requires-reboot: '1'
                 io.balena.private.hostapp.board-rev: '${DEVICE_REPO_REV}'
           EOF
+
+          # Add extension services if specified
+          if [ -n "${{ inputs.extensions }}" ]; then
+            for ext_image in ${{ inputs.extensions }}; do
+              # Extract service name from image URL (last path component, without tag/digest)
+              svc_name=$(echo "${ext_image}" | sed 's|.*/||; s|[@:].*||; s|[^a-zA-Z0-9_-]|-|g')
+
+              # Read profile from extension image label
+              ext_profile=$(docker manifest inspect "${ext_image}" 2>/dev/null | \
+                jq -r '.config.Labels["io.balena.image.profiles"] // empty' 2>/dev/null || echo "")
+
+              # If no profile label, derive from service name (convention)
+              if [ -z "${ext_profile}" ]; then
+                ext_profile="${svc_name}"
+              fi
+
+              cat >> "${WORKSPACE}/docker-compose.yml" <<EOF
+            ${svc_name}:
+              image: ${ext_image}
+              profiles: ["${ext_profile}"]
+              labels:
+                io.balena.image.store: 'data'
+                io.balena.image.class: 'overlay'
+                io.balena.image.requires-reboot: '1'
+          EOF
+            done
+          fi
 
           if [ -n "${_local_image}" ]; then
             releaseCommit="$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" --source "${WORKSPACE}" ${status} ${_debug} | sed -n 's/.*Release: //p')"
