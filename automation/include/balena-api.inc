@@ -1293,3 +1293,80 @@ balena_api_delete_release_asset() {
 	[ -z "${_token}" ] && >&2 echo "[balena_api_delete_release_asset]: Authentication token is required" && return 1
 	do_delete "https://api.${_apiEnv}/${TRANSLATION}/release_asset(${_asset_id})" -H "Authorization: Bearer ${_token}"
 }
+
+# Login to balena registry
+#
+# Inputs:
+# $1: Balena API environment (e.g., balena-cloud.com)
+# $2: Balena API token
+#
+# Returns:
+# 0 if successful, 1 if failed
+#
+balena_api_registry_login() {
+	local _apiEnv="${1}"
+	local _token="${2}"
+
+	if [ -z "${_token}" ]; then
+		>&2 echo "[balena_api_registry_login] No token provided"
+		return 1
+	fi
+
+	if [ -z "${_apiEnv}" ]; then
+		>&2 echo "[balena_api_registry_login] No API environment provided"
+		return 1
+	fi
+
+	local _registry="registry2.${_apiEnv}"
+
+	>&2 echo "[balena_api_registry_login] Authenticating with ${_registry}"
+	if echo "${_token}" | docker login -u "_" --password-stdin "${_registry}" >&2; then
+		return 0
+	else
+		>&2 echo "[balena_api_registry_login] Failed to authenticate"
+		return 1
+	fi
+}
+
+# Resolve an app:version reference to an image URL
+#
+# Inputs:
+# $1: App:version reference (e.g., kernel-modules-raspberrypi4-64:0.0.0+rev2)
+# $2: Balena API environment
+# $3: Balena API token
+#
+# Output:
+# Prints resolved image URL to stdout (e.g., registry2.balena-cloud.com/v2/hash@sha256:digest)
+#
+# Returns:
+# 0 if resolved, 1 on error
+#
+balena_api_resolve_fleet_image() {
+	local _ref="${1}"
+	local _apiEnv="${2}"
+	local _token="${3}"
+
+	# Parse app:version format
+	local _app="${_ref%:*}"
+	local _version="${_ref#*:}"
+
+	if [ "${_app}" = "${_ref}" ] || [ -z "${_version}" ]; then
+		>&2 echo "[balena_api_resolve_fleet_image] Invalid format: ${_ref} (expected app:version)"
+		return 1
+	fi
+
+	# Strip leading 'v' and convert 'rev' to API format (0.0.0+rev2 -> 0.0.0+2)
+	_version="${_version#v}"
+	_version="${_version/+rev/+}"
+
+	local _image
+	_image=$(balena_api_fetch_image_from_app "${_app}" "${_version}" "${_apiEnv}" "${_token}")
+
+	if [ -z "${_image}" ]; then
+		>&2 echo "[balena_api_resolve_fleet_image] Failed to resolve ${_ref}"
+		return 1
+	fi
+
+	echo "${_image}"
+	return 0
+}
