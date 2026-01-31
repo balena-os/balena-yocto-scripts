@@ -486,9 +486,9 @@ balena_api_fetch_release_json() {
 		_token=${_token:-$(balena_lib_token)}
 	fi
 	_semver=${_release_version%+*}
-	if [[ "${_release_version}" == *"+"* ]]; then
-		_revision=${_release_version#*+}
-	fi
+	case "${_release_version}" in
+		*"+"*) _revision=${_release_version#*+} ;;
+	esac
 	__dlog "[${_appName}] Fetching release version  ${_semver}+rev${_revision}"
 	if [ -n "${_token}" ]; then
 		_json=$(${CURL} -XGET -H "Content-type: application/json" "https://api.${_apiEnv}/${TRANSLATION}/release?\$filter=(belongs_to__application%20eq%20${_appID})%20and%20(semver%20eq%20%27${_semver}%27)%20and%20(revision%20eq%20%27${_revision}%27)" -H "Authorization: Bearer ${_token}")
