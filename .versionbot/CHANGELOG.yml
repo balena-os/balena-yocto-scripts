@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.33.14
+      hash: 15940b831e234f904a5c92ed275a5c4eb810d6f3
+      body: |
+        Update aws/aws-cli from 2.33.12 to 2.33.14
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.39.22
+  title: ""
+  date: 2026-02-04T01:00:13.803Z
+- commits:
     - subject: Update docker/login-action action to v3.7.0
       hash: 1f8710f576ade4a457410417f163d2a36c8a5e14
       body: |
