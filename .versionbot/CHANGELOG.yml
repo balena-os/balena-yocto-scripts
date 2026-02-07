@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws-actions/configure-aws-credentials action to v6
+      hash: 05dde72d0c05b619bbe8af0f16a6d301e393997a
+      body: |
+        Update aws-actions/configure-aws-credentials from 5.1.1 to 6.0.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.39.24
+  title: ""
+  date: 2026-02-07T06:49:00.329Z
+- commits:
     - subject: Update aws/aws-cli to v2.33.17
       hash: 7f31be022b971a55da4d7deec0efd783e7fcda1d
       body: |
