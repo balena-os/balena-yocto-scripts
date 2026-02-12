@@ -1992,7 +1992,7 @@ jobs:
           # shellcheck disable=SC2046
           >&2 eval $(ssh-agent)
           >&2 ssh-add
-          balena key add "${ami_test_fleet}" "${key_file}.pub"
+          balena ssh-key add "${ami_test_fleet}" "${key_file}.pub"
 
           uuid=$(balena device register "${AMI_TEST_ORG}/${ami_test_fleet}" | awk '{print $4}')
           >&2 echo "Pre-registered device with UUID ${uuid}"
