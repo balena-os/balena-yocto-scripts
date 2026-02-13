@@ -1,4 +1,35 @@
 - commits:
+    - subject: Remove dead AMI script and its Dockerfile dependencies
+      hash: c1f8c608d4d72c45e5a311523f7d69a1b9e4174a
+      body: |
+        The workflow inlines all AMI logic directly and never calls
+        balena-generate-ami.sh. Remove the script along with its
+        Dockerfile COPY and the awscli/udev/python3-pip packages
+        that only existed to support it.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Replace deprecated `balena key add` with `balena ssh-key add`
+      hash: ae66932650c91e6f5f3c61c6a4540961d1fa20e4
+      body: |
+        balena CLI v23.0.0 removed the `key add` alias. The AMI test
+        setup step still used it while the cleanup step already used
+        the new `ssh-key list`/`ssh-key rm` names.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.39.27
+  title: ""
+  date: 2026-02-13T11:14:39.619Z
+- commits:
     - subject: Update aws/aws-cli to v2.33.18
       hash: c150c44a4c497ab38368182b3ff6bbf044868a3b
       body: |
