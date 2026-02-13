@@ -1553,7 +1553,6 @@ jobs:
       
       - name: Upload release assets
         uses: balena-io/upload-balena-release-asset@aa5c76210bde8edc08e21f35c56b05d56fada041 # v0.1.5
-        continue-on-error: true
         with:
           balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
           balena-host: ${{ env.BALENARC_BALENA_URL }}
