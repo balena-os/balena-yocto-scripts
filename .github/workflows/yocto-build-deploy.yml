@@ -126,7 +126,7 @@ on:
         required: false
         type: string
       extensions:
-        description: Space-separated list of OS block extensions in app:version format (e.g., 'kernel-modules-raspberrypi4-64:v1.0.0')
+        description: Space-separated list of OS block extension registry image URLs (e.g., 'registry2.balena-cloud.com/v2/abc123')
         required: false
         type: string
         default: ''
@@ -1363,15 +1363,25 @@ jobs:
           cp -v "${DEPLOY_PATH}/balena.yml" "${WORKSPACE}/balena.yml"
 
       - name: Setup balena CLI
-        uses: balena-io-examples/setup-balena-action@ab9d85bb1829271b0da797a359fbfb7e0f9213b7 # v0.0.95
         env:
           # renovate: datasource=github-releases depName=balena-io/balena-cli
-          BALENA_CLI_VERSION: v23.2.30
-        with:
-          # balena CLI version to install
-          cli-version: ${{ env.BALENA_CLI_VERSION }}
-          # balenaCloud API token to login automatically
-          balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
+          BALENA_CLI_VERSION: 23.2.30
+        run: |
+          # Install CLI from npm so the @balena/compose schema can be patched
+          # to allow 'profiles' on extension services. The standalone binary
+          # embeds the schema and cannot be modified at runtime.
+          npm install -g --force "balena-cli@${BALENA_CLI_VERSION}"
+          if [ -n "${{ inputs.extensions }}" ]; then
+            # Patch all copies of the schema — npm may hoist @balena/compose
+            # to the top level or nest it under balena-cli/node_modules/
+            find "$(npm root -g)" -path "*@balena/compose/dist/parse/schemas/config_schema_v2.4.json" | while read -r schema; do
+              jq '.definitions.service.properties.profiles = {"type":"array","items":{"type":"string"},"uniqueItems":true}' \
+                "${schema}" > /tmp/schema_patched.json && mv /tmp/schema_patched.json "${schema}"
+              echo "Patched profiles into ${schema}"
+            done
+          fi
+          balena login --token "${{ secrets.BALENA_API_DEPLOY_KEY }}"
+          balena version
 
       # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
       # https://github.com/balena-io/deploy-to-balena-action/issues/286
@@ -1458,7 +1468,7 @@ jobs:
           if [ "${FINAL}" != true ]; then
             status="--draft"
           fi
-          #[ "${VERBOSE}" = "verbose" ] && _debug="--debug"
+          [ "${VERBOSE}" = "verbose" ] && _debug="--debug"
 
           # create docker-compose.yml with OS release metadata for the hostapp
           cat > "${WORKSPACE}/docker-compose.yml" <<EOF
@@ -1473,25 +1483,70 @@ jobs:
                 io.balena.private.hostapp.board-rev: '${DEVICE_REPO_REV}'
           EOF
 
+          # Resolve an extension reference to a registry image URL.
+          # Accepts either a registry URL (pass-through) or app:version
+          # format which is resolved via the API, mirroring
+          # balena_api_resolve_fleet_image from balena-api.inc.
+          resolve_extension_image() {
+            local ref="${1}"
+
+            # Already a registry URL — pass through
+            case "${ref}" in
+              registry2.*|bh.cr/*)
+                echo "${ref}"
+                return 0
+                ;;
+            esac
+
+            # Parse app:version
+            local app="${ref%:*}"
+            local ver="${ref#*:}"
+            if [ "${app}" = "${ref}" ] || [ -z "${ver}" ]; then
+              >&2 echo "[ERROR] Invalid extension format: ${ref} (expected app:version or registry URL)"
+              return 1
+            fi
+            ver="${ver#v}"
+            local semver="${ver%+*}"
+            local revision="${ver#*+}"
+            revision="${revision#rev}"
+
+            # Resolve release
+            local rel_json rel_id
+            rel_json=$(${CURL} -XGET \
+              "https://api.${API_ENV}/${TRANSLATION}/release?\$filter=belongs_to__application/any(a:a/app_name%20eq%20'${app}')%20and%20semver%20eq%20'${semver}'%20and%20revision%20eq%20'${revision}'" \
+              -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
+            rel_id=$(echo "${rel_json}" | jq -r '.d[0].id')
+            if [ -z "${rel_id}" ] || [ "${rel_id}" = "null" ]; then
+              >&2 echo "[ERROR] Extension ${ref}: release not found"
+              return 1
+            fi
+
+            # Resolve image location
+            local img_json img_location img_digest
+            img_json=$(${CURL} -XGET \
+              "https://api.${API_ENV}/${TRANSLATION}/image?\$filter=is_part_of__release/any(r:r/release%20eq%20${rel_id})" \
+              -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
+            img_location=$(echo "${img_json}" | jq -r '.d[0].is_stored_at__image_location')
+            img_digest=$(echo "${img_json}" | jq -r '.d[0].content_hash')
+            if [ -z "${img_location}" ] || [ "${img_location}" = "null" ]; then
+              >&2 echo "[ERROR] Extension ${ref}: image not found"
+              return 1
+            fi
+
+            echo "${img_location}@${img_digest}"
+          }
+
           # Add extension services if specified
           if [ -n "${{ inputs.extensions }}" ]; then
-            for ext_image in ${{ inputs.extensions }}; do
-              # Extract service name from image URL (last path component, without tag/digest)
-              svc_name=$(echo "${ext_image}" | sed 's|.*/||; s|[@:].*||; s|[^a-zA-Z0-9_-]|-|g')
-
-              # Read profile from extension image label
-              ext_profile=$(docker manifest inspect "${ext_image}" 2>/dev/null | \
-                jq -r '.config.Labels["io.balena.image.profiles"] // empty' 2>/dev/null || echo "")
-
-              # If no profile label, derive from service name (convention)
-              if [ -z "${ext_profile}" ]; then
-                ext_profile="${svc_name}"
-              fi
+            for ext_ref in ${{ inputs.extensions }}; do
+              svc_name=$(echo "${ext_ref}" | sed 's|.*/||; s|[@:].*||; s|[^a-zA-Z0-9_-]|-|g')
+              ext_image=$(resolve_extension_image "${ext_ref}")
+              echo "[INFO] ${ext_ref} -> ${ext_image}"
 
               cat >> "${WORKSPACE}/docker-compose.yml" <<EOF
             ${svc_name}:
               image: ${ext_image}
-              profiles: ["${ext_profile}"]
+              profiles: ["${svc_name}"]
               labels:
                 io.balena.image.store: 'data'
                 io.balena.image.class: 'overlay'
