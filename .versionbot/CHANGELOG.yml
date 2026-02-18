@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.33.25
+      hash: 86a95ce38bfad52df52e4a4283abe7f4d540d1f3
+      body: |
+        Update aws/aws-cli from 2.33.18 to 2.33.25
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.39.28
+  title: ""
+  date: 2026-02-18T23:19:26.827Z
+- commits:
     - subject: Remove dead AMI script and its Dockerfile dependencies
       hash: c1f8c608d4d72c45e5a311523f7d69a1b9e4174a
       body: |
