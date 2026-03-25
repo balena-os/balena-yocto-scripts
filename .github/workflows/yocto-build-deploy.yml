@@ -267,7 +267,7 @@ jobs:
       dt_arch: ${{ steps.balena-lib.outputs.dt_arch }}
       is_private: ${{ steps.is-private.outputs.result }}
       should_finalize: ${{ steps.merge-test-result.outputs.finalize == 'true' || inputs.force-finalize }}
-      is_esr: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v20')) || (github.event_name == 'workflow_dispatch' && startsWith(github.ref_name, '20')) }}
+      is_esr: ${{ startsWith(github.ref, 'refs/tags/v20') }}
       deploy_path: ${{ github.workspace }}/deploy/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}
       balena_host: ${{ env.BALENARC_BALENA_URL }}
 
