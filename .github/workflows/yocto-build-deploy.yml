@@ -1715,7 +1715,8 @@ jobs:
   ami-deploy:
     name: Deploy AMI
     runs-on: ${{ fromJSON(inputs.build-runs-on) }}
-    if: inputs.deploy-ami && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    # Only try to deploy an AMI if this is a push of a new tag, or a force finalize manual run of the workflow. 
+    if: inputs.deploy-ami && (github.event_name == 'push' || ((github.event_name == 'workflow_dispatch') && inputs.force-finalize)) 
     needs:
       - approved-commit
       - build
@@ -2195,7 +2196,8 @@ jobs:
 
         # Tear down any AMI's created in the case of a failure - to leave a clean slate for the next run
       - name: Clean up AMI images on failure
-        if: failure()
+        # Only try to delete an AMI if we actually succeeded in creating one - this to stop us accidently deleting old AMIs
+        if: failure() && steps.ami-create.outcome == 'success'
         run: |
           image_id=$(aws ec2 describe-images \
               --filters "Name=name,Values=${AMI_NAME}" \
