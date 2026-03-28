@@ -1,4 +1,32 @@
 - commits:
+    - subject: stop running AMI delete on failure step if no AMI created, and stop AMI
+        deploy on non-finalised workflow-dispatch
+      hash: 703e2ddca64701f96903b8f0ec6d6e651847ae40
+      body: |
+        These 2 rules are there to stop accidental AMI creation or deletion
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+    - subject: "workflows: simplify esr check to tag comparison"
+      hash: e4cbdbab03bdf05a8fcda27584efe7511a402e9e
+      body: |
+        The workflow dispatch ESR check was erroneously matching ESR versions.
+        This commit uses the same match for both workflow and dispatch runs.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.39.29
+  title: ""
+  date: 2026-03-28T17:54:53.249Z
+- commits:
     - subject: Update aws/aws-cli to v2.33.25
       hash: 86a95ce38bfad52df52e4a4283abe7f4d540d1f3
       body: |
