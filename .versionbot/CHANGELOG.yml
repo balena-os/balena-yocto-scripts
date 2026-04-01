@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io/balena-cli to v24
+      hash: e5c4beeab5837fda8514834663ede9098ccd6cea
+      body: |
+        Update balena-io/balena-cli from 23.2.30 to 24.0.3
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.39.30
+  title: ""
+  date: 2026-04-01T07:52:47.775Z
+- commits:
     - subject: stop running AMI delete on failure step if no AMI created, and stop AMI
         deploy on non-finalised workflow-dispatch
       hash: 703e2ddca64701f96903b8f0ec6d6e651847ae40
