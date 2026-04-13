@@ -523,7 +523,15 @@ if [ -d "${TEMPLATECONF}/default" ]; then
 	TEMPLATECONF="${TEMPLATECONF}/default"
 fi
 
-source ${SCRIPTPATH}/../../layers/poky/oe-init-build-env ${SCRIPTPATH}/../../${BUILD_DIR}
+DEVICE_LAYER_CONF=$(ls ${SCRIPTPATH}/../../layers/meta-balena-*/conf/layer.conf)
+INIT_BUILD_ENV_LAYER="poky"
+
+if grep -q -i "LAYERSERIES_COMPAT.*wrynose" ${DEVICE_LAYER_CONF}; then
+    INIT_BUILD_ENV_LAYER="openembedded-core"
+fi
+
+source ${SCRIPTPATH}/../../layers/${INIT_BUILD_ENV_LAYER}/oe-init-build-env ${SCRIPTPATH}/../../${BUILD_DIR}
+
 if [ "x$DEVELOPMENT_IMAGE" == "xyes" ]; then
     sed -i "s/.*OS_DEVELOPMENT =.*/OS_DEVELOPMENT = \"1\"/g" conf/local.conf
 else
@@ -559,7 +567,6 @@ for pair in $ADDITIONAL_VARIABLES; do
     echo "$variable=\"$value\"" >> conf/local.conf
 done
 
-DEVICE_LAYER_CONF=$(ls ${SCRIPTPATH}/../../layers/meta-balena-*/conf/layer.conf)
 if ls ${SCRIPTPATH}/../../layers/meta-balena/meta-*-${OLD_SYNTAX_RELEASES[0]} >/dev/null 2>&1; then
     for poky_release in "${OLD_SYNTAX_RELEASES[@]}"; do
         if grep -q -i "LAYERSERIES_COMPAT.*$poky_release" ${DEVICE_LAYER_CONF}; then
