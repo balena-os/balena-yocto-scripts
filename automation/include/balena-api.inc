@@ -12,7 +12,7 @@ TRANSLATION=${TRANSLATION:-"v6"}
 
 BALENA_HOSTOS_BLOCK_CLASS="io.balena.image.class"
 BALENA_HOSTOS_BLOCK_STORE="io.balena.image.store"
-BALENA_HOSTOS_BLOCK_REQUIRES_REBOOT="io.balena.image.requires-reboot"
+BALENA_HOSTOS_BLOCK_REQUIRES_REBOOT="io.balena.update.requires-reboot"
 BALENA_HOSTOS_BLOCK_BOOTABLE="io.balena.image.bootable"
 BALENA_HOSTOS_APP_UUID="io.balena.app-uuid"
 BALENA_HOSTOS_APP_ID="io.balena.app-id"
