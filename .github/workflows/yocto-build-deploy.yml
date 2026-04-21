@@ -270,6 +270,9 @@ jobs:
       is_esr: ${{ startsWith(github.ref, 'refs/tags/v20') }}
       deploy_path: ${{ github.workspace }}/deploy/${{ steps.balena-lib.outputs.device_slug }}/${{ steps.balena-lib.outputs.os_version }}
       balena_host: ${{ env.BALENARC_BALENA_URL }}
+      build_services: ${{ steps.build-matrix.outputs.services }}
+      build_matrix: ${{ steps.build-matrix.outputs.matrix }}
+      has_extensions: ${{ steps.build-matrix.outputs.has_extensions }}
 
     steps:
       # Generate an app installation token that has access to
@@ -377,6 +380,143 @@ jobs:
           dt_arch="$(balena_lib_get_dt_arch "${SLUG}")"
           echo "dt_arch=${dt_arch}" >>"${GITHUB_OUTPUT}"
 
+      - name: Prepare hostapp composition
+        run: |
+          COMPOSITION="${MACHINE}.hostapp.yml"
+          META_COMPOSITION="layers/meta-balena/hostapp.yml"
+
+          if [ -f "${META_COMPOSITION}" ] && [ -f "${COMPOSITION}" ]; then
+            echo "[INFO] Merging meta-balena composition with device repo overlay"
+            yq eval-all 'select(fileIndex == 0) *d select(fileIndex == 1)' \
+              "${META_COMPOSITION}" "${COMPOSITION}" > "${COMPOSITION}.tmp"
+            mv "${COMPOSITION}.tmp" "${COMPOSITION}"
+          elif [ -f "${META_COMPOSITION}" ]; then
+            echo "[INFO] Using meta-balena composition (no device repo overlay)"
+            cp "${META_COMPOSITION}" "${COMPOSITION}"
+          elif [ ! -f "${COMPOSITION}" ]; then
+            echo "[INFO] No composition file found, generating default"
+            cat > "${COMPOSITION}" <<'COMPEOF'
+          version: '2.4'
+          services:
+            hostapp:
+              image: __BUILD_OUTPUT__
+              x-build: {}
+              labels:
+                io.balena.image.store: 'root'
+                io.balena.image.class: 'hostapp'
+                io.balena.update.requires-reboot: '1'
+                io.balena.private.hostapp.board-rev: '$DEVICE_REPO_REV'
+          COMPEOF
+          fi
+
+          # A device overlay opts out of a service entirely by nulling the whole key (e.g., `kernel-modules: ~`).
+          # yq's *d operator propagates the null through the merge; this step then deletes the null entries.
+          # For build-only opt-out (keep the service in deploy but drop it from the build matrix), a device overlay
+          # sets x-build: ~ alongside a concrete image: field — same null-override pattern, applied to a nested key.
+          yq -i '.services |= with_entries(select(.value != null))' "${COMPOSITION}"
+
+          echo "[INFO] Composition:"
+          cat "${COMPOSITION}"
+
+      - name: Validate composition
+        run: |
+          COMPOSITION="${MACHINE}.hostapp.yml"
+
+          # Reject empty/missing services upfront — downstream yq queries return [] silently otherwise.
+          n_services=$(yq '.services // {} | length' "${COMPOSITION}")
+          if [ "${n_services}" -eq 0 ]; then
+            echo "::error title=Invalid composition::Missing or empty 'services' in ${COMPOSITION}"
+            cat "${COMPOSITION}"
+            exit 1
+          fi
+
+          # Each service must have exactly one build provenance:
+          #   - image: __BUILD_OUTPUT__ paired with a truthy x-build (workflow builds it)
+          #   - concrete image with no x-build (deployed from a registry)
+          # Detect each mismatch separately so the error message points at the actual problem.
+          build_slot_no_build=$(yq -o=json '[.services | to_entries[] | select(
+            (.value.image // "") == "__BUILD_OUTPUT__" and
+            ((.value."x-build" // null) == null)
+          ) | .key]' "${COMPOSITION}")
+
+          build_no_slot=$(yq -o=json '[.services | to_entries[] | select(
+            ((.value."x-build" // null) != null) and
+            ((.value.image // "") != "__BUILD_OUTPUT__")
+          ) | .key]' "${COMPOSITION}")
+
+          if [ "$(echo "${build_slot_no_build}" | jq 'length')" -ne 0 ]; then
+            echo "::error title=Invalid composition::Services with image: __BUILD_OUTPUT__ require a truthy x-build block: ${build_slot_no_build}"
+            cat "${COMPOSITION}"
+            exit 1
+          fi
+
+          if [ "$(echo "${build_no_slot}" | jq 'length')" -ne 0 ]; then
+            echo "::error title=Invalid composition::Services with a truthy x-build must declare image: __BUILD_OUTPUT__: ${build_no_slot}"
+            cat "${COMPOSITION}"
+            exit 1
+          fi
+
+          # Extension archive matching uses ${recipe}-${MACHINE}.docker as the join key;
+          # duplicate recipes silently shadow each other at deploy time.
+          # Split filter from projection: yq's `map(select(cond) | proj)` keeps non-matching
+          # entries with a null-projected result (unlike jq). `map(select) | map(proj)` filters
+          # first, so length-1 groups drop out instead of becoming {services: []} false positives.
+          dup_recipes=$(yq -o=json '.services | to_entries | map(select(.value."x-build".recipe != null) | {"service": .key, "recipe": .value."x-build".recipe}) | group_by(.recipe) | map(select(length > 1)) | map({"recipe": .[0].recipe, "services": [.[] | .service]})' "${COMPOSITION}")
+          if [ "$(echo "${dup_recipes}" | jq 'length')" -ne 0 ]; then
+            echo "::error title=Duplicate x-build.recipe::Recipe values must be unique across services: ${dup_recipes}"
+            cat "${COMPOSITION}"
+            exit 1
+          fi
+
+      - name: Parse build matrix
+        id: build-matrix
+        run: |
+          COMPOSITION="${MACHINE}.hostapp.yml"
+          echo "Parsing composition: ${COMPOSITION}"
+
+          # Services opt in to the build pipeline by declaring a truthy x-build (including empty {}).
+          # Device-repo overlays can opt out of a meta-balena-defined extension by setting `x-build: ~`,
+          # which the deep merge propagates as null — falsy, so the service is excluded from the matrix.
+          matrix=$(yq -o=json '[.services | to_entries[] | select(.value."x-build") | {
+            "service_name": .key,
+            "recipe": (.value."x-build".recipe // ""),
+            "build_args": (.value."x-build".build_args // [] | join(" ")),
+            "assets": (.value."x-build".assets // [] | join("\n")),
+            "image_class": (.value.labels."io.balena.image.class" // "overlay")
+          }]' "${COMPOSITION}")
+
+          # An empty matrix silently skips all downstream build jobs with green checks; fail fast instead.
+          if [ -z "${matrix}" ] || [ "${matrix}" = "null" ] || [ "$(echo "${matrix}" | jq 'length')" -eq 0 ]; then
+            echo "::error title=Empty build matrix::No services with truthy x-build found in ${COMPOSITION}"
+            cat "${COMPOSITION}"
+            exit 1
+          fi
+
+          # A composition that builds only extensions but omits hostapp is almost certainly a mistake (device repo forgot to opt in).
+          if [ "$(echo "${matrix}" | jq 'any(.image_class == "hostapp")')" != "true" ]; then
+            echo "::error title=Missing hostapp service::No service with io.balena.image.class == hostapp in build matrix; a hostapp is required"
+            cat "${COMPOSITION}"
+            exit 1
+          fi
+
+          services=$(echo "${matrix}" | jq -c '[.[].service_name]')
+          # Matrix contains only services with truthy x-build (registry-pulled extensions are absent).
+          # >1 means at least one extension was built and will produce a .docker artifact to download.
+          # Computed here because GHA `if:` cannot evaluate fromJSON(...).length on a string output.
+          has_extensions=$([ "$(echo "${matrix}" | jq 'length')" -gt 1 ] && echo true || echo false)
+
+          echo "Build services: ${services}"
+          echo "Build matrix: ${matrix}"
+          echo "Has extensions: ${has_extensions}"
+          echo "services=${services}" >> "${GITHUB_OUTPUT}"
+          echo "has_extensions=${has_extensions}" >> "${GITHUB_OUTPUT}"
+          delimiter="$(openssl rand -hex 16)"
+          {
+            echo "matrix<<${delimiter}"
+            echo "${matrix}"
+            echo "${delimiter}"
+          } >> "${GITHUB_OUTPUT}"
+
       # Unrolled balena_api_is_dt_private function - https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
       # Had to be unrolled due to this: https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191 function relying on a jenkins env var to select the balena env - so failed
       # is_private=$(${CURL} -XGET -H "Content-type: application/json" -H "Authorization: bearer ${BALENAOS_TOKEN}" --silent --retry 5 "https://api.${API_ENV}/${TRANSLATION}/device_type?\$filter=slug%20eq%20%27${device_slug}%27&\$select=slug,is_private" | jq -r '.d[0].is_private')
@@ -400,6 +540,46 @@ jobs:
             const data = await result.json()
             console.log(JSON.stringify(data, null, 2))
             return data.d[0].is_private
+
+      - name: Checkout private contracts
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        if: steps.is-private.outputs.result == 'true'
+        with:
+          repository: balena-io/private-contracts
+          token: ${{ steps.app-token-balena-io.outputs.token }}
+          path: ${{ github.workspace }}/private-contracts
+          persist-credentials: false
+
+      - name: Build OS contract
+        env:
+          CONTRACTS_BUILD_DIR:
+            "${{ github.workspace }}/balena-yocto-scripts/build/contracts"
+          NODE: node
+          DEVICE_TYPE_SLUG: ${{ steps.balena-lib.outputs.device_slug }}
+          CONTRACTS_OUTPUT_DIR: "${{ github.workspace }}/build/contracts"
+        run: |
+          if ! npm --prefix="${CONTRACTS_BUILD_DIR}" ci > /dev/null; then
+            >&2 echo "[balena_lib_build_contracts]: npm failed installing dependencies"
+            exit 1
+          fi
+          NODE_PATH="${CONTRACTS_BUILD_DIR}/node_modules" ${NODE} "${CONTRACTS_BUILD_DIR}/generate-oscontracts.js" > /dev/null
+          if [ -f "${CONTRACTS_OUTPUT_DIR}/${DEVICE_TYPE_SLUG}/balena-os/balena.yml" ]; then
+            echo "${CONTRACTS_OUTPUT_DIR}/${DEVICE_TYPE_SLUG}/balena-os/balena.yml"
+          else
+            >&2 echo "[balena_lib_build_contracts]: Failed to build OS contract for ${DEVICE_TYPE_SLUG}. Ensure a hw.deviceType contract is in the appropriate repo"
+            exit 1
+          fi
+          cp "${CONTRACTS_OUTPUT_DIR}/${DEVICE_TYPE_SLUG}/balena-os/balena.yml" "${{ github.workspace }}/balena.yml"
+
+      - name: Upload composition and contract artifacts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: hostapp-composition
+          retention-days: 3
+          if-no-files-found: error
+          path: |
+            ${{ env.MACHINE }}.hostapp.yml
+            ${{ github.workspace }}/balena.yml
 
       # In the old workflow we had to fetch the merge commit, get the check runs from the PR, and check if a device type passed or failed
       # reference: https://github.com/balena-os/github-workflows/blob/master/.github/workflows/build_and_deploy.yml#L89
@@ -575,6 +755,12 @@ jobs:
     # - YOCTO_SSH_PRIVATE_KEY_B64: used to pull private yocto sources from within the same organization
     environment: ${{ inputs.signing-environment }}
 
+    strategy:
+      fail-fast: false
+      matrix:
+        service_name: ${{ fromJSON(needs.balena-lib.outputs.build_services) }}
+        include: ${{ fromJSON(needs.balena-lib.outputs.build_matrix) }}
+
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
     # https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect#adding-permissions-settings
@@ -673,38 +859,6 @@ jobs:
           git checkout --force "${{ inputs.yocto-scripts-ref }}"
           git submodule update --init --recursive
 
-      - name: Checkout private Contracts
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        if: needs.balena-lib.outputs.is_private == 'true'
-        with:
-          repository: balena-io/private-contracts
-          token: ${{ steps.app-token-balena-io.outputs.token }}
-          path: ${{ github.workspace }}/private-contracts
-          # Do not persist the token credentials,
-          # and prefer that each step provide credentials where required
-          persist-credentials: false
-
-      # Unrolled balena_api_is_dt_private function - https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
-      # Had to be unrolled due to this: https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191 function relying on a jenkins env var to select the balena env - so failed
-      # TODO: Move this to hostapp-deploy job
-      - name: Build OS contract
-        env:
-          CONTRACTS_BUILD_DIR: "${{ github.workspace }}/balena-yocto-scripts/build/contracts"
-          NODE: node
-          DEVICE_TYPE_SLUG: ${{ needs.balena-lib.outputs.device_slug }}
-          CONTRACTS_OUTPUT_DIR: "${{ github.workspace }}/build/contracts"
-        run: |
-          npm --prefix="${CONTRACTS_BUILD_DIR}" ci > /dev/null || (>&2 echo "[balena_lib_build_contracts]: npm failed installing dependencies" && return 1)
-          NODE_PATH="${CONTRACTS_BUILD_DIR}/node_modules" ${NODE} "${CONTRACTS_BUILD_DIR}/generate-oscontracts.js" > /dev/null
-          if [ -f "${CONTRACTS_OUTPUT_DIR}/${DEVICE_TYPE_SLUG}/balena-os/balena.yml" ]; then
-            echo "${CONTRACTS_OUTPUT_DIR}/${DEVICE_TYPE_SLUG}/balena-os/balena.yml"
-          else
-            >&2 echo "[balena_lib_build_contracts]: Failed to build OS contract for ${DEVICE_TYPE_SLUG}. Ensure a hw.deviceType contract is in the appropriate repo"
-            return 1
-          fi
-          # Move newly generated OS contract to location expected later on in the workflow
-          cp "${CONTRACTS_OUTPUT_DIR}/${DEVICE_TYPE_SLUG}/balena-os/balena.yml" "${WORKSPACE}/balena.yml"
-
       # Causes tarballs of the source control repositories (e.g. Git repositories), including metadata, to be placed in the DL_DIR directory.
       # https://docs.yoctoproject.org/4.0.5/ref-manual/variables.html?highlight=compress#term-BB_GENERATE_MIRROR_TARBALLS
       # The github-script action is a safer method of writing to outputs and variables, vs a shell step.
@@ -718,7 +872,7 @@ jobs:
             core.exportVariable('BARYS_ARGUMENTS_VAR', newValue);
 
       - name: Enable signed images
-        if: inputs.sign-image == true
+        if: inputs.sign-image == true && matrix.image_class == 'hostapp'
         env:
           SIGN_API: "${{ vars.SIGN_API_URL || 'https://sign.balena-cloud.com' }}"
           SIGN_API_KEY: "${{ secrets.SIGN_API_KEY }}"
@@ -824,6 +978,10 @@ jobs:
           # Use the target deploy environment (balena-cloud.com, balena-staging.com, balena-dev.com...) to
           # preload the supervisor from the correct registry
           DEPLOY_ENV: ${{ needs.balena-lib.outputs.balena_host }}
+          # Matrix values are read from a repo-authored composition; route through env to prevent shell injection.
+          MATRIX_RECIPE: ${{ matrix.recipe }}
+          MATRIX_IMAGE_CLASS: ${{ matrix.image_class }}
+          MATRIX_BUILD_ARGS: ${{ matrix.build_args }}
         run: |
           # When building for non-x86 device types, meson, after building binaries must try to run them via qemu if possible , maybe as some sanity check or test?
           # Therefore qemu must be used - and our runner mmap_min_addr is set to 4096 (default, set here: https://github.com/product-os/github-runner-kernel/blob/ef5a66951599dc64bf2920d896c36c6d9eda8df6/config/5.10/microvm-kernel-x86_64-5.10.config#L858
@@ -840,20 +998,36 @@ jobs:
           >&2 eval "$(ssh-agent)"
           echo "${{ secrets.YOCTO_SSH_PRIVATE_KEY_B64 }}" | base64 -d | ssh-add - >&2
 
-          BARYS_ARGUMENTS_VAR="${BARYS_ARGUMENTS_VAR} -a DEVICE_TYPE=${SLUG}"
+          # Common args needed by all matrix legs
+          COMMON_ARGS="-a BB_GENERATE_MIRROR_TARBALLS=1 -a DEVICE_TYPE=${SLUG}"
+
+          # Recipe flag: extensions pass -i <recipe>, hostapp omits it (uses deploy_artifact default)
+          BITBAKE_TARGET_ARG=""
+          if [ -n "${MATRIX_RECIPE}" ]; then
+            BITBAKE_TARGET_ARG="-i ${MATRIX_RECIPE}"
+          fi
+
+          # Hostapp additionally receives the caller's build-args input (used e.g. for a sample conf); extensions rely on x-build.build_args alone.
+          BARYS_ARGS="${COMMON_ARGS} ${MATRIX_BUILD_ARGS}"
+          if [ "${MATRIX_IMAGE_CLASS}" = "hostapp" ]; then
+            BARYS_ARGS="${BARYS_ARGS} ${BARYS_ARGUMENTS_VAR}"
+          fi
 
           ./balena-yocto-scripts/build/balena-build.sh \
             -d "${MACHINE}" \
             -a "${DEPLOY_ENV}" \
             -s "${SHARED_BUILD_DIR}" \
-            -g "${BARYS_ARGUMENTS_VAR}" | tee balena-build.log
+            ${BITBAKE_TARGET_ARG} \
+            -g "${BARYS_ARGS}" | tee balena-build.log
 
           if ! grep -q "Build for ${{ inputs.machine }} suceeded" balena-build.log; then
             exit 1
           fi
 
       - name: Verify kernel module signing key
-        if: inputs.sign-image == true && inputs.extra_signing_key == true
+        if:
+          inputs.sign-image == true && inputs.extra_signing_key == true &&
+          matrix.image_class == 'hostapp'
         env:
           automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
           HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
@@ -1050,7 +1224,7 @@ jobs:
         # always upload build logs, even if the build fails
         if: cancelled() == false
         with:
-          name: build-logs-${{ env.MACHINE }}
+          name: build-logs-${{ env.MACHINE }}-${{ matrix.service_name }}
           if-no-files-found: error
           retention-days: 7
           compression-level: 7
@@ -1070,7 +1244,14 @@ jobs:
         # as they run in the context of the main branch and would be vulnerable to cache poisoning.
         # https://0xn3va.gitbook.io/cheat-sheets/ci-cd/github/actions#cache-poisoning
         # https://adnanthekhan.com/2024/05/06/the-monsters-in-your-build-cache-github-actions-cache-poisoning/
-        if: steps.sstate-restore.outputs.cache-hit != true && github.event_name != 'pull_request_target'
+        # Only the hostapp leg saves: all matrix legs share one key, so parallel
+        # extension legs would race to write it (first finisher wins, rest hit
+        # "cache already exists") and persist a partial extension sstate instead
+        # of the fuller hostapp one. Extensions still warm-start via restore-keys.
+        if: >-
+          steps.sstate-restore.outputs.cache-hit != true &&
+          github.event_name != 'pull_request_target' &&
+          matrix.image_class == 'hostapp'
         # Unset AWS credentials so they don't override the minio credentials
         env:
           AWS_ACCESS_KEY_ID: yocto-svcacct
@@ -1150,6 +1331,7 @@ jobs:
       # and only package up what is needed for s3 deploy, hostapp deploy, and leviathan tests.
       # https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/include/balena-deploy.inc#L23
       - name: Prepare hostapp artifacts
+        if: matrix.image_class == 'hostapp'
         env:
           ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
         run: |
@@ -1161,13 +1343,12 @@ jobs:
           source "${automation_dir}/include/balena-deploy.inc"
           balena_deploy_artifacts "${SLUG}" "${S3_DEPLOY_PATH}" false
 
-          cp -v "${WORKSPACE}/balena.yml" "${S3_DEPLOY_PATH}/balena.yml"
-
           find "${DEPLOY_PATH}" -exec ls -lh {} \;
 
       # Deflate files are the main image artifact for S3 / webresource deploy
       # is they are used by the img-maker and os download endpoints.
       - name: Prepare deflate files
+        if: matrix.image_class == 'hostapp'
         env:
           HELPER_IMAGE: balena/balena-img:6.20.26
         run: |
@@ -1183,7 +1364,9 @@ jobs:
       # and to prevent running signed images that have not gone through review and may have security flaws.
       # Additional file extensions can be added below, but are only required if included as artifact uploads.
       - name: Encrypt signed/private artifacts
-        if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
+        if:
+          (inputs.sign-image || needs.balena-lib.outputs.is_private == 'true')
+          && matrix.image_class == 'hostapp'
         env:
           PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
           PATHS_TO_ENCRYPT: |
@@ -1209,7 +1392,7 @@ jobs:
       # https://github.com/actions/upload-artifact
       - name: Upload hostapp artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || inputs.force-finalize
+        if: matrix.image_class == 'hostapp'
         with:
           name: hostapp-artifacts
           if-no-files-found: error
@@ -1223,7 +1406,6 @@ jobs:
             ${{ env.S3_DEPLOY_PATH }}/balena-image.docker.enc
             ${{ env.S3_DEPLOY_PATH }}/compressed*/*.deflate
             ${{ env.S3_DEPLOY_PATH }}/compressed*/*.deflate.enc
-            ${{ env.S3_DEPLOY_PATH }}/balena.yml
             ${{ env.S3_DEPLOY_PATH }}/*.json
             ${{ env.S3_DEPLOY_PATH }}/*.md
             ${{ env.S3_DEPLOY_PATH }}/VERSION*
@@ -1239,6 +1421,7 @@ jobs:
       # https://github.com/actions/upload-artifact
       - name: Upload kernel-module-headers artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: matrix.image_class == 'hostapp'
         with:
           name: kernel-module-headers
           if-no-files-found: error
@@ -1254,6 +1437,7 @@ jobs:
       # https://github.com/actions/upload-artifact
       - name: Upload balena-image.docker artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: matrix.image_class == 'hostapp'
         with:
           name: balena-image.docker
           if-no-files-found: error
@@ -1270,6 +1454,7 @@ jobs:
       # https://github.com/actions/upload-artifact
       - name: Upload balena.img.zip artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: matrix.image_class == 'hostapp'
         with:
           name: balena.img.zip
           if-no-files-found: error
@@ -1285,6 +1470,7 @@ jobs:
       # https://github.com/actions/upload-artifact
       - name: Upload balena-flasher.img.zip artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: matrix.image_class == 'hostapp'
         with:
           name: balena-flasher.img.zip
           if-no-files-found: ignore
@@ -1300,6 +1486,7 @@ jobs:
       # https://github.com/actions/upload-artifact
       - name: Upload balena-raw.img.zip artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: matrix.image_class == 'hostapp'
         with:
           name: balena-raw.img.zip
           if-no-files-found: ignore
@@ -1310,6 +1497,18 @@ jobs:
           path: |
             ${{ env.S3_DEPLOY_PATH }}/image/balena-raw.img.zip
             ${{ env.S3_DEPLOY_PATH }}/image/balena-raw.img.zip.enc
+
+      - name: Upload extension artifacts
+        if: matrix.image_class != 'hostapp'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: extension-${{ matrix.service_name }}
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 0
+          path: |
+            build/tmp/deploy/images/${{ env.MACHINE }}/${{ matrix.recipe }}-${{ env.MACHINE }}.docker
+            ${{ matrix.assets }}
 
   ##############################
   # hostapp Deploy
@@ -1351,6 +1550,24 @@ jobs:
           name: hostapp-artifacts
           path: ${{ env.DEPLOY_PATH }}
 
+      - name: Download composition file
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: hostapp-composition
+          path: ${{ env.DEPLOY_PATH }}
+
+      - name: Download extension artifacts
+        # Only run when the build matrix produced a non-hostapp service — an extension this workflow
+        # actually built. Registry-pulled extensions (concrete image, no x-build) are absent from the
+        # matrix and have nothing to download. Gated via a precomputed output because GHA `if:` cannot
+        # evaluate fromJSON(...).length on a string output.
+        if: needs.balena-lib.outputs.has_extensions == 'true'
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: extension-*
+          path: ${{ env.DEPLOY_PATH }}/extensions
+          merge-multiple: true
+
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
         env:
@@ -1373,8 +1590,6 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y unzip
           fi
-
-          cp -v "${DEPLOY_PATH}/balena.yml" "${WORKSPACE}/balena.yml"
 
       - name: Setup balena CLI
         uses: balena-io-examples/setup-balena-action@d59e0ac4645e7ba9a5b5cab36b6d9d828cd596fe # v0.0.96
@@ -1420,8 +1635,8 @@ jobs:
           ## Adapted from https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/entry_scripts/balena-deploy-block.sh
           ## That script was executed from inside a helper image - here we're doing it inline
 
-          # load hostapp bundle and get local image reference, needed for `balena deploy`
-          _local_image=$(docker load -i "${DEPLOY_PATH}/balena-image.docker" | cut -d: -f1 --complement | tr -d " " )
+          # Load hostapp image
+          _local_image=$(docker load -i "${DEPLOY_PATH}/balena-image.docker" | cut -d: -f1 --complement | tr -d " ")
 
           if [[ -z "${_local_image}" ]]; then
             echo "[ERROR] Failed to load balena-image.docker"
@@ -1437,7 +1652,8 @@ jobs:
             APPNAME="${APPNAME}-esr"
           fi
 
-          if [ -f "${WORKSPACE}/balena.yml" ]; then
+          if [ -f "${DEPLOY_PATH}/balena.yml" ]; then
+            cp -v "${DEPLOY_PATH}/balena.yml" "${WORKSPACE}/balena.yml"
             echo -e "\nversion: ${VERSION}" >> "${WORKSPACE}/balena.yml"
             if [ "${{ inputs.sign-image }}" = "true" ]; then
               sed -i '/provides:/a \  - type: sw.feature\n    slug: secureboot' "/${WORKSPACE}/balena.yml"
@@ -1472,20 +1688,64 @@ jobs:
           if [ "${FINAL}" != true ]; then
             status="--draft"
           fi
-          #[ "${VERBOSE}" = "verbose" ] && _debug="--debug"
 
-          # create docker-compose.yml with OS release metadata for the hostapp
-          cat > "${WORKSPACE}/docker-compose.yml" <<EOF
-          version: '2.4'
-          services:
-            hostapp:
-              image: ${_local_image}
-              labels:
-                io.balena.image.store: 'root'
-                io.balena.image.class: 'hostapp'
-                io.balena.update.requires-reboot: '1'
-                io.balena.private.hostapp.board-rev: '${DEVICE_REPO_REV}'
-          EOF
+          COMPOSITION="${DEPLOY_PATH}/${MACHINE}.hostapp.yml"
+          echo "[INFO] Using composition file: ${COMPOSITION}"
+          cp "${COMPOSITION}" "${WORKSPACE}/docker-compose.yml"
+
+          # Substitute hostapp image reference
+          yq -i "(.services.hostapp.image) = \"${_local_image}\"" "${WORKSPACE}/docker-compose.yml"
+
+          # Load and substitute extension images
+          if [ -d "${DEPLOY_PATH}/extensions" ]; then
+            for docker_archive in "${DEPLOY_PATH}"/extensions/*.docker; do
+              [ -f "${docker_archive}" ] || continue
+              _ext_image=$(docker load -i "${docker_archive}" | cut -d: -f1 --complement | tr -d " ")
+              if [ -z "${_ext_image}" ]; then
+                echo "[ERROR] Failed to load extension archive ${docker_archive}"
+                exit 1
+              fi
+              echo "[INFO] Loaded extension image: ${_ext_image} from ${docker_archive}"
+
+              # Build uploads each extension as ${recipe}-${MACHINE}.docker (see Upload extension artifacts).
+              # Match that exact filename to avoid recipe-name prefix collisions and regex interpretation.
+              _archive_name=$(basename "${docker_archive}" .docker)
+              _matched=0
+              for svc in $(yq '.services | keys | .[]' "${WORKSPACE}/docker-compose.yml"); do
+                _svc_image=$(yq ".services.${svc}.image" "${WORKSPACE}/docker-compose.yml")
+                _svc_recipe=$(yq ".services.${svc}.\"x-build\".recipe // \"\"" "${WORKSPACE}/docker-compose.yml")
+                if [ -z "${_svc_recipe}" ]; then
+                  continue
+                fi
+                if [ "${_svc_image}" = "__BUILD_OUTPUT__" ] && [ "${_archive_name}" = "${_svc_recipe}-${MACHINE}" ]; then
+                  yq -i "(.services.${svc}.image) = \"${_ext_image}\"" "${WORKSPACE}/docker-compose.yml"
+                  echo "[INFO] Set ${svc} image to ${_ext_image}"
+                  _matched=1
+                  break
+                fi
+              done
+              if [ "${_matched}" -eq 0 ]; then
+                _candidates=$(yq '.services[] | .["x-build"].recipe | select(. != null)' "${WORKSPACE}/docker-compose.yml" | sed "s/$/-${MACHINE}.docker/" | tr '\n' ' ')
+                echo "::error title=Orphan extension archive::${docker_archive} did not match any service. Expected filenames were: ${_candidates}"
+                exit 1
+              fi
+            done
+          fi
+
+          # Replace literal "$DEVICE_REPO_REV" placeholder values with the env value.
+          # yq's recursive descent + select(. == ...) matches whole node values only — immune to
+          # substring collisions in other label values, unlike envsubst which is a regex pass.
+          : "${DEVICE_REPO_REV:?required for hostapp board-rev label substitution}"
+          yq -i '(.. | select(. == "$DEVICE_REPO_REV")) = strenv(DEVICE_REPO_REV)' "${WORKSPACE}/docker-compose.yml"
+
+          echo "[INFO] Final composition:"
+          cat "${WORKSPACE}/docker-compose.yml"
+
+          # Any __BUILD_OUTPUT__ left means an extension archive didn't match a service; deploying would ship a broken ref.
+          if grep -q '__BUILD_OUTPUT__' "${WORKSPACE}/docker-compose.yml"; then
+            echo "::error title=Unresolved __BUILD_OUTPUT__ placeholder::Composition still contains __BUILD_OUTPUT__ — extension archive did not match any service"
+            exit 1
+          fi
 
           if [ -n "${_local_image}" ]; then
             releaseCommit="$(BALENARC_BALENA_URL="${API_ENV}" balena deploy "${BALENAOS_ACCOUNT}/${APPNAME}" --source "${WORKSPACE}" ${status} ${_debug} | sed -n 's/.*Release: //p')"
@@ -1578,6 +1838,31 @@ jobs:
             fi
           fi
 
+      - name: Stage extension release assets
+        run: |
+          mkdir -p "${DEPLOY_PATH}/release-assets"
+          COMPOSITION="${DEPLOY_PATH}/${MACHINE}.hostapp.yml"
+
+          # Each service's x-build.assets entries are the source of truth for what
+          # becomes a release web resource. Don't scrape the extensions/ dir —
+          # assets not declared in the composition shouldn't ship as release resources,
+          # and a missing declared asset should fail the deploy loudly.
+          declared=$(yq -o=json '[.services[] | .["x-build"].assets // []] | flatten | unique' "${COMPOSITION}")
+          if [ "$(echo "${declared}" | jq 'length')" -eq 0 ]; then
+            echo "[INFO] No x-build.assets declared in composition; skipping release asset staging."
+            exit 0
+          fi
+
+          echo "${declared}" | jq -r '.[]' | while IFS= read -r asset_path; do
+            asset_name="$(basename "${asset_path}")"
+            src=$(find "${DEPLOY_PATH}/extensions" -type f -name "${asset_name}" -print -quit 2>/dev/null)
+            if [ -z "${src}" ]; then
+              echo "::error title=Missing release asset::Composition declares '${asset_name}' but it was not present in the downloaded extension artifacts"
+              exit 1
+            fi
+            cp -v "${src}" "${DEPLOY_PATH}/release-assets/"
+          done
+
       - name: Upload release assets
         uses: balena-io/upload-balena-release-asset@aa5c76210bde8edc08e21f35c56b05d56fada041 # v0.1.5
         with:
@@ -1596,6 +1881,7 @@ jobs:
             ${{ env.DEPLOY_PATH }}/licenses.tar.gz
             ${{ env.DEPLOY_PATH }}/cyclonedx/*/*.json
             ${{ env.DEPLOY_PATH }}/secure-boot-lock.tar.gz
+            ${{ env.DEPLOY_PATH }}/release-assets/*
 
   ##############################
   # S3 Deploy
