@@ -93,7 +93,7 @@ on:
         description: The AWS environment to use for the S3 source mirror - includes related vars and OIDC role(s)
         required: false
         type: string
-        # default: balena-production.us-east-1
+        default: balena-production.us-east-1
       # This input exists because we want the option to not auto-finalise for some device types, even if they have tests and those tests pass - for example some custom device types, the customer doesn't want new releases published until they green light it
       finalize-on-push-if-tests-passed:
         description: Whether to finalize a hostApp container image to a balena environment, if tests pass.
@@ -742,7 +742,7 @@ jobs:
       - name: Add S3 shared-downloads to MIRRORS
         if: needs.source-mirror-setup.outputs.s3-url
         env:
-          SOURCE_MIRROR_URL: ${{ needs.source-mirror-setup.outputs.s3-url }}
+          SOURCE_MIRROR_URL: ${{ needs.source-mirror-setup.outputs.https-url }}
         run: |
           mkdir -p "$(dirname "${AUTO_CONF_FILE}")"
           cat <<EOF >> "${AUTO_CONF_FILE}"
