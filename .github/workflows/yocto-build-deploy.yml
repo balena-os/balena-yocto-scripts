@@ -740,9 +740,9 @@ jobs:
       # The own-mirrors class makes it easier to set up your own PREMIRRORS from which to first fetch source before
       # attempting to fetch it from the upstream specified in SRC_URI within each recipe.
       - name: Add S3 shared-downloads to MIRRORS
-        if: needs.source-mirror-setup.outputs.s3-url
+        if: needs.source-mirror-setup.outputs.https-url
         env:
-          SOURCE_MIRROR_URL: ${{ needs.source-mirror-setup.outputs.s3-url }}
+          SOURCE_MIRROR_URL: ${{ needs.source-mirror-setup.outputs.https-url }}
         run: |
           mkdir -p "$(dirname "${AUTO_CONF_FILE}")"
           cat <<EOF >> "${AUTO_CONF_FILE}"
@@ -755,6 +755,7 @@ jobs:
             bzr://.*/.* ${SOURCE_MIRROR_URL} \\
             https?$://.*/.* ${SOURCE_MIRROR_URL} \\
             ftp://.*/.*  ${SOURCE_MIRROR_URL} \\
+            crate://.*/.* ${SOURCE_MIRROR_URL} \\
           "
 
           EOF
