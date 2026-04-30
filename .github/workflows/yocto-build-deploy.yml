@@ -801,6 +801,10 @@ jobs:
         id: build
         env:
           HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
+          # Self-CI: use the per-PR helper image baked by Flowzone instead of
+          # the master-tip image. Empty falls through to the VERSION-file
+          # default for downstream device repos that consume this workflow.
+          BALENA_YOCTO_SCRIPTS_VERSION: ${{ github.repository == 'balena-os/balena-yocto-scripts' && github.event_name == 'pull_request' && format('build-{0}', github.event.pull_request.head.sha) || '' }}
           SHARED_BUILD_DIR: ${{ github.workspace }}/shared
           YOCTO_SSH_PRIVATE_KEY_B64: ${{ secrets.YOCTO_SSH_PRIVATE_KEY_B64 }}
           # Use the target deploy environment (balena-cloud.com, balena-staging.com, balena-dev.com...) to
@@ -839,6 +843,10 @@ jobs:
         env:
           automation_dir: "${{ github.workspace }}/balena-yocto-scripts/automation"
           HELPER_IMAGE_REPO: ghcr.io/balena-os/balena-yocto-scripts
+          # Self-CI: use the per-PR helper image baked by Flowzone instead of
+          # the master-tip image. Empty falls through to the VERSION-file
+          # default for downstream device repos that consume this workflow.
+          BALENA_YOCTO_SCRIPTS_VERSION: ${{ github.repository == 'balena-os/balena-yocto-scripts' && github.event_name == 'pull_request' && format('build-{0}', github.event.pull_request.head.sha) || '' }}
           SHARED_BUILD_DIR: ${{ github.workspace }}/shared
           SIGN_KMOD_KEY_APPEND: "${{ secrets.SIGN_KMOD_KEY_APPEND }}"
           INSTALL_DIR: /work
