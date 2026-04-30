@@ -93,7 +93,7 @@ on:
         description: The AWS environment to use for the S3 source mirror - includes related vars and OIDC role(s)
         required: false
         type: string
-        # default: balena-production.us-east-1
+        default: balena-production.us-east-1
       # This input exists because we want the option to not auto-finalise for some device types, even if they have tests and those tests pass - for example some custom device types, the customer doesn't want new releases published until they green light it
       finalize-on-push-if-tests-passed:
         description: Whether to finalize a hostApp container image to a balena environment, if tests pass.
@@ -742,7 +742,7 @@ jobs:
       - name: Add S3 shared-downloads to MIRRORS
         if: needs.source-mirror-setup.outputs.s3-url
         env:
-          SOURCE_MIRROR_URL: ${{ needs.source-mirror-setup.outputs.s3-url }}
+          SOURCE_MIRROR_URL: ${{ needs.source-mirror-setup.outputs.https-url }}
         run: |
           mkdir -p "$(dirname "${AUTO_CONF_FILE}")"
           cat <<EOF >> "${AUTO_CONF_FILE}"
@@ -755,6 +755,7 @@ jobs:
             bzr://.*/.* ${SOURCE_MIRROR_URL} \\
             https?$://.*/.* ${SOURCE_MIRROR_URL} \\
             ftp://.*/.*  ${SOURCE_MIRROR_URL} \\
+            crate://.*/.* ${SOURCE_MIRROR_URL} \\
           "
 
           EOF
@@ -1025,7 +1026,7 @@ jobs:
       - name: Upload build logs
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         # always upload build logs, even if the build fails
-        if: always()
+        if: cancelled() == false
         with:
           name: build-logs-${{ env.MACHINE }}
           if-no-files-found: error
@@ -1072,6 +1073,7 @@ jobs:
       # https://github.com/aws/aws-cli/tags
       - name: Setup awscli
         uses: unfor19/install-aws-cli-action@f5b46b7f32cf5e7ebd652656c5036bf83dd1e60c # v1
+        if: cancelled() == false
         env:
           # renovate: datasource=github-tags depName=aws/aws-cli
           AWSCLI_VERSION: 2.34.23
@@ -1081,6 +1083,8 @@ jobs:
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
+        if: cancelled() == false && needs.source-mirror-setup.outputs.aws-iam-role != ''
+        continue-on-error: true
         with:
           role-to-assume: ${{ needs.source-mirror-setup.outputs.aws-iam-role }}
           role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -1094,7 +1098,7 @@ jobs:
       - name: Sync shared downloads to S3
         # Do not publish shared downloads for pull_request_target events to prevent cache poisoning
         # Do not publish shared downloads for private device-types as the mirror is public-read
-        if: github.event_name != 'pull_request_target' && needs.balena-lib.outputs.is_private == 'false' && needs.source-mirror-setup.outputs.s3-url
+        if: cancelled() == false && github.event_name != 'pull_request_target' && needs.balena-lib.outputs.is_private == 'false' && needs.source-mirror-setup.outputs.s3-url
         # Ignore errors for now, as we may have upload conflicts with other jobs
         continue-on-error: true
         env:
@@ -1106,7 +1110,8 @@ jobs:
         # created in the build container runtime.
         run: |
           sudo ln -sf "${{ github.workspace }}" /work
-          du -cksh "${SHARED_DOWNLOADS_DIR}/*"
+          find "${SHARED_DOWNLOADS_DIR}/"
+          du -cksh "${SHARED_DOWNLOADS_DIR}/"
           aws s3 sync --sse="${S3_SSE}" "${SHARED_DOWNLOADS_DIR}/" "${S3_URL}/" \
             --exclude "*/*" --exclude "*.tmp" --size-only --follow-symlinks --no-progress
 
@@ -1309,7 +1314,7 @@ jobs:
     environment: ${{ inputs.deploy-environment }}
 
     permissions:
-      actions: read # Required to download artifacts from build job for private repos:- https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28#download-an-artifact 
+      actions: read # Required to download artifacts from build job for private repos:- https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28#download-an-artifact
 
     env:
       BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || vars.BALENARC_BALENA_URL || 'balena-cloud.com' }}
@@ -1550,7 +1555,7 @@ jobs:
               fi
             fi
           fi
-      
+
       - name: Upload release assets
         uses: balena-io/upload-balena-release-asset@aa5c76210bde8edc08e21f35c56b05d56fada041 # v0.1.5
         continue-on-error: true
@@ -1597,7 +1602,7 @@ jobs:
     # - AWS_S3_SSE_ALGORITHM: AWS S3 server-side encryption algorithm
     environment: ${{ inputs.deploy-environment }}
 
-    env:  
+    env:
       # Include a number of similar variable keys to allow for flexibility in the environment and backwards compatibility
       AWS_IAM_ROLE: ${{ vars.AWS_IAM_ROLE }}
       AWS_REGION: ${{ vars.AWS_REGION || vars.AWS_S3_REGION || vars.S3_REGION || 'us-east-1' }}
@@ -1617,7 +1622,7 @@ jobs:
     # https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect#adding-permissions-settings
     permissions:
       id-token: write # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
-      actions: read # Required to download artifacts from build job for private repos:- https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28#download-an-artifact 
+      actions: read # Required to download artifacts from build job for private repos:- https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28#download-an-artifact
 
     steps:
 
@@ -1715,8 +1720,8 @@ jobs:
   ami-deploy:
     name: Deploy AMI
     runs-on: ${{ fromJSON(inputs.build-runs-on) }}
-    # Only try to deploy an AMI if this is a push of a new tag, or a force finalize manual run of the workflow. 
-    if: inputs.deploy-ami && (github.event_name == 'push' ||  inputs.force-finalize) 
+    # Only try to deploy an AMI if this is a push of a new tag, or a force finalize manual run of the workflow.
+    if: inputs.deploy-ami && (github.event_name == 'push' ||  inputs.force-finalize)
     needs:
       - approved-commit
       - build
@@ -1734,7 +1739,7 @@ jobs:
     # - BALENA_API_DEPLOY_KEY: Balena API deploy key with access to the balena_os/cloud-config-* fleets
     environment: ${{ inputs.deploy-environment }}
 
-    env:  
+    env:
       # Include a number of similar variable keys to allow for flexibility in the environment and backwards compatibility
       AWS_IAM_ROLE: ${{ vars.AWS_IAM_ROLE }}
       AWS_REGION: ${{ vars.AWS_REGION || vars.AWS_S3_REGION || vars.S3_REGION || 'us-east-1' }}
@@ -1752,7 +1757,7 @@ jobs:
     # https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect#adding-permissions-settings
     permissions:
       id-token: write # This is required for requesting the JWT #https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#requesting-the-access-token
-      actions: read # Required to download artifacts from build job for private repos:- https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28#download-an-artifact 
+      actions: read # Required to download artifacts from build job for private repos:- https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28#download-an-artifact
 
     steps:
 
@@ -1824,7 +1829,7 @@ jobs:
       # # AMI name format: balenaOS(-installer?)(-secureboot?)-VERSION-DEVICE_TYPE
       - name: Set AMI name
         id: ami-name
-        env: 
+        env:
           VERSION: "${{ needs.balena-lib.outputs.os_version }}"
         run: |
             echo "AMI_NAME=balenaOS-${VERSION}-${SLUG}" | sed 's/+/-/g' >>"${GITHUB_ENV}"
@@ -1881,7 +1886,7 @@ jobs:
             --kms-key-id "${AWS_KMS_KEY_ID}" | jq -r .ImportTaskId)
 
           echo "* Created a AWS import snapshot task with id ${import_task_id}. Waiting for completition..."
-          
+
           ### Using the aws ec2 wait command times out - currently can't find a way to increase the timeout period, so poll "manually" instead
           # aws ec2 wait snapshot-imported \
           #   --import-task-ids ${import_task_id}
@@ -1976,7 +1981,7 @@ jobs:
           HOSTOS_VERSION: "${{ needs.balena-lib.outputs.os_version }}"
           AMI_TEST_ORG: ${{ vars.AMI_TEST_ORG || 'testbot'}}
           AMI_TEST_DEV_MODE: true
-        run: | 
+        run: |
           key_file="${HOME}/.ssh/id_ed25519"
 
           ami_test_fleet=$(openssl rand -hex 4)
@@ -1999,7 +2004,7 @@ jobs:
           >&2 echo "Pre-registered device with UUID ${uuid}"
           echo "uuid=${uuid}" >>"${GITHUB_OUTPUT}"
 
-          if [ "$AMI_TEST_DEV_MODE" = true ]; then 
+          if [ "$AMI_TEST_DEV_MODE" = true ]; then
               _dev_mode="--dev";
           else
               _dev_mode="";
@@ -2058,10 +2063,10 @@ jobs:
           fi
 
           echo "instance_id=${_instance_id}" >>"${GITHUB_OUTPUT}"
-          
+
           aws ec2 wait instance-running --instance-ids "${_instance_id}"
           aws ec2 wait instance-status-ok --instance-ids "${_instance_id}"
-          
+
           _loops=30
           until echo 'balena ps -q -f name=balena_supervisor | xargs balena inspect | \
               jq -r ".[] | select(.State.Health.Status!=null).Name + \":\" + .State.Health.Status"; exit' | \
@@ -2078,7 +2083,7 @@ jobs:
       - name: Terminate test instance
         continue-on-error: true
         if: always()
-        env: 
+        env:
           INSTANCE_ID: ${{ steps.ami-test.outputs.instance_id }}
         run: |
           aws ec2 terminate-instances --instance-ids "${INSTANCE_ID}"
@@ -2086,14 +2091,14 @@ jobs:
       - name: Clean up test fleet
         continue-on-error: true
         if: always()
-        env: 
+        env:
           FLEET: "${{ steps.ami-test-fleet.outputs.fleet }}"
         run: |
           [ -z "${FLEET}" ] && exit 0
           balena fleet rm "${FLEET}" --yes || true
           _key_id=$(balena ssh-key list | grep "${FLEET#*/}" | awk '{print $1}')
           balena ssh-key rm "${_key_id}" --yes || true
-        
+
       # FIXME - This currently will not work, due to not being able to share encypted snapshots
       # - name: Make AMI public
       #   if: ${{ steps.ami-test.outcome == 'success' }}
@@ -2104,7 +2109,7 @@ jobs:
       #     AMI_ARCHITECTURE: "${{ steps.ami-arch.outputs.string }}"
       #     AMI_IMAGE_ID: "${{ steps.ami-test.outputs.ami_image_id }}"
       #     AWS_DEFAULT_REGION: "${{ needs.aws-deploy-config.outputs.aws-region }}"
-      #   run: |  
+      #   run: |
       #     # We have x86_64 and aarch64, and want one slot free for customers requests
       #     AWS_AMI_PUBLIC_ARCH_QUOTA=$(((AWS_AMI_PUBLIC_QUOTA - 1)/2))
       #     _ami_public_images_count=$(aws ec2 describe-images \
@@ -2161,13 +2166,13 @@ jobs:
       #             exit 1
       #         fi
       #     fi
-      
+
       # From https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-quotas.html
       # The maximum number of public and private AMIs allowed per Region iz 50000.
       # - name: Clean up EOL AMIs
       #   if: always()
       #   continue-on-error: true
-      #   env: 
+      #   env:
       #     PERIOD: "2 years ago"
       #   run: |
       #     _date=$(date +%Y-%m-%d -d "${PERIOD}")
@@ -2219,7 +2224,7 @@ jobs:
           else
               echo "Could not de-register AMI ${image_id}"
           fi
-          
+
   ##############################
   # Leviathan Test
   ##############################
@@ -2252,7 +2257,7 @@ jobs:
         shell: bash --noprofile --norc -eo pipefail -x {0}
 
     permissions:
-      actions: read # Required to download artifacts from build job for private repos:- https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28#download-an-artifact 
+      actions: read # Required to download artifacts from build job for private repos:- https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28#download-an-artifact
 
     strategy:
       fail-fast: false
@@ -2410,8 +2415,8 @@ jobs:
           fi
 
           mkdir -p "${LEVIATHAN_WORKSPACE}"
-          
-          # The test suite expects the image to be tested to be called "balena.img.gz" - regardless of what it may have been called before 
+
+          # The test suite expects the image to be tested to be called "balena.img.gz" - regardless of what it may have been called before
           gzip -9 -c "${DEPLOY_PATH}/image/${BALENA_OS_IMAGE}" >"${LEVIATHAN_WORKSPACE}/balena.img.gz"
           mv -v "${DEPLOY_PATH}/balena-image.docker" "${LEVIATHAN_WORKSPACE}/balena-image.docker"
           mv -v "${DEPLOY_PATH}/kernel_modules_headers.tar.gz" "${LEVIATHAN_WORKSPACE}/kernel_modules_headers.tar.gz"
@@ -2443,7 +2448,7 @@ jobs:
       # https://github.com/balena-os/leviathan/blob/master/action.yml
       - name: BalenaOS Leviathan Tests
         # Use the leviathan action from the submodule in meta-balena
-        # Using the submodule version maintains backward compatibility and restricts version drift  
+        # Using the submodule version maintains backward compatibility and restricts version drift
         uses: ./layers/meta-balena/tests/leviathan
         env:
           WORKSPACE: "${{ env.LEVIATHAN_WORKSPACE }}"
