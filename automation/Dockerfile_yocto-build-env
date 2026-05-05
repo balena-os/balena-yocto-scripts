@@ -24,15 +24,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends jq nodejs npm s
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends dos2unix && rm -rf /var/lib/apt/lists/*
 
-# Install docker — pinned to docker.io 27.x, the newest major in jammy that
-# still accepts API-1.41 clients (Docker 29.x raised MIN_API_VERSION from 1.24
-# to 1.44, breaking the docker client used by mkfs-hostapp-native:do_compile).
-# Wildcard absorbs Ubuntu's future security patches within the 27.x line.
-# Re-evaluate when balena-engine moves to a newer major; jammy ships only
-# 20.10 / 27.5 / 29.1 of docker.io, so switch to docker-ce from Docker's
-# official APT repo for anything else: https://docs.docker.com/engine/install/ubuntu/
+# Install docker from Docker's official APT repo. Ubuntu's docker.io package
+# only ships 20.10.12 (frozen in jammy/universe) and 29.1.3 (jammy-updates +
+# jammy-security) — and Docker 29.x raised MIN_API_VERSION from 1.24 to 1.44,
+# breaking the API-1.41 client used by mkfs-hostapp-native:do_compile.
+#
+# Pinned to docker-ce 28.5.2 — the newest version where moby's
+# MinSupportedAPIVersion is still 1.24 (Docker 29 is when it bumped). Docker's
+# APT repo retains all historical versions persistently, unlike Ubuntu's
+# archive (e.g., 27.5.1 was yanked from jammy-security in favor of 29.1.3).
+# https://docs.docker.com/engine/install/ubuntu/
+RUN install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
+    chmod a+r /etc/apt/keyrings/docker.asc && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable" > /etc/apt/sources.list.d/docker.list
+
+# renovate: datasource=github-releases depName=moby/moby extractVersion=^docker-v(?<version>.*)$
+ENV DOCKER_CE_VERSION=28.5.2
 # hadolint ignore=DL3008
-RUN apt-get update && apt-get install -y --no-install-recommends iptables procps e2fsprogs xfsprogs xz-utils git kmod apt-transport-https ca-certificates curl gnupg lsb-release "docker.io=27.*" && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends e2fsprogs xfsprogs git kmod "docker-ce=5:${DOCKER_CE_VERSION}-*~ubuntu.22.04~jammy" "docker-ce-cli=5:${DOCKER_CE_VERSION}-*~ubuntu.22.04~jammy" && \
+    rm -rf /var/lib/apt/lists/*
 VOLUME /var/lib/docker
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
