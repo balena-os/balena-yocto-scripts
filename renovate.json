@@ -2,5 +2,12 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "github>balena-io/renovate-config"
+  ],
+  "packageRules": [
+    {
+      "description": "Cap docker-ce at 28.x — Docker 29 raised MIN_API_VERSION to 1.44 and breaks the API-1.41 client in mkfs-hostapp-native",
+      "matchPackageNames": ["moby/moby"],
+      "allowedVersions": "<29.0.0"
+    }
   ]
 }
