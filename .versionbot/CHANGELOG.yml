@@ -1,4 +1,55 @@
 - commits:
+    - subject: "Dockerfile_yocto-build-env: Switch to docker-ce, pin 28.5.2"
+      hash: afd7b9b8e70f348317a3107103a6bb19303d3a7c
+      body: >
+        PR #899 pinned docker.io=27.* from jammy-security to fix the API-1.41
+
+        client incompatibility introduced when Ubuntu pushed docker.io 29.1.3
+
+        to jammy-updates (Docker 29 raised MIN_API_VERSION from 1.24 to 1.44).
+
+
+        Ubuntu has since replaced 27.5.1 in jammy-security with 29.1.3 too, so
+
+        the 27.* wildcard now resolves to nothing and image rebuilds fail. Only
+
+        20.10.12 (frozen in jammy/universe) and 29.1.3 (both update pockets)
+
+        remain available from Ubuntu's archive — neither serves us.
+
+
+        Switch to docker-ce from Docker's official APT repo. Docker retains all
+
+        historical versions persistently. Pin
+        docker-ce=5:28.5.2-1~ubuntu.22.04~jammy
+
+        — the newest version where moby's MinSupportedAPIVersion is still 1.24
+
+        (verified at the v28.5.2 tag in moby/moby). Includes 27.x and 28.x
+
+        security fixes Ubuntu won't backport now that they've moved on to 29.
+
+
+        The version is held in DOCKER_CE_VERSION with a renovate annotation so
+
+        patch and minor bumps within 28.x land as reviewable PRs rather than
+
+        silent drift on each rebuild. A renovate.json packageRule caps moby/moby
+
+        at <29.0.0 so renovate stops at the API-min boundary instead of
+
+        proposing 29.x bumps.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.39.34
+  title: ""
+  date: 2026-05-07T14:02:00.032Z
+- commits:
     - subject: "yocto-build-deploy.yml: Wait for self-CI helper image before Build"
       hash: 795ee59c2538578adb96117dec045e1666a5711b
       body: |
