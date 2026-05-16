@@ -1,4 +1,22 @@
 - commits:
+    - subject: "build/barys: Add Wrynose build support"
+      hash: 4c079e100c23f13adf3826fc68cc928a9aaef9e2
+      body: |
+        When building with Poky Wrynose,
+        the oe-init-build-env script needs
+        to be called from the openembedded-core
+        layer, instead of poky.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alexandru Costache <alexandru@balena.io>
+        signed-off-by: Alexandru Costache <alexandru@balena.io>
+      author: Alexandru Costache
+      nested: []
+  version: 1.39.35
+  title: ""
+  date: 2026-05-16T15:06:07.890Z
+- commits:
     - subject: "Dockerfile_yocto-build-env: Switch to docker-ce, pin 28.5.2"
       hash: afd7b9b8e70f348317a3107103a6bb19303d3a7c
       body: >
