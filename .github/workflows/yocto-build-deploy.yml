@@ -382,16 +382,20 @@ jobs:
       - name: Prepare hostapp composition
         run: |
           COMPOSITION="${MACHINE}.hostapp.yml"
-          META_COMPOSITION="layers/meta-balena/hostapp.yml"
+          META_FRAGMENTS=()
+          for f in layers/meta-balena/*.yml; do
+            [ -f "$f" ] && yq -e '.services' "$f" >/dev/null 2>&1 && META_FRAGMENTS+=("$f")
+          done
 
-          if [ -f "${META_COMPOSITION}" ] && [ -f "${COMPOSITION}" ]; then
-            echo "[INFO] Merging meta-balena composition with device repo overlay"
-            yq eval-all 'select(fileIndex == 0) *d select(fileIndex == 1)' \
-              "${META_COMPOSITION}" "${COMPOSITION}" > "${COMPOSITION}.tmp"
+          if [ ${#META_FRAGMENTS[@]} -gt 0 ] && [ -f "${COMPOSITION}" ]; then
+            echo "[INFO] Merging meta-balena fragments with device repo overlay: ${META_FRAGMENTS[*]} + ${COMPOSITION}"
+            yq eval-all '. as $item ireduce({}; . *d $item)' \
+              "${META_FRAGMENTS[@]}" "${COMPOSITION}" > "${COMPOSITION}.tmp"
             mv "${COMPOSITION}.tmp" "${COMPOSITION}"
-          elif [ -f "${META_COMPOSITION}" ]; then
-            echo "[INFO] Using meta-balena composition (no device repo overlay)"
-            cp "${META_COMPOSITION}" "${COMPOSITION}"
+          elif [ ${#META_FRAGMENTS[@]} -gt 0 ]; then
+            echo "[INFO] Using meta-balena fragments (no device repo overlay): ${META_FRAGMENTS[*]}"
+            yq eval-all '. as $item ireduce({}; . *d $item)' \
+              "${META_FRAGMENTS[@]}" > "${COMPOSITION}"
           elif [ ! -f "${COMPOSITION}" ]; then
             echo "[INFO] No composition file found, generating default"
             cat > "${COMPOSITION}" <<'COMPEOF'
