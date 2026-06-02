@@ -396,6 +396,7 @@ jobs:
           elif [ ! -f "${COMPOSITION}" ]; then
             echo "[INFO] No composition file found, generating default"
             cat > "${COMPOSITION}" <<'COMPEOF'
+          # yaml-language-server: $schema=https://raw.githubusercontent.com/balena-os/balena-yocto-scripts/master/schemas/hostapp-composition.json
           version: '2.4'
           services:
             hostapp:
@@ -421,6 +422,13 @@ jobs:
       - name: Validate composition
         run: |
           COMPOSITION="${MACHINE}.hostapp.yml"
+          SCHEMA="balena-yocto-scripts/schemas/hostapp-composition.json"
+
+          # Structural validation: compose-spec compliance + x-build shape.
+          # Catches typos (x-buld), wrong types (recipe: 42), unknown fields inside x-build.
+          # Semantic rules (recipe uniqueness, build_slot/x-build pairing) live in the yq checks below.
+          pipx install check-jsonschema >/dev/null 2>&1 || pip install --user --quiet check-jsonschema
+          check-jsonschema --schemafile "${SCHEMA}" "${COMPOSITION}"
 
           # Reject empty/missing services upfront — downstream yq queries return [] silently otherwise.
           n_services=$(yq '.services // {} | length' "${COMPOSITION}")

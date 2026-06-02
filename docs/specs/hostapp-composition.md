@@ -23,6 +23,41 @@ generates a minimal default composition with a single hostapp service.
 Composition files use Docker Compose v2.4 syntax. Build metadata is carried in
 `x-*` extension fields, which compose parsers silently ignore.
 
+## Schema
+
+A JSON Schema at
+[`schemas/hostapp-composition.json`](../../schemas/hostapp-composition.json)
+composes the upstream [compose-spec
+schema](https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json)
+with the `x-build` extension. Device repos point at it via a
+`yaml-language-server` directive at the top of their composition file:
+
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/balena-os/balena-yocto-scripts/master/schemas/hostapp-composition.json
+version: "2.4"
+services:
+  ...
+```
+
+This gives editors (VSCode with `redhat.vscode-yaml`, JetBrains IDEs)
+autocomplete on `x-build` fields and inline diagnostics for typos and wrong
+types.
+
+The workflow's "Validate composition" step also runs `check-jsonschema`
+against this schema as a hard CI gate, before the yq-based semantic checks.
+The two layers are deliberate:
+
+- **Schema** catches structural errors — typos (`x-buld`), wrong types
+  (`recipe: 42`), unknown nested fields inside `x-build`. Declarative,
+  shared with IDEs.
+- **yq checks** catch semantic errors — duplicate `x-build.recipe` across
+  services, missing hostapp class, build_slot/x-build pairing mismatches.
+  Imperative, lives in the workflow.
+
+Note that compose-spec permits any `x-*` key at the service level, so a typo
+on the `x-build` key itself (e.g., `x-buld`) passes the structural schema —
+the semantic layer catches it by producing an empty build matrix.
+
 ## Service contract
 
 Every service in the composition declares its build provenance and deploy

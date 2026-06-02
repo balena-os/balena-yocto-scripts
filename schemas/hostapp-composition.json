@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/balena-os/balena-yocto-scripts/master/schemas/hostapp-composition.json",
+  "title": "balenaOS Hostapp Composition",
+  "description": "Docker Compose v2.4 composition with balena-yocto-scripts x-build extension. See docs/specs/hostapp-composition.md for the contract.",
+  "allOf": [
+    {
+      "$ref": "https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "services": {
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "x-build": { "$ref": "#/$defs/x-build" }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "x-build": {
+      "description": "Build directive for balena-yocto-scripts. Either an object with the build config, or null (~) to opt out of the build matrix while keeping the service in the deployed composition.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "recipe": {
+              "description": "Bitbake image target. Omitted for hostapp (falls back to the device type's deploy_artifact); required for extensions.",
+              "type": "string",
+              "minLength": 1
+            },
+            "build_args": {
+              "description": "Extra barys arguments specific to this service. Joined with spaces and appended to common args.",
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "assets": {
+              "description": "File paths uploaded as web resources attached to the balenaCloud release.",
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
