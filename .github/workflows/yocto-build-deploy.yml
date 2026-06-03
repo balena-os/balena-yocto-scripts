@@ -424,11 +424,17 @@ jobs:
           COMPOSITION="${MACHINE}.hostapp.yml"
           SCHEMA="balena-yocto-scripts/schemas/hostapp-composition.json"
 
-          # Structural validation: compose-spec compliance + x-build shape.
-          # Catches typos (x-buld), wrong types (recipe: 42), unknown fields inside x-build.
-          # Semantic rules (recipe uniqueness, build_slot/x-build pairing) live in the yq checks below.
-          pipx install check-jsonschema >/dev/null 2>&1 || pip install --user --quiet check-jsonschema
-          check-jsonschema --schemafile "${SCHEMA}" "${COMPOSITION}"
+          # Soft-skip if the submodule pointer predates the schema file. Once device repos bump their
+          # balena-yocto-scripts submodule to a ref that contains schemas/, validation activates automatically.
+          if [ ! -f "${SCHEMA}" ]; then
+            echo "::warning title=Schema not available::${SCHEMA} not found in the checkout — structural validation skipped. Update the balena-yocto-scripts submodule pointer to enable it."
+          else
+            # Structural validation: compose-spec compliance + x-build shape.
+            # Catches typos (x-buld), wrong types (recipe: 42), unknown fields inside x-build.
+            # Semantic rules (recipe uniqueness, build_slot/x-build pairing) live in the yq checks below.
+            pipx install check-jsonschema >/dev/null 2>&1 || pip install --user --quiet check-jsonschema
+            check-jsonschema --schemafile "${SCHEMA}" "${COMPOSITION}"
+          fi
 
           # Reject empty/missing services upfront — downstream yq queries return [] silently otherwise.
           n_services=$(yq '.services // {} | length' "${COMPOSITION}")

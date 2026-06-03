@@ -44,8 +44,11 @@ autocomplete on `x-build` fields and inline diagnostics for typos and wrong
 types.
 
 The workflow's "Validate composition" step also runs `check-jsonschema`
-against this schema as a hard CI gate, before the yq-based semantic checks.
-The two layers are deliberate:
+against the schema bundled in the `balena-yocto-scripts` submodule, before
+the yq-based semantic checks. The check soft-skips with a `::warning::`
+annotation if the submodule pointer predates the schema file — once a device
+repo bumps its submodule, validation activates automatically. The two layers
+are deliberate:
 
 - **Schema** catches structural errors — typos (`x-buld`), wrong types
   (`recipe: 42`), unknown nested fields inside `x-build`. Declarative,
