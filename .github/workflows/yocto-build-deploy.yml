@@ -1606,15 +1606,26 @@ jobs:
           fi
 
       - name: Setup balena CLI
-        uses: balena-io-examples/setup-balena-action@fee0ed01069566dd4c71b24e64c8b9c1c26cea17 # v0.0.119
         env:
           # renovate: datasource=github-releases depName=balena-io/balena-cli
           BALENA_CLI_VERSION: v24.0.3
-        with:
-          # balena CLI version to install
-          cli-version: ${{ env.BALENA_CLI_VERSION }}
-          # balenaCloud API token to login automatically
-          balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
+        run: |
+          # Install the CLI from npm (not the standalone binary) so the bundled
+          # @balena/compose schema can be patched to accept service-level `profiles:`.
+          # The standalone binary embeds the schema and is not patchable; npm puts it
+          # under `npm root -g` where we can edit it. Remove once balena-compose ships
+          # profiles support (balena-compose PR #118).
+          export NPM_CONFIG_PREFIX="${RUNNER_TEMP}/balena-cli"
+          npm install -g "balena-cli@${BALENA_CLI_VERSION}"
+          echo "${NPM_CONFIG_PREFIX}/bin" >> "${GITHUB_PATH}"
+          find "$(npm root -g)" -path "*@balena/compose/dist/parse/schemas/config_schema_v2.4.json" | while read -r schema; do
+            jq '.definitions.service.properties.profiles = {"type":"array","items":{"type":"string"},"uniqueItems":true}' \
+              "${schema}" > "${schema}.tmp" && mv "${schema}.tmp" "${schema}"
+            echo "Patched profiles into ${schema}"
+          done
+          # GITHUB_PATH only applies to later steps, so call the freshly installed CLI
+          # by its prefix path for the login within this step.
+          "${NPM_CONFIG_PREFIX}/bin/balena" login --token "${{ secrets.BALENA_API_DEPLOY_KEY }}"
 
       # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
       # https://github.com/balena-io/deploy-to-balena-action/issues/286
