@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.34.61
+      hash: 2758ddc6dbefcbc1b6792763cb7d2ce78d0162a7
+      body: |
+        Update aws/aws-cli from 2.34.23 to 2.34.61
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.41.1
+  title: ""
+  date: 2026-06-03T23:19:16.674Z
+- commits:
     - subject: Add hostapp composition build pipeline
       hash: 2ad1221c707874f7ed85dc69f62125384d62ccef
       body: >
