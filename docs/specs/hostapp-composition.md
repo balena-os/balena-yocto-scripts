@@ -86,7 +86,7 @@ services:
       io.balena.image.store: "root"
       io.balena.image.class: "hostapp"
       io.balena.update.requires-reboot: "1"
-      io.balena.private.hostapp.board-rev: "$DEVICE_REPO_REV"
+      io.balena.private.hostapp.board-rev: "__DEVICE_REPO_REV__"
 ```
 
 A device overlay adds extensions:
@@ -150,16 +150,35 @@ scope:
   matrix. Without a concrete `image:`, this combination fails the composition
   validation.
 
-## Image field substitution
+## Placeholders
 
-Built services declare `image: __BUILD_OUTPUT__` as a sentinel. The workflow
-overwrites the sentinel at deploy time with the image reference returned by
-`docker load`. Services with concrete `image:` values are passed through
-unchanged.
+The composition supports two **workflow-time placeholders** that the deploy
+step rewrites before passing the composition to `balena deploy`. Both follow
+the `__UPPERCASE_SNAKE__` form to stay visually distinct from real values and
+to avoid collision with [compose-spec variable
+interpolation](https://github.com/compose-spec/compose-spec/blob/master/12-interpolation.md)
+(`$VAR` / `${VAR}`), which compose parsers may apply before our substitution
+step runs.
 
-After substitution, the workflow validates that no `__BUILD_OUTPUT__`
-placeholders remain. A surviving placeholder means an extension archive failed
-to match a service; the deploy fails fast.
+| Placeholder           | Valid in         | Resolves to                                                                                    |
+| --------------------- | ---------------- | ---------------------------------------------------------------------------------------------- |
+| `__BUILD_OUTPUT__`    | service `image:` | The image reference returned by `docker load` for that service's built `.docker` archive.      |
+| `__DEVICE_REPO_REV__` | any string value | The device repo's git revision (exposed to the deploy step via the `DEVICE_REPO_REV` env var). |
+
+`__BUILD_OUTPUT__` is matched structurally by path (`.services.<svc>.image`) —
+services with concrete `image:` values are passed through unchanged. After
+substitution, the workflow validates that no `__BUILD_OUTPUT__` remains; a
+surviving sentinel means an extension archive failed to match a service and
+the deploy fails fast.
+
+`__DEVICE_REPO_REV__` is matched by whole-node string equality at any depth
+in the composition, so it's immune to substring collisions in other label
+values. The workflow's `${DEVICE_REPO_REV:?...}` guard fails fast if the
+env var is unset, preventing silent empty-string substitution.
+
+Adding a new placeholder is a three-step contract change: this section, the
+workflow's substitution step, and any meta-balena base composition or device
+overlay that emits the placeholder.
 
 ## Image labels
 
@@ -177,7 +196,7 @@ How labels reach the image is the recipe's choice — `docker import --change`, 
 is agnostic to the mechanism; it only requires the produced image carries the
 labels its consumers expect. The composition is the right place for labels that
 need workflow-time substitution (e.g.,
-`io.balena.private.hostapp.board-rev: '$DEVICE_REPO_REV'`).
+`io.balena.private.hostapp.board-rev: '__DEVICE_REPO_REV__'`).
 
 See [Image Labels Reference](../reference/image-labels.md) for the full catalog
 and consumer table.

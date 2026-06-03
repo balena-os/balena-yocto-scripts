@@ -406,7 +406,7 @@ jobs:
                 io.balena.image.store: 'root'
                 io.balena.image.class: 'hostapp'
                 io.balena.update.requires-reboot: '1'
-                io.balena.private.hostapp.board-rev: '$DEVICE_REPO_REV'
+                io.balena.private.hostapp.board-rev: '__DEVICE_REPO_REV__'
           COMPEOF
           fi
 
@@ -1740,11 +1740,12 @@ jobs:
             done
           fi
 
-          # Replace literal "$DEVICE_REPO_REV" placeholder values with the env value.
+          # Replace literal "__DEVICE_REPO_REV__" placeholder values with the env value.
           # yq's recursive descent + select(. == ...) matches whole node values only — immune to
           # substring collisions in other label values, unlike envsubst which is a regex pass.
+          # See docs/specs/hostapp-composition.md#placeholders for the contract.
           : "${DEVICE_REPO_REV:?required for hostapp board-rev label substitution}"
-          yq -i '(.. | select(. == "$DEVICE_REPO_REV")) = strenv(DEVICE_REPO_REV)' "${WORKSPACE}/docker-compose.yml"
+          yq -i '(.. | select(. == "__DEVICE_REPO_REV__")) = strenv(DEVICE_REPO_REV)' "${WORKSPACE}/docker-compose.yml"
 
           echo "[INFO] Final composition:"
           cat "${WORKSPACE}/docker-compose.yml"
