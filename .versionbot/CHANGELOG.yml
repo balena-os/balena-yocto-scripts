@@ -1,4 +1,32 @@
 - commits:
+    - subject: Add hostapp composition build pipeline
+      hash: 2ad1221c707874f7ed85dc69f62125384d62ccef
+      body: >
+        Build a balenaOS hostapp from a Docker Compose composition declared by
+
+        the device repo. Services declaring x-build are built in parallel via
+
+        a matrix job; outputs and registry images are assembled into a single
+
+        release at deploy time.
+
+
+        See docs/specs/hostapp-composition.md for the contract.
+
+
+        Connects to
+        https://balena.fibery.io/Work/Improvement/POC-Build-Pipeline-4069
+      footer:
+        Change-type: minor
+        change-type: minor
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.41.0
+  title: ""
+  date: 2026-06-03T17:11:50.990Z
+- commits:
     - subject: Make release asset upload step required
       hash: e23ba4eee20843a54f278e7b720c2894f2e018cc
       body: |
