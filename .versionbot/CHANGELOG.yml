@@ -1,4 +1,51 @@
 - commits:
+    - subject: "yocto-build-deploy: soft-skip schema validation when not in checkout"
+      hash: 385217067b8f8fa79c79954adfc794ddd15f6163
+      body: |
+        The schema path is relative to the workflow's checkout, requiring device
+        repos to carry the balena-yocto-scripts submodule pointer at a ref that
+        contains schemas/hostapp-composition.json. Adopters haven't all bumped
+        yet. Skip with a ::warning:: annotation when the schema isn't available;
+        once submodules bump, validation activates automatically.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: "yocto-build-deploy: normalize composition placeholders to __VAR__ form"
+      hash: ba4c2f615ffa847d29a0c3a6fd1a16ca317b3be3
+      body: >
+        The composition supported two substitution placeholders with
+        inconsistent
+
+        shapes — __BUILD_OUTPUT__ (sentinel) and $DEVICE_REPO_REV (shell-var).
+        The
+
+        latter collides with compose-spec's documented variable interpolation
+
+        (`$VAR` / `${VAR}`), so it survived to the deploy step only by accident
+
+        of nothing else setting DEVICE_REPO_REV in that environment.
+
+
+        Rename to __DEVICE_REPO_REV__ so both placeholders share one shape that
+
+        compose parsers can't interpret. Add a Placeholders section to the spec
+
+        documenting the contract.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.41.2
+  title: ""
+  date: 2026-06-04T17:32:20.272Z
+- commits:
     - subject: Update aws/aws-cli to v2.34.61
       hash: 2758ddc6dbefcbc1b6792763cb7d2ce78d0162a7
       body: |
