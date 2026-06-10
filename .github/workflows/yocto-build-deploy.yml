@@ -281,7 +281,7 @@ jobs:
       # This behvaiour is required for private submodules
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token
-        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         id: app-token
         with:
           app-id: ${{ vars.BALENAOS_CI_APP_ID }}
@@ -292,7 +292,7 @@ jobs:
       # so we can checkout private contracts
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token (balena-io)
-        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         id: app-token-balena-io
         with:
           app-id: ${{ vars.BALENAOS_CI_APP_ID }}
@@ -301,7 +301,7 @@ jobs:
 
       # https://github.com/actions/checkout
       - name: Clone device repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: ${{ inputs.device-repo }}
           token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
@@ -556,7 +556,7 @@ jobs:
             return data.d[0].is_private
 
       - name: Checkout private contracts
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         if: steps.is-private.outputs.result == 'true'
         with:
           repository: balena-io/private-contracts
@@ -821,7 +821,7 @@ jobs:
       # This behvaiour is required for private submodules
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token
-        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         id: app-token
         with:
           app-id: ${{ vars.BALENAOS_CI_APP_ID }}
@@ -832,7 +832,7 @@ jobs:
       # so we can checkout private contracts
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token (balena-io)
-        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         id: app-token-balena-io
         with:
           app-id: ${{ vars.BALENAOS_CI_APP_ID }}
@@ -841,7 +841,7 @@ jobs:
 
       # https://github.com/actions/checkout
       - name: Clone device repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: ${{ inputs.device-repo }}
           token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
@@ -1606,7 +1606,7 @@ jobs:
           fi
 
       - name: Setup balena CLI
-        uses: balena-io-examples/setup-balena-action@d59e0ac4645e7ba9a5b5cab36b6d9d828cd596fe # v0.0.96
+        uses: balena-io-examples/setup-balena-action@fee0ed01069566dd4c71b24e64c8b9c1c26cea17 # v0.0.119
         env:
           # renovate: datasource=github-releases depName=balena-io/balena-cli
           BALENA_CLI_VERSION: v24.0.3
@@ -1879,7 +1879,7 @@ jobs:
           done
 
       - name: Upload release assets
-        uses: balena-io/upload-balena-release-asset@aa5c76210bde8edc08e21f35c56b05d56fada041 # v0.1.5
+        uses: balena-io/upload-balena-release-asset@52cceb8fc25e0bfdb433b92567a434d1a5baecda # v0.1.6
         with:
           balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
           balena-host: ${{ env.BALENARC_BALENA_URL }}
@@ -2157,7 +2157,7 @@ jobs:
             echo "AMI_NAME=balenaOS-${VERSION}-${SLUG}" | sed 's/+/-/g' >>"${GITHUB_ENV}"
 
       - name: Setup balena CLI
-        uses: balena-io-examples/setup-balena-action@d59e0ac4645e7ba9a5b5cab36b6d9d828cd596fe # v0.0.96
+        uses: balena-io-examples/setup-balena-action@fee0ed01069566dd4c71b24e64c8b9c1c26cea17 # v0.0.119
         env:
           # renovate: datasource=github-releases depName=balena-io/balena-cli
           BALENA_CLI_VERSION: v24.0.3
@@ -2621,7 +2621,7 @@ jobs:
       # Owner input to make token valid for all repositories in the org
       # This behvaiour is required for private submodules
       - name: Create GitHub App installation token
-        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         id: app-token
         with:
           app-id: ${{ vars.BALENAOS_CI_APP_ID }}
@@ -2632,7 +2632,7 @@ jobs:
       # so we can checkout private contracts
       # https://github.com/actions/create-github-app-token
       - name: Create GitHub App installation token (balena-io)
-        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         id: app-token-balena-io
         with:
           app-id: ${{ vars.BALENAOS_CI_APP_ID }}
@@ -2642,7 +2642,7 @@ jobs:
       # Clone the device respository to fetch Leviathan
       # https://github.com/actions/checkout
       - name: Clone device repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: ${{ inputs.device-repo }}
           token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
@@ -2719,7 +2719,7 @@ jobs:
 
       # Check out private contracts if this is a private device type - as these are required for the tests
       - name: Checkout private Contracts
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         if: needs.balena-lib.outputs.is_private == 'true'
         with:
           repository: balena-io/private-contracts
