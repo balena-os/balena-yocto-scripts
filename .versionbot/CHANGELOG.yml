@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update GitHub Actions
+      hash: 8a391b84283820e3d2d77894b0773abc0c3e9d73
+      body: |
+        Update actions/checkout from 6.0.2 to 6.0.3
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.41.3
+  title: ""
+  date: 2026-06-10T18:36:53.250Z
+- commits:
     - subject: "yocto-build-deploy: soft-skip schema validation when not in checkout"
       hash: 385217067b8f8fa79c79954adfc794ddd15f6163
       body: |
