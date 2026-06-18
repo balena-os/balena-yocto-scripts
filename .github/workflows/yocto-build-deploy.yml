@@ -30,7 +30,7 @@ on:
         description: balena API key that provides access to the signing server
         required: false
       BALENAOS_CI_APP_PRIVATE_KEY:
-        description: "GPG Private Key for GitHub App to generate ephemeral tokens (used with vars.BALENAOS_CI_APP_ID)"
+        description: "GitHub App private key (PEM) to generate ephemeral tokens (used with vars.BALENAOS_CI_APP_ID). Accepts a raw PEM or base64-encoded value."
         required: false
       PBDKF2_PASSPHRASE:
         description: "Passphrase used to encrypt/decrypt balenaOS assets at rest in GitHub."
@@ -275,6 +275,44 @@ jobs:
       has_extensions: ${{ steps.build-matrix.outputs.has_extensions }}
 
     steps:
+      # Decode the GitHub App private key.
+      # Skips decode if -----BEGIN is detected, allowing raw or base64-encoded secrets.
+      # Raw secrets are auto-masked by GitHub; the decoded derivative is not, so mask it explicitly.
+      - name: Decode the GitHub App private key
+        id: decode
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        env:
+          SECRET_VALUE: ${{ secrets.BALENAOS_CI_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$SECRET_VALUE" ]]; then
+            echo "::error::BALENAOS_CI_APP_PRIVATE_KEY secret is not set"
+            exit 1
+          fi
+          if [[ "$SECRET_VALUE" == *"-----BEGIN"* ]]; then
+            echo "Detected unencoded private key, skipping base64 decode"
+            private_key="$SECRET_VALUE"
+          else
+            if ! private_key=$(echo "$SECRET_VALUE" | base64 -d); then
+              echo "::error::Failed to base64 decode BALENAOS_CI_APP_PRIVATE_KEY. Verify the secret is valid base64."
+              exit 1
+            fi
+            while IFS= read -r line; do
+              [[ -n "$line" ]] && echo "::add-mask::$line"
+            done <<< "$private_key"
+          fi
+          if [[ "$private_key" != *"-----BEGIN"* ]]; then
+            echo "::error::Decoded private key does not look like a PEM key (missing -----BEGIN header). Check secret encoding."
+            exit 1
+          fi
+          delimiter="pk_$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+          {
+            echo "private-key<<${delimiter}"
+            echo "$private_key"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
+
       # Generate an app installation token that has access to
       # all repos where the app is installed (usually the whole org)
       # Owner input to make token valid for all repositories in the org
@@ -284,8 +322,8 @@ jobs:
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         with:
-          app-id: ${{ vars.BALENAOS_CI_APP_ID }}
-          private-key: ${{ secrets.BALENAOS_CI_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.BALENAOS_CI_APP_ID }}
+          private-key: ${{ steps.decode.outputs.private-key }}
           owner: ${{ github.repository_owner }}
 
       # Generate another app token for the balena-io organization
@@ -295,8 +333,8 @@ jobs:
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token-balena-io
         with:
-          app-id: ${{ vars.BALENAOS_CI_APP_ID }}
-          private-key: ${{ secrets.BALENAOS_CI_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.BALENAOS_CI_APP_ID }}
+          private-key: ${{ steps.decode.outputs.private-key }}
           owner: balena-io
 
       # https://github.com/actions/checkout
@@ -815,6 +853,44 @@ jobs:
           remove-codeql: "true"
           remove-docker-images: "true"
 
+      # Decode the GitHub App private key.
+      # Skips decode if -----BEGIN is detected, allowing raw or base64-encoded secrets.
+      # Raw secrets are auto-masked by GitHub; the decoded derivative is not, so mask it explicitly.
+      - name: Decode the GitHub App private key
+        id: decode
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        env:
+          SECRET_VALUE: ${{ secrets.BALENAOS_CI_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$SECRET_VALUE" ]]; then
+            echo "::error::BALENAOS_CI_APP_PRIVATE_KEY secret is not set"
+            exit 1
+          fi
+          if [[ "$SECRET_VALUE" == *"-----BEGIN"* ]]; then
+            echo "Detected unencoded private key, skipping base64 decode"
+            private_key="$SECRET_VALUE"
+          else
+            if ! private_key=$(echo "$SECRET_VALUE" | base64 -d); then
+              echo "::error::Failed to base64 decode BALENAOS_CI_APP_PRIVATE_KEY. Verify the secret is valid base64."
+              exit 1
+            fi
+            while IFS= read -r line; do
+              [[ -n "$line" ]] && echo "::add-mask::$line"
+            done <<< "$private_key"
+          fi
+          if [[ "$private_key" != *"-----BEGIN"* ]]; then
+            echo "::error::Decoded private key does not look like a PEM key (missing -----BEGIN header). Check secret encoding."
+            exit 1
+          fi
+          delimiter="pk_$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+          {
+            echo "private-key<<${delimiter}"
+            echo "$private_key"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
+
       # Generate an app installation token that has access to
       # all repos where the app is installed (usually the whole org)
       # Owner input to make token valid for all repositories in the org
@@ -824,8 +900,8 @@ jobs:
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         with:
-          app-id: ${{ vars.BALENAOS_CI_APP_ID }}
-          private-key: ${{ secrets.BALENAOS_CI_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.BALENAOS_CI_APP_ID }}
+          private-key: ${{ steps.decode.outputs.private-key }}
           owner: ${{ github.repository_owner }}
 
       # Generate another app token for the balena-io organization
@@ -835,8 +911,8 @@ jobs:
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token-balena-io
         with:
-          app-id: ${{ vars.BALENAOS_CI_APP_ID }}
-          private-key: ${{ secrets.BALENAOS_CI_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.BALENAOS_CI_APP_ID }}
+          private-key: ${{ steps.decode.outputs.private-key }}
           owner: balena-io
 
       # https://github.com/actions/checkout
@@ -2617,6 +2693,44 @@ jobs:
       QEMU_MEMORY: "1G"
 
     steps:
+      # Decode the GitHub App private key.
+      # Skips decode if -----BEGIN is detected, allowing raw or base64-encoded secrets.
+      # Raw secrets are auto-masked by GitHub; the decoded derivative is not, so mask it explicitly.
+      - name: Decode the GitHub App private key
+        id: decode
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        env:
+          SECRET_VALUE: ${{ secrets.BALENAOS_CI_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$SECRET_VALUE" ]]; then
+            echo "::error::BALENAOS_CI_APP_PRIVATE_KEY secret is not set"
+            exit 1
+          fi
+          if [[ "$SECRET_VALUE" == *"-----BEGIN"* ]]; then
+            echo "Detected unencoded private key, skipping base64 decode"
+            private_key="$SECRET_VALUE"
+          else
+            if ! private_key=$(echo "$SECRET_VALUE" | base64 -d); then
+              echo "::error::Failed to base64 decode BALENAOS_CI_APP_PRIVATE_KEY. Verify the secret is valid base64."
+              exit 1
+            fi
+            while IFS= read -r line; do
+              [[ -n "$line" ]] && echo "::add-mask::$line"
+            done <<< "$private_key"
+          fi
+          if [[ "$private_key" != *"-----BEGIN"* ]]; then
+            echo "::error::Decoded private key does not look like a PEM key (missing -----BEGIN header). Check secret encoding."
+            exit 1
+          fi
+          delimiter="pk_$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+          {
+            echo "private-key<<${delimiter}"
+            echo "$private_key"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
+
       # https://github.com/actions/create-github-app-token
       # Owner input to make token valid for all repositories in the org
       # This behvaiour is required for private submodules
@@ -2624,8 +2738,8 @@ jobs:
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         with:
-          app-id: ${{ vars.BALENAOS_CI_APP_ID }}
-          private-key: ${{ secrets.BALENAOS_CI_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.BALENAOS_CI_APP_ID }}
+          private-key: ${{ steps.decode.outputs.private-key }}
           owner: ${{ github.repository_owner }}
 
       # Generate another app token for the balena-io organization
@@ -2635,8 +2749,8 @@ jobs:
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token-balena-io
         with:
-          app-id: ${{ vars.BALENAOS_CI_APP_ID }}
-          private-key: ${{ secrets.BALENAOS_CI_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.BALENAOS_CI_APP_ID }}
+          private-key: ${{ steps.decode.outputs.private-key }}
           owner: balena-io
 
       # Clone the device respository to fetch Leviathan
