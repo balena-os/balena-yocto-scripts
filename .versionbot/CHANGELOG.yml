@@ -1,4 +1,35 @@
 - commits:
+    - subject: Decode base64-encoded GitHub App private key before token generation
+      hash: dd490e2aa8ec393f4b0d3fd97cb2f68568234ad8
+      body: |
+        The BALENAOS_CI_APP_PRIVATE_KEY secret can now be stored raw or
+        base64-encoded. base64 avoids the newline mangling that multi-line PEM
+        secrets are prone to in GitHub secret storage.
+
+        Each job gets a decode step that passes the key through unchanged if it
+        already looks like a PEM (-----BEGIN), otherwise base64-decodes it and
+        masks the decoded lines. The six create-github-app-token steps now read
+        the decoded output instead of the secret directly.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+    - subject: Update actions/create-github-app-token action to v3
+      hash: 87341be50b5fabca1c3c42499c49c30b0ed40ea7
+      body: |
+        Update actions/create-github-app-token from 2.2.2 to 3.2.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.41.4
+  title: ""
+  date: 2026-06-23T13:27:23.760Z
+- commits:
     - subject: Update GitHub Actions
       hash: 8a391b84283820e3d2d77894b0773abc0c3e9d73
       body: |
