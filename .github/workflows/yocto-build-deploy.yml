@@ -642,8 +642,13 @@ jobs:
         id: set-merge-commit
         if: ${{ github.event_name == 'push' }} # Only perform on push event - i.e a new version tag
         run: |
-          merge_commit=$(git rev-parse :/"^Merge pull request")
-          echo "Found merge commit ${merge_commit}"
+          set -euo pipefail
+          merge_commit=$(git log --first-parent --format='%H %s' | grep -m1 -E '#[0-9]+' | cut -d' ' -f1 || true)
+          if [ -z "${merge_commit}" ]; then
+            echo "::error title=No PR commit found::Could not find a commit referencing a PR in the first-parent history of $(git rev-parse HEAD)"
+            exit 1
+          fi
+          echo "Found merge commit ${merge_commit}: $(git log -1 --format='%s' "${merge_commit}")"
           echo "merge_commit=${merge_commit}" >>"${GITHUB_OUTPUT}"
 
       # This will control the deployment of the hostapp only - it will determine if it is marked as final or not
