@@ -1,4 +1,30 @@
 - commits:
+    - subject: "yocto-build-deploy: replace pattern based all history first parent
+        match"
+      hash: b3c08ee1850c7013706a2e945f529aa28f329b1d
+      body: |
+        Instead, resolve the PR commit by walking the pushed ref's own
+        first-parent history.
+
+        Pattern search returns the youngest match reachable from ANY ref,
+        so it can jump onto an unrelated branch (e.g. an ESR PR) whose commit is
+        not even an ancestor of this tag.
+
+        Also,  match any `#<num>` instead of the literal "Merge pull request"
+        prefix, so squash merged and custom titled merges
+        (like "Update GitHub Actions (#759)") are found, but not version-bump
+        commits made by bots.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.41.5
+  title: ""
+  date: 2026-06-29T15:55:45.595Z
+- commits:
     - subject: Decode base64-encoded GitHub App private key before token generation
       hash: dd490e2aa8ec393f4b0d3fd97cb2f68568234ad8
       body: |
