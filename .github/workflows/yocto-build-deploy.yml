@@ -1413,15 +1413,6 @@ jobs:
           aws s3 sync --sse="${S3_SSE}" "${SHARED_DOWNLOADS_DIR}/" "${S3_URL}/" \
             --exclude "*/*" --exclude "*.tmp" --size-only --follow-symlinks --no-progress
 
-      # login required to pull private balena/balena-img image
-      # https://github.com/docker/login-action
-      - name: Login to Docker Hub
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USER }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       # TODO: Unroll balena_deploy_artifacts into the workflow shell directly
       # and only package up what is needed for s3 deploy, hostapp deploy, and leviathan tests.
       # https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/include/balena-deploy.inc#L23
@@ -1437,20 +1428,6 @@ jobs:
 
           source "${automation_dir}/include/balena-deploy.inc"
           balena_deploy_artifacts "${SLUG}" "${S3_DEPLOY_PATH}" false
-
-          find "${DEPLOY_PATH}" -exec ls -lh {} \;
-
-      # Deflate files are the main image artifact for S3 / webresource deploy
-      # is they are used by the img-maker and os download endpoints.
-      - name: Prepare deflate files
-        if: matrix.image_class == 'hostapp'
-        env:
-          HELPER_IMAGE: balena/balena-img:6.20.26
-        run: |
-          docker run --rm \
-            -e BASE_DIR=/host/images \
-            -v "${DEPLOY_PATH}:/host/images" \
-            "${HELPER_IMAGE}" /usr/src/app/node_modules/.bin/ts-node /usr/src/app/scripts/prepare.ts
 
           find "${DEPLOY_PATH}" -exec ls -lh {} \;
 
