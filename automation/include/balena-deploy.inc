@@ -118,17 +118,20 @@ balena_deploy_artifacts () {
 	# shellcheck disable=SC2312
 	cp -v "$(readlink --canonicalize "${_yocto_build_deploy}/${_deploy_artifact}")" \
 		"${_deploy_dir}/image/balena.img"
+	"${include_dir}"/../conversion_scripts/prepare-image.py --output-dir "${_deploy_dir}" "${_deploy_dir}/image/balena.img"
 
 	# shellcheck disable=SC2312
 	if [[ -n "${_deploy_flasher_artifact}" ]]; then
 		cp -v "$(readlink --canonicalize "${_yocto_build_deploy}/${_deploy_flasher_artifact}")" \
 			"${_deploy_dir}/image/balena-flasher.img"
+		"${include_dir}"/../conversion_scripts/prepare-image.py --output-dir "${_deploy_dir}" --image-type flasher "${_deploy_dir}/image/balena-flasher.img"
 	fi
 
 	# shellcheck disable=SC2312
 	if [[ -n "${_deploy_raw_artifact}" ]]; then
 		cp -v "$(readlink --canonicalize "${_yocto_build_deploy}/${_deploy_raw_artifact}")" \
 			"${_deploy_dir}/image/balena-raw.img"
+		"${include_dir}"/../conversion_scripts/prepare-image.py --output-dir "${_deploy_dir}" --image-type raw "${_deploy_dir}/image/balena-raw.img"
 	fi
 
 	if [[ "${_compressed}" != 'true' ]]; then
