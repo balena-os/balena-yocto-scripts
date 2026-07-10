@@ -1588,7 +1588,9 @@ jobs:
 
   hostapp-deploy:
     name: Deploy hostApp
-    runs-on: ${{ fromJSON(inputs.build-runs-on) }}
+    # We don't need significant resources for this step, and it downloads artifacts faster when
+    # using GitHub hosted runners vs self-hosted.
+    runs-on: ubuntu-24.04
     # We want to push a hostapp on push events (PR merge) or dispatch
     # These conditions should match s3-deploy
     # Force finlize will finalize no matter what - so we want to make sure there is something to finlize - so it will always trigger this if true
@@ -1962,7 +1964,9 @@ jobs:
 
   s3-deploy:
     name: Deploy to S3
-    runs-on: ${{ fromJSON(inputs.build-runs-on) }}
+    # We don't need significant resources for this step, and it downloads artifacts faster when
+    # using GitHub hosted runners vs self-hosted.
+    runs-on: ubuntu-24.04
     # We want to push a hostapp on push events (PR merge) or dispatch
     # These conditions should match hostapp-deploy
     # Force finlize will finalize no matter what - so we want to make sure there is something to finlize - so it will always trigger this if true
