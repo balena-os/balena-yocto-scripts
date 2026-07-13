@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io/balena-cli to v25
+      hash: 8dd6bdbcf9024a7b9cdbbaa91ee4c2080a396b61
+      body: |
+        Update balena-io/balena-cli from 24.0.3 to 25.1.10
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.41.6
+  title: ""
+  date: 2026-07-13T13:20:06.104Z
+- commits:
     - subject: "yocto-build-deploy: replace pattern based all history first parent
         match"
       hash: b3c08ee1850c7013706a2e945f529aa28f329b1d
