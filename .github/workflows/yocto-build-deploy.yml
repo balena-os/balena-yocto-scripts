@@ -1693,7 +1693,6 @@ jobs:
           RELEASE_VERSION: "${{ needs.balena-lib.outputs.os_version }}"
           BOOTABLE: 1
           TRANSLATION: "v6"
-          FINAL: ${{ needs.balena-lib.outputs.should_finalize }}
           ESR: "${{ needs.balena-lib.outputs.is_esr }}"
           balenaCloudEmail: "" # TODO: currently trying to use named API key only, its possible email/pw auth no longer has the additional privileges that it used to
           balenaCloudPassword: "" # TODO: currently trying to use named API key only, its possible email/pw auth no longer has the additional privileges that it used to
@@ -1759,9 +1758,10 @@ jobs:
             >&2 echo "balena_lib_release: balena.yml contract file not present"
           fi
 
-          if [ "${FINAL}" != true ]; then
-            status="--draft"
-          fi
+          # Always deploy as a draft. A separate "Finalize release" step promotes the
+          # release once all release assets have been uploaded, so a release only becomes
+          # available to devices when it is complete.
+          status="--draft"
 
           COMPOSITION="${DEPLOY_PATH}/${MACHINE}.hostapp.yml"
           echo "[INFO] Using composition file: ${COMPOSITION}"
@@ -1957,6 +1957,18 @@ jobs:
             ${{ env.DEPLOY_PATH }}/cyclonedx/*/*.json
             ${{ env.DEPLOY_PATH }}/secure-boot-lock.tar.gz
             ${{ env.DEPLOY_PATH }}/release-assets/*
+
+      # Finalize the draft release only after every release asset has been uploaded.
+      # Finalizing is what makes the API present the release to devices, so this must
+      # be the last step - a finalized release should never be missing its assets.
+      - name: Finalize release
+        if: needs.balena-lib.outputs.should_finalize == 'true'
+        env:
+          RELEASE_ID: ${{ steps.deploy-hostapp.outputs.release_id }}
+        run: |
+          set -e
+          echo "[INFO] Finalizing release ${RELEASE_ID}"
+          balena release finalize "${RELEASE_ID}"
 
   ##############################
   # S3 Deploy
