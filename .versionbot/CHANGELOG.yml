@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update product-os/review-commit-action action to v0.3.2
+      hash: d60f358679df56824fd0a24bfb5959e029152ab1
+      body: |
+        Update product-os/review-commit-action from 0.3.0 to 0.3.2
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.41.7
+  title: ""
+  date: 2026-07-14T15:56:52.158Z
+- commits:
     - subject: Update balena-io/balena-cli to v25
       hash: 8dd6bdbcf9024a7b9cdbbaa91ee4c2080a396b61
       body: |
