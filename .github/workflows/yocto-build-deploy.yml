@@ -273,6 +273,7 @@ jobs:
       build_services: ${{ steps.build-matrix.outputs.services }}
       build_matrix: ${{ steps.build-matrix.outputs.matrix }}
       has_extensions: ${{ steps.build-matrix.outputs.has_extensions }}
+      has_extension_assets: ${{ steps.build-matrix.outputs.has_extension_assets }}
 
     steps:
       # Decode the GitHub App private key.
@@ -557,11 +558,18 @@ jobs:
           # Computed here because GHA `if:` cannot evaluate fromJSON(...).length on a string output.
           has_extensions=$([ "$(echo "${matrix}" | jq 'length')" -gt 1 ] && echo true || echo false)
 
+          # Whether any service declares release assets. Gates the extension-assets artifact
+          # download so a run with extensions but no declared assets doesn't look for a
+          # non-existent artifact. Same reason as has_extensions: GHA `if:` can't do this.
+          has_extension_assets=$([ "$(echo "${matrix}" | jq '[.[] | select(.assets != "")] | length')" -gt 0 ] && echo true || echo false)
+
           echo "Build services: ${services}"
           echo "Build matrix: ${matrix}"
           echo "Has extensions: ${has_extensions}"
+          echo "Has extension assets: ${has_extension_assets}"
           echo "services=${services}" >> "${GITHUB_OUTPUT}"
           echo "has_extensions=${has_extensions}" >> "${GITHUB_OUTPUT}"
+          echo "has_extension_assets=${has_extension_assets}" >> "${GITHUB_OUTPUT}"
           delimiter="$(openssl rand -hex 16)"
           {
             echo "matrix<<${delimiter}"
@@ -1570,16 +1578,30 @@ jobs:
             ${{ env.S3_DEPLOY_PATH }}/image/balena-raw.img.zip
             ${{ env.S3_DEPLOY_PATH }}/image/balena-raw.img.zip.enc
 
-      - name: Upload extension artifacts
+      # The image archive and the release assets are uploaded as separate artifacts.
+      # The image archive is loaded and deployed via `balena deploy`; the assets become
+      # release web resources. Keeping them apart lets the deploy job download each
+      # extension's assets into its own folder and upload them wholesale, without having
+      # to filter the container image archive back out.
+      - name: Upload extension image artifact
         if: matrix.image_class != 'hostapp'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: extension-${{ matrix.service_name }}
+          name: extension-image-${{ matrix.service_name }}
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 0
+          path: build/tmp/deploy/images/${{ env.MACHINE }}/${{ matrix.recipe }}-${{ env.MACHINE }}.docker
+
+      - name: Upload extension asset artifacts
+        if: matrix.image_class != 'hostapp' && matrix.assets != ''
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: extension-assets-${{ matrix.service_name }}
           if-no-files-found: error
           retention-days: 3
           compression-level: 0
           path: |
-            build/tmp/deploy/images/${{ env.MACHINE }}/${{ matrix.recipe }}-${{ env.MACHINE }}.docker
             ${{ matrix.assets }}
 
   ##############################
@@ -1630,17 +1652,30 @@ jobs:
           name: hostapp-composition
           path: ${{ env.DEPLOY_PATH }}
 
-      - name: Download extension artifacts
+      - name: Download extension image artifacts
         # Only run when the build matrix produced a non-hostapp service — an extension this workflow
         # actually built. Registry-pulled extensions (concrete image, no x-build) are absent from the
         # matrix and have nothing to download. Gated via a precomputed output because GHA `if:` cannot
         # evaluate fromJSON(...).length on a string output.
+        # merge-multiple flattens all image archives into extensions/; their filenames
+        # (${recipe}-${MACHINE}.docker) are unique, so they can't collide.
         if: needs.balena-lib.outputs.has_extensions == 'true'
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          pattern: extension-*
+          pattern: extension-image-*
           path: ${{ env.DEPLOY_PATH }}/extensions
           merge-multiple: true
+
+      - name: Download extension release assets
+        # Each extension's assets land in their own extension-assets-<service>/ folder
+        # (merge-multiple defaults to false), so identically named assets from different
+        # extensions can't overwrite each other. Everything downloaded here is uploaded
+        # as a release asset wholesale.
+        if: needs.balena-lib.outputs.has_extension_assets == 'true'
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: extension-assets-*
+          path: ${{ env.DEPLOY_PATH }}/release-assets
 
       - name: Decrypt artifacts
         if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
@@ -1781,7 +1816,7 @@ jobs:
               fi
               echo "[INFO] Loaded extension image: ${_ext_image} from ${docker_archive}"
 
-              # Build uploads each extension as ${recipe}-${MACHINE}.docker (see Upload extension artifacts).
+              # Build uploads each extension image as ${recipe}-${MACHINE}.docker (see Upload extension image artifact).
               # Match that exact filename to avoid recipe-name prefix collisions and regex interpretation.
               _archive_name=$(basename "${docker_archive}" .docker)
               _matched=0
@@ -1913,31 +1948,6 @@ jobs:
             fi
           fi
 
-      - name: Stage extension release assets
-        run: |
-          mkdir -p "${DEPLOY_PATH}/release-assets"
-          COMPOSITION="${DEPLOY_PATH}/${MACHINE}.hostapp.yml"
-
-          # Each service's x-build.assets entries are the source of truth for what
-          # becomes a release web resource. Don't scrape the extensions/ dir —
-          # assets not declared in the composition shouldn't ship as release resources,
-          # and a missing declared asset should fail the deploy loudly.
-          declared=$(yq -o=json '[.services[] | .["x-build"].assets // []] | flatten | unique' "${COMPOSITION}")
-          if [ "$(echo "${declared}" | jq 'length')" -eq 0 ]; then
-            echo "[INFO] No x-build.assets declared in composition; skipping release asset staging."
-            exit 0
-          fi
-
-          echo "${declared}" | jq -r '.[]' | while IFS= read -r asset_path; do
-            asset_name="$(basename "${asset_path}")"
-            src=$(find "${DEPLOY_PATH}/extensions" -type f -name "${asset_name}" -print -quit 2>/dev/null)
-            if [ -z "${src}" ]; then
-              echo "::error title=Missing release asset::Composition declares '${asset_name}' but it was not present in the downloaded extension artifacts"
-              exit 1
-            fi
-            cp -v "${src}" "${DEPLOY_PATH}/release-assets/"
-          done
-
       - name: Upload release assets
         uses: balena-io/upload-balena-release-asset@52cceb8fc25e0bfdb433b92567a434d1a5baecda # v0.1.6
         with:
@@ -1956,7 +1966,37 @@ jobs:
             ${{ env.DEPLOY_PATH }}/licenses.tar.gz
             ${{ env.DEPLOY_PATH }}/cyclonedx/*/*.json
             ${{ env.DEPLOY_PATH }}/secure-boot-lock.tar.gz
-            ${{ env.DEPLOY_PATH }}/release-assets/*
+
+      # download-artifact names each extension's folder after its artifact
+      # (extension-assets-<service>). Rename to the bare service name so the uploaded
+      # release-asset keys are grouped as <service>/<file> rather than
+      # extension-assets-<service>/<file>.
+      - name: Group extension assets by service name
+        if: needs.balena-lib.outputs.has_extension_assets == 'true'
+        run: |
+          set -e
+          cd "${DEPLOY_PATH}/release-assets"
+          for dir in extension-assets-*/; do
+            [ -d "${dir}" ] || continue
+            svc="${dir#extension-assets-}"
+            svc="${svc%/}"
+            echo "[INFO] Grouping assets: ${dir} -> ${svc}/"
+            mv "${dir}" "${svc}"
+          done
+
+      # Uploaded as a dedicated step rooted at release-assets/ so the least-common-ancestor
+      # is release-assets and each key becomes <service>/<file>. Folding these into the step
+      # above would root the LCA at DEPLOY_PATH and leak a release-assets/ segment into the key.
+      - name: Upload extension release assets
+        if: needs.balena-lib.outputs.has_extension_assets == 'true'
+        uses: balena-io/upload-balena-release-asset@52cceb8fc25e0bfdb433b92567a434d1a5baecda # v0.1.6
+        with:
+          balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
+          balena-host: ${{ env.BALENARC_BALENA_URL }}
+          release-id: ${{ steps.deploy-hostapp.outputs.release_id }}
+          if-no-files-found: error
+          path: |
+            ${{ env.DEPLOY_PATH }}/release-assets/**
 
       # Finalize the draft release only after every release asset has been uploaded.
       # Finalizing is what makes the API present the release to devices, so this must
