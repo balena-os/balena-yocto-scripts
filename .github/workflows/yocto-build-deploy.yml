@@ -1998,6 +1998,89 @@ jobs:
           path: |
             ${{ env.DEPLOY_PATH }}/release-assets/**
 
+      # Guard the finalize: image-maker requires a specific set of assets for a release to
+      # be buildable, so verify they actually landed on the release before publishing it.
+      # A finalized release missing these is broken, so fail loudly here instead.
+      # Contract: docs/specs/hostapp-release-assets.md
+      - name: Verify required release assets
+        if: needs.balena-lib.outputs.should_finalize == 'true'
+        env:
+          BALENAOS_TOKEN: ${{ secrets.BALENA_API_DEPLOY_KEY }}
+          API_ENV: ${{ env.BALENARC_BALENA_URL }}
+          RELEASE_ID: ${{ steps.deploy-hostapp.outputs.release_id }}
+          # release_asset is a v7-only resource (v6 has no translation for it).
+          # --fail-with-body: exit non-zero on HTTP >= 400 while keeping the error body for diagnostics.
+          CURL: "curl --silent --fail-with-body --retry 10 --location --compressed"
+        run: |
+          set -euo pipefail
+
+          DTJSON="${DEPLOY_PATH}/device-type.json"
+          if [ ! -f "${DTJSON}" ]; then
+            echo "::error title=Missing device-type.json::${DTJSON} not found; cannot determine required assets"
+            exit 1
+          fi
+
+          _deploy_artifact=$(jq -r '.yocto.deployArtifact // empty' "${DTJSON}")
+          _archive=$(jq -r '.yocto.archive // empty' "${DTJSON}")
+          _slug=$(jq -r '.slug // empty' "${DTJSON}")
+          _flasher=$(jq -r '.yocto.deployFlasherArtifact // empty' "${DTJSON}")
+          _raw=$(jq -r '.yocto.deployRawArtifact // empty' "${DTJSON}")
+
+          # VERSION, VERSION_HOSTOS and device-type.json are produced for every device type.
+          required_exact=(VERSION VERSION_HOSTOS device-type.json)
+          required_prefix=()
+
+          # image*.json + compressed*/ deflates only exist for standard compressible images;
+          # edge, docker-image and archive device types return before prepare-image.py runs
+          # (see balena_deploy_artifacts). image-{flasher,raw}.json + compressed-{flasher,raw}/
+          # are produced only when the device type declares that deploy artifact.
+          if [ "${_slug}" != "edge" ] && [ "${_deploy_artifact}" != "docker-image" ] && [ "${_archive}" != "true" ]; then
+            required_exact+=(image.json)
+            required_prefix+=(compressed/)
+            if [ -n "${_flasher}" ]; then
+              required_exact+=(image-flasher.json)
+              required_prefix+=(compressed-flasher/)
+            fi
+            if [ -n "${_raw}" ]; then
+              required_exact+=(image-raw.json)
+              required_prefix+=(compressed-raw/)
+            fi
+          fi
+
+          # Fetch the asset keys actually attached to the release. Check the request and the
+          # response shape explicitly: a failed query or an unexpected payload must fail here with
+          # a clear message, not surface later as a misleading "missing assets" error (empty keys)
+          # or a cryptic jq error.
+          if ! _json=$(${CURL} -XGET -H "Content-type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}" \
+            "https://api.${API_ENV}/v7/release_asset?\$filter=release%20eq%20${RELEASE_ID}&\$select=asset_key"); then
+            echo "::error title=Release asset query failed::Could not read assets for release ${RELEASE_ID}: ${_json}"
+            exit 1
+          fi
+          if [ "$(echo "${_json}" | jq -r '.d | type')" != "array" ]; then
+            echo "::error title=Unexpected release asset response::Expected an OData 'd' array but got: ${_json}"
+            exit 1
+          fi
+          _keys=$(echo "${_json}" | jq -r '.d[].asset_key')
+
+          echo "[INFO] Release ${RELEASE_ID} has the following assets:"
+          printf '%s\n' "${_keys}"
+
+          missing=()
+          for k in "${required_exact[@]}"; do
+            printf '%s\n' "${_keys}" | grep -qxF -- "${k}" || missing+=("${k}")
+          done
+          # Prefix entries (compressed*/) require at least one asset under that folder.
+          for p in "${required_prefix[@]}"; do
+            printf '%s\n' "${_keys}" | grep -q -- "^${p}" || missing+=("${p}*")
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error title=Missing required release assets::Release ${RELEASE_ID} is missing contractually-required assets: ${missing[*]}"
+            exit 1
+          fi
+
+          echo "[INFO] All required release assets are present."
+
       # Finalize the draft release only after every release asset has been uploaded.
       # Finalizing is what makes the API present the release to devices, so this must
       # be the last step - a finalized release should never be missing its assets.
