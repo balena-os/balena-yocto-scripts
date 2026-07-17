@@ -844,6 +844,9 @@ jobs:
       DEPLOY_PATH: ${{ github.workspace }}/deploy
       # S3_DEPLOY_PATH is the DEPLOY_PATH + the device slug and os version as is expected by the prepare.ts script from image maker
       S3_DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}
+      # Whether to AES-256 encrypt uploaded artifacts (private device types + secure boot).
+      # Passed to lzma-artifact-action's encrypt input; the password stays permanently set.
+      ARTIFACT_ENCRYPT: ${{ inputs.sign-image || needs.balena-lib.outputs.is_private == 'true' }}
 
     defaults:
       run:
@@ -1439,144 +1442,108 @@ jobs:
 
           find "${DEPLOY_PATH}" -exec ls -lh {} \;
 
-      # Encryption is required for private device types, and signed images.
-      # We do this to obfuscate private device images on public repos,
-      # and to prevent running signed images that have not gone through review and may have security flaws.
-      # Additional file extensions can be added below, but are only required if included as artifact uploads.
-      - name: Encrypt signed/private artifacts
-        if:
-          (inputs.sign-image || needs.balena-lib.outputs.is_private == 'true')
-          && matrix.image_class == 'hostapp'
-        env:
-          PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
-          PATHS_TO_ENCRYPT: |
-            ${{ env.S3_DEPLOY_PATH }}/balena-image.docker
-            ${{ env.S3_DEPLOY_PATH }}/image/*.img.zip
-            ${{ env.S3_DEPLOY_PATH }}/compressed*/*.deflate
-            ${{ env.S3_DEPLOY_PATH }}/*.manifest
-            ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
-            ${{ env.S3_DEPLOY_PATH }}/secure-boot-lock.tar.gz
-        run: |
-          set -x
-          for file in $(echo "${PATHS_TO_ENCRYPT}" | tr '\n' ' '); do
-            if ! [ -f "${file}" ]; then
-              echo "File ${file} does not exist, skipping encryption."
-              continue
-            fi
-            openssl enc -v -e -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${file}" -out "${file}.enc"
-            rm "${file}"
-          done
-
-      # Upload artifacts to be deployed to S3 / webresources along with the hostapp release.
-      # Primarily deflate files, and licenses, and manifests.
-      # https://github.com/actions/upload-artifact
+      # Upload artifacts to be deployed to S3 / webresources along with the hostapp release
+      # (deflates, licenses, manifests, ...). lzma-artifact-action LZMA-compresses them into one
+      # archive and, for private/secure-boot device types, AES-256 encrypts it — replacing the
+      # previous openssl pass. base-directory keeps the stored paths flat (relative to the deploy
+      # dir) so the download restores them where the consumers expect. Optional per-device files
+      # (secure-boot-lock, cyclonedx, CHANGELOG, kernel headers) are tolerated when absent.
+      # TODO: repoint to the merged tag once product-os/lzma-artifact-action#6 releases.
       - name: Upload hostapp artifacts
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: matrix.image_class == 'hostapp'
+        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
           name: hostapp-artifacts
+          base-directory: ${{ env.S3_DEPLOY_PATH }}
           if-no-files-found: error
-          retention-days: 3
-          # Use 0 compression to avoid corrupting the encrypted files
-          compression-level: 0
-          # Look for both the encrypted (.enc) and unencrypted file variants.
-          # Do not upload uncompressed .img files as they can be restored from the compressed .zip files after download.
-          path: |
-            ${{ env.S3_DEPLOY_PATH }}/balena-image.docker
-            ${{ env.S3_DEPLOY_PATH }}/balena-image.docker.enc
-            ${{ env.S3_DEPLOY_PATH }}/compressed*/*.deflate
-            ${{ env.S3_DEPLOY_PATH }}/compressed*/*.deflate.enc
-            ${{ env.S3_DEPLOY_PATH }}/*.json
-            ${{ env.S3_DEPLOY_PATH }}/*.md
-            ${{ env.S3_DEPLOY_PATH }}/VERSION*
-            ${{ env.S3_DEPLOY_PATH }}/*.manifest
-            ${{ env.S3_DEPLOY_PATH }}/*.manifest.enc
-            ${{ env.S3_DEPLOY_PATH }}/licenses.tar.gz
-            ${{ env.S3_DEPLOY_PATH }}/cyclonedx/*/*.json
-            ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
-            ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz.enc
-            ${{ env.S3_DEPLOY_PATH }}/secure-boot-lock.tar.gz.enc
+          retention-days: "3"
+          compression-level: "1"
+          encrypt: ${{ env.ARTIFACT_ENCRYPT }}
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
+          source: |
+            balena-image.docker
+            compressed*/*.deflate
+            *.json
+            *.md
+            VERSION*
+            *.manifest
+            licenses.tar.gz
+            cyclonedx/*/*.json
+            kernel_modules_headers.tar.gz
+            secure-boot-lock.tar.gz
 
       # Used by Leviathan to test kernel module loading.
-      # https://github.com/actions/upload-artifact
       - name: Upload kernel-module-headers artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: matrix.image_class == 'hostapp'
+        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
           name: kernel-module-headers
+          base-directory: ${{ env.S3_DEPLOY_PATH }}
           if-no-files-found: error
-          retention-days: 3
-          # Use 0 compression to avoid corrupting the encrypted files
-          compression-level: 0
-          # Look for both the encrypted (.enc) and unencrypted file variants.
-          path: |
-            ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz
-            ${{ env.S3_DEPLOY_PATH }}/kernel_modules_headers.tar.gz.enc
+          retention-days: "3"
+          compression-level: "1"
+          encrypt: ${{ env.ARTIFACT_ENCRYPT }}
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
+          source: kernel_modules_headers.tar.gz
 
       # Used by Leviathan to test HUP.
-      # https://github.com/actions/upload-artifact
+      # Used by Leviathan to test HUP.
       - name: Upload balena-image.docker artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: matrix.image_class == 'hostapp'
+        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
           name: balena-image.docker
+          base-directory: ${{ env.S3_DEPLOY_PATH }}
           if-no-files-found: error
-          retention-days: 3
-          # Use 0 compression to avoid corrupting the encrypted files
-          compression-level: 0
-          # Look for both the encrypted (.enc) and unencrypted file variants.
-          path: |
-            ${{ env.S3_DEPLOY_PATH }}/balena-image.docker
-            ${{ env.S3_DEPLOY_PATH }}/balena-image.docker.enc
+          retention-days: "3"
+          compression-level: "1"
+          encrypt: ${{ env.ARTIFACT_ENCRYPT }}
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
+          source: balena-image.docker
 
-      # May be used by Leviathan to run OS and cloud suites depending on the value of test_image in the test matrix.
-      # Used for AMI creation.
-      # https://github.com/actions/upload-artifact
-      - name: Upload balena.img.zip artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      # Raw image for Leviathan OS/cloud suites (selected via test_image) and AMI creation.
+      # Uploaded raw: lzma-artifact-action LZMA-compresses in transit, so the previous .img.zip
+      # step is redundant.
+      - name: Upload balena.img artifact
         if: matrix.image_class == 'hostapp'
+        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
-          name: balena.img.zip
+          name: balena.img
+          base-directory: ${{ env.S3_DEPLOY_PATH }}/image
           if-no-files-found: error
-          retention-days: 3
-          # Use 0 compression to avoid corrupting the encrypted files
-          compression-level: 0
-          # Look for both the encrypted (.enc) and unencrypted file variants.
-          path: |
-            ${{ env.S3_DEPLOY_PATH }}/image/balena.img.zip
-            ${{ env.S3_DEPLOY_PATH }}/image/balena.img.zip.enc
+          retention-days: "3"
+          compression-level: "1"
+          encrypt: ${{ env.ARTIFACT_ENCRYPT }}
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
+          source: balena.img
 
-      # May be used by Leviathan to run OS and cloud suites depending on the value of test_image in the test matrix.
-      # https://github.com/actions/upload-artifact
-      - name: Upload balena-flasher.img.zip artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      # May be used by Leviathan OS/cloud suites depending on test_image.
+      - name: Upload balena-flasher.img artifact
         if: matrix.image_class == 'hostapp'
+        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
-          name: balena-flasher.img.zip
+          name: balena-flasher.img
+          base-directory: ${{ env.S3_DEPLOY_PATH }}/image
           if-no-files-found: ignore
-          retention-days: 3
-          # Use 0 compression to avoid corrupting the encrypted files
-          compression-level: 0
-          # Look for both the encrypted (.enc) and unencrypted file variants.
-          path: |
-            ${{ env.S3_DEPLOY_PATH }}/image/balena-flasher.img.zip
-            ${{ env.S3_DEPLOY_PATH }}/image/balena-flasher.img.zip.enc
+          retention-days: "3"
+          compression-level: "1"
+          encrypt: ${{ env.ARTIFACT_ENCRYPT }}
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
+          source: balena-flasher.img
 
-      # May be used by Leviathan to run OS and cloud suites depending on the value of test_image in the test matrix.
-      # https://github.com/actions/upload-artifact
-      - name: Upload balena-raw.img.zip artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      # May be used by Leviathan OS/cloud suites depending on test_image.
+      - name: Upload balena-raw.img artifact
         if: matrix.image_class == 'hostapp'
+        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
-          name: balena-raw.img.zip
+          name: balena-raw.img
+          base-directory: ${{ env.S3_DEPLOY_PATH }}/image
           if-no-files-found: ignore
-          retention-days: 3
-          # Use 0 compression to avoid corrupting the encrypted files
-          compression-level: 0
-          # Look for both the encrypted (.enc) and unencrypted file variants.
-          path: |
-            ${{ env.S3_DEPLOY_PATH }}/image/balena-raw.img.zip
-            ${{ env.S3_DEPLOY_PATH }}/image/balena-raw.img.zip.enc
+          retention-days: "3"
+          compression-level: "1"
+          encrypt: ${{ env.ARTIFACT_ENCRYPT }}
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
+          source: balena-raw.img
 
       # The image archive and the release assets are uploaded as separate artifacts.
       # The image archive is loaded and deployed via `balena deploy`; the assets become
@@ -1585,23 +1552,31 @@ jobs:
       # to filter the container image archive back out.
       - name: Upload extension image artifact
         if: matrix.image_class != 'hostapp'
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
           name: extension-image-${{ matrix.service_name }}
+          base-directory: build/tmp/deploy/images/${{ env.MACHINE }}
           if-no-files-found: error
-          retention-days: 3
-          compression-level: 0
-          path: build/tmp/deploy/images/${{ env.MACHINE }}/${{ matrix.recipe }}-${{ env.MACHINE }}.docker
+          retention-days: "3"
+          compression-level: "1"
+          encrypt: ${{ env.ARTIFACT_ENCRYPT }}
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
+          source: ${{ matrix.recipe }}-${{ env.MACHINE }}.docker
 
       - name: Upload extension asset artifacts
         if: matrix.image_class != 'hostapp' && matrix.assets != ''
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
           name: extension-assets-${{ matrix.service_name }}
           if-no-files-found: error
-          retention-days: 3
-          compression-level: 0
-          path: |
+          retention-days: "3"
+          compression-level: "1"
+          encrypt: ${{ env.ARTIFACT_ENCRYPT }}
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
+          # TODO(phase-2): set base-directory once extension assets are staged under a known
+          # root, so release-asset keys flatten to <service>/<file>. Today the composition's
+          # asset paths are workspace-relative and preserved in the archive as-is.
+          source: |
             ${{ matrix.assets }}
 
   ##############################
@@ -1640,11 +1615,15 @@ jobs:
 
     steps:
 
+      # lzma-artifact-action decrypts (when a password is set and the archive is encrypted) and
+      # decompresses on download, so no separate decrypt/unzip steps are needed. base-directory on
+      # upload kept the archive flat, so extraction restores files at ${DEPLOY_PATH}/... as before.
       - name: Download artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
           name: hostapp-artifacts
-          path: ${{ env.DEPLOY_PATH }}
+          destination: ${{ env.DEPLOY_PATH }}
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
       - name: Download composition file
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
@@ -1660,11 +1639,12 @@ jobs:
         # merge-multiple flattens all image archives into extensions/; their filenames
         # (${recipe}-${MACHINE}.docker) are unique, so they can't collide.
         if: needs.balena-lib.outputs.has_extensions == 'true'
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
           pattern: extension-image-*
-          path: ${{ env.DEPLOY_PATH }}/extensions
-          merge-multiple: true
+          destination: ${{ env.DEPLOY_PATH }}/extensions
+          merge-multiple: "true"
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
       - name: Download extension release assets
         # Each extension's assets land in their own extension-assets-<service>/ folder
@@ -1672,33 +1652,11 @@ jobs:
         # extensions can't overwrite each other. Everything downloaded here is uploaded
         # as a release asset wholesale.
         if: needs.balena-lib.outputs.has_extension_assets == 'true'
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
           pattern: extension-assets-*
-          path: ${{ env.DEPLOY_PATH }}/release-assets
-
-      - name: Decrypt artifacts
-        if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
-        env:
-          PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
-          PATHS_TO_DECRYPT: |
-            ${{ env.DEPLOY_PATH }}/*.enc
-            ${{ env.DEPLOY_PATH }}/**/*.enc
-        run: |
-          set -x
-          for enc in $(echo "${PATHS_TO_DECRYPT}" | tr '\n' ' '); do
-            openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${enc}" -out "${enc%.enc}"
-          done
-
-      # Unzip the raw image files that were zipped and removed before uploading.
-      - name: Decompress artifacts
-        run: |
-          set -x
-
-          if ! command -v unzip; then
-            sudo apt-get update
-            sudo apt-get install -y unzip
-          fi
+          destination: ${{ env.DEPLOY_PATH }}/release-assets
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
       - name: Setup balena CLI
         uses: balena-io-examples/setup-balena-action@fee0ed01069566dd4c71b24e64c8b9c1c26cea17 # v0.0.119
@@ -2145,34 +2103,14 @@ jobs:
 
     steps:
 
+      # lzma-artifact-action decrypts + decompresses on download; base-directory kept the archive
+      # flat so files restore under ${DEPLOY_PATH} (= <slug>/<version>) for the S3 sync below.
       - name: Download artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
           name: hostapp-artifacts
-          path: ${{ env.DEPLOY_PATH }}
-
-      - name: Decrypt artifacts
-        if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
-        env:
-          PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
-          PATHS_TO_DECRYPT: |
-            ${{ env.DEPLOY_PATH }}/*.enc
-            ${{ env.DEPLOY_PATH }}/**/*.enc
-        run: |
-          set -x
-          for enc in $(echo "${PATHS_TO_DECRYPT}" | tr '\n' ' '); do
-            openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${enc}" -out "${enc%.enc}"
-          done
-
-      # Unzip the raw image files that were zipped and removed before uploading.
-      - name: Decompress artifacts
-        run: |
-          set -x
-
-          if ! command -v unzip; then
-            sudo apt-get update
-            sudo apt-get install -y unzip
-          fi
+          destination: ${{ env.DEPLOY_PATH }}
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
       # https://github.com/unfor19/install-aws-cli-action
       # https://github.com/aws/aws-cli/tags
@@ -2280,39 +2218,14 @@ jobs:
 
     steps:
 
+      # lzma-artifact-action decrypts + decompresses on download, yielding the raw balena.img
+      # directly under ${DEPLOY_PATH}/image (no unzip needed).
       - name: Download artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
-          name: balena.img.zip
-          path: ${{ env.DEPLOY_PATH }}/image
-
-      - name: Decrypt artifacts
-        if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
-        env:
-          PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
-          PATHS_TO_DECRYPT: |
-            ${{ env.DEPLOY_PATH }}/**/*.enc
-        run: |
-          set -x
-          for enc in $(echo "${PATHS_TO_DECRYPT}" | tr '\n' ' '); do
-            openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${enc}" -out "${enc%.enc}"
-          done
-
-      # Unzip the raw image files that were zipped and removed before uploading.
-      - name: Decompress artifacts
-        run: |
-          set -x
-
-          if ! command -v unzip; then
-            sudo apt-get update
-            sudo apt-get install -y unzip
-          fi
-
-          find "${DEPLOY_PATH}/image" -type f -name "*.img.zip"
-
-          for zip in "${DEPLOY_PATH}"/image/*.img.zip; do
-            unzip "${zip}" -d "$(dirname "${zip}")"
-          done
+          name: balena.img
+          destination: ${{ env.DEPLOY_PATH }}/image
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
       # https://github.com/unfor19/install-aws-cli-action
       # https://github.com/aws/aws-cli/tags
@@ -2907,50 +2820,29 @@ jobs:
           git checkout --force "${{ inputs.meta-balena-ref }}"
           git submodule update --init --recursive
 
-      - name: Download artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      # lzma-artifact-action decrypts + decompresses on download; the raw image lands directly
+      # under ${DEPLOY_PATH}/image (no unzip), and balena-image.docker / kernel headers under
+      # ${DEPLOY_PATH}, ready for the workspace prep below.
+      - name: Download OS image
+        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
-          name: ${{ env.BALENA_OS_IMAGE }}.zip
-          path: ${{ env.DEPLOY_PATH }}/image
+          name: ${{ env.BALENA_OS_IMAGE }}
+          destination: ${{ env.DEPLOY_PATH }}/image
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
-      - name: Download artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      - name: Download balena-image.docker
+        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
           name: balena-image.docker
-          path: ${{ env.DEPLOY_PATH }}
+          destination: ${{ env.DEPLOY_PATH }}
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
-      - name: Download artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      - name: Download kernel-module-headers
+        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
           name: kernel-module-headers
-          path: ${{ env.DEPLOY_PATH }}
-
-      - name: Decrypt artifacts
-        if: inputs.sign-image || needs.balena-lib.outputs.is_private == 'true'
-        env:
-          PBDKF2_PASSPHRASE: ${{ secrets.PBDKF2_PASSPHRASE }}
-          PATHS_TO_DECRYPT: |
-            ${{ env.DEPLOY_PATH }}/*.enc
-            ${{ env.DEPLOY_PATH }}/**/*.enc
-        run: |
-          set -x
-          for enc in $(echo "${PATHS_TO_DECRYPT}" | tr '\n' ' '); do
-            openssl enc -v -d -aes-256-cbc -k "${PBDKF2_PASSPHRASE}" -pbkdf2 -iter 310000 -md sha256 -salt -in "${enc}" -out "${enc%.enc}"
-          done
-
-      # Unzip the raw image files that were zipped and removed before uploading.
-      - name: Decompress artifacts
-        run: |
-          set -x
-
-          if ! command -v unzip; then
-            sudo apt-get update
-            sudo apt-get install -y unzip
-          fi
-
-          find "${DEPLOY_PATH}/image" -type f -name "*.img.zip"
-
-          unzip "${DEPLOY_PATH}/image/${BALENA_OS_IMAGE}.zip" -d "${DEPLOY_PATH}/image/"
+          destination: ${{ env.DEPLOY_PATH }}
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
       # Check out private contracts if this is a private device type - as these are required for the tests
       - name: Checkout private Contracts

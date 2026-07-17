@@ -134,21 +134,7 @@ balena_deploy_artifacts () {
 		"${include_dir}"/../conversion_scripts/prepare-image.py --output-dir "${_deploy_dir}" --image-type raw "${_deploy_dir}/image/balena-raw.img"
 	fi
 
-	if [[ "${_compressed}" != 'true' ]]; then
-		# uncompressed, just copy and we're done
-		return
-	fi
-
-	local _zip_flags=()
-	_zip_flags+=("-v") # verbose operation/print version info
-	_zip_flags+=("-j") # junk (don't record) directory names
-	_zip_flags+=("-9") # compress better
-
-	if [[ "${_remove_compressed_file}" = "true" ]]; then
-		_zip_flags+=("-m") # move into zipfile (delete OS files)
-	fi
-
-	for _image in "${_deploy_dir}"/image/*.img; do
-		(cd "${_deploy_dir}/image" && zip "${_zip_flags[@]}" "${_image}.zip" "${_image}")
-	done
+	# The raw .img files are left in place under ${_deploy_dir}/image/. They are no longer
+	# pre-zipped here: the workflow uploads them via lzma-artifact-action, which LZMA-compresses
+	# them in transit, so a separate zip step would be redundant double-compression.
 }
