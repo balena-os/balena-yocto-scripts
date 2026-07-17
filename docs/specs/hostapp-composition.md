@@ -117,7 +117,7 @@ builds via `balena-kernel-modules-block`.
 | ------------ | --------------- | -------- | ------------------------------------------------------------------------------------------------ |
 | `recipe`     | string          | no       | Bitbake image target. Omitted for hostapp (falls back to `deploy_artifact`); set for extensions. |
 | `build_args` | list of strings | no       | Extra barys arguments specific to this service. Joined with spaces and appended to common args.  |
-| `assets`     | list of strings | no       | File paths to upload as web resources attached to the balenaCloud release.                       |
+| `assets`     | list of strings | no       | Globs of raw build outputs under `build/tmp/deploy/`; transformed to flat keys on deploy.        |
 
 ### Opt-out signals
 
@@ -155,18 +155,19 @@ scope:
 
 ## Placeholders
 
-The composition supports two **workflow-time placeholders** that the deploy
-step rewrites before passing the composition to `balena deploy`. Both follow
-the `__UPPERCASE_SNAKE__` form to stay visually distinct from real values and
-to avoid collision with [compose-spec variable
+The composition uses **workflow-time placeholders** in the `__UPPERCASE_SNAKE__`
+form, kept visually distinct from real values and clear of [compose-spec variable
 interpolation](https://github.com/compose-spec/compose-spec/blob/master/12-interpolation.md)
-(`$VAR` / `${VAR}`), which compose parsers may apply before our substitution
-step runs.
+(`$VAR` / `${VAR}`), which compose parsers may apply before our substitution step
+runs. `__BUILD_OUTPUT__` and `__DEVICE_REPO_REV__` are rewritten into the
+composition before it is passed to `balena deploy`; `__MACHINE__` is substituted
+earlier, at build-matrix parse time, only within `x-build.assets`.
 
 | Placeholder           | Valid in         | Resolves to                                                                                    |
 | --------------------- | ---------------- | ---------------------------------------------------------------------------------------------- |
 | `__BUILD_OUTPUT__`    | service `image:` | The image reference returned by `docker load` for that service's built `.docker` archive.      |
 | `__DEVICE_REPO_REV__` | any string value | The device repo's git revision (exposed to the deploy step via the `DEVICE_REPO_REV` env var). |
+| `__MACHINE__`         | `x-build.assets` | Yocto MACHINE, substituted into asset globs at build-matrix parse time.                        |
 
 `__BUILD_OUTPUT__` is matched structurally by path (`.services.<svc>.image`) —
 services with concrete `image:` values are passed through unchanged. After
@@ -178,6 +179,16 @@ the deploy fails fast.
 in the composition, so it's immune to substring collisions in other label
 values. The workflow's `${DEVICE_REPO_REV:?...}` guard fails fast if the
 env var is unset, preventing silent empty-string substitution.
+
+`__MACHINE__` is substituted at build-matrix parse time, only within each
+service's `x-build.assets` globs, because those globs are relative to
+`build/tmp/deploy/` and need the concrete yocto `MACHINE` to reach the
+`images/<machine>/` build output. The on-disk composition keeps the literal;
+only the parsed matrix `assets` value is resolved. The `images/<machine>/`
+prefix it produces (and the other raw-output paths like `cyclonedx-export/`,
+`licenses/`, `rpi-eeprom/secure-boot-lock/`) is transformed to the flat contract
+layout on the deploy side (`hostapp-deploy` and `s3-deploy` share one anchored
+"Transform release assets" step).
 
 Adding a new placeholder is a three-step contract change: this section, the
 workflow's substitution step, and any meta-balena base composition or device

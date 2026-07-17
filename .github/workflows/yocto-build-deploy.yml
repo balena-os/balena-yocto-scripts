@@ -272,7 +272,6 @@ jobs:
       balena_host: ${{ env.BALENARC_BALENA_URL }}
       build_services: ${{ steps.build-matrix.outputs.services }}
       build_matrix: ${{ steps.build-matrix.outputs.matrix }}
-      has_extensions: ${{ steps.build-matrix.outputs.has_extensions }}
       has_extension_assets: ${{ steps.build-matrix.outputs.has_extension_assets }}
 
     steps:
@@ -458,6 +457,41 @@ jobs:
           echo "[INFO] Composition:"
           cat "${COMPOSITION}"
 
+      # TEMPORARY (scaffold): meta-balena does not yet declare x-build.assets for the hostapp, so
+      # inject the canonical release-asset set here to exercise the composition-driven asset flow.
+      # Only fills when the hostapp declares no assets, so a real meta-balena base or device overlay
+      # overrides it. Paths are relative to the deploy-dir root build/tmp/deploy/ (the upload
+      # base-directory): machine-native files under images/__MACHINE__/ (__MACHINE__ is substituted
+      # at build-matrix parse time), and build/tmp/deploy/ siblings (cyclonedx-export/) globbed in
+      # place. These list only real build outputs; the deploy jobs transform them into the flat
+      # contract layout (strip images/<machine>/, cyclonedx-export/ -> cyclonedx/, tar licenses/ and
+      # rpi-eeprom/secure-boot-lock/). The two staged files that aren't build outputs, device-type.json
+      # (the repo-root <slug>.json renamed) and CHANGELOG.md, are added by the upload step instead of
+      # listed here.
+      # Remove once layers/meta-balena/hostapp.yml ships x-build.assets.
+      - name: Inject default hostapp assets
+        run: |
+          COMPOSITION="${MACHINE}.hostapp.yml"
+          yq -i '
+            (.services[]
+              | select(.labels."io.balena.image.class" == "hostapp")
+              | select(((."x-build".assets) // []) | length == 0)
+              | ."x-build".assets) = [
+                "images/__MACHINE__/VERSION",
+                "images/__MACHINE__/VERSION_HOSTOS",
+                "images/__MACHINE__/image*.json",
+                "images/__MACHINE__/compressed*/part-*.deflate",
+                "images/__MACHINE__/*.manifest",
+                "images/__MACHINE__/kernel_modules_headers.tar.gz",
+                "images/__MACHINE__/rpi-eeprom/secure-boot-lock/**",
+                "cyclonedx-export/**/*.json",
+                "licenses/**"
+              ]
+          ' "${COMPOSITION}"
+
+          echo "[INFO] Composition after hostapp asset injection:"
+          cat "${COMPOSITION}"
+
       - name: Validate composition
         run: |
           COMPOSITION="${MACHINE}.hostapp.yml"
@@ -530,11 +564,15 @@ jobs:
           # Services opt in to the build pipeline by declaring a truthy x-build (including empty {}).
           # Device-repo overlays can opt out of a meta-balena-defined extension by setting `x-build: ~`,
           # which the deep merge propagates as null — falsy, so the service is excluded from the matrix.
+          # image_output is the built docker filename each service produces in the yocto deploy dir:
+          # <recipe>-<machine>.docker. The hostapp declares no recipe (its build omits -i) but is
+          # always produced by the balena-image recipe, so default the recipe to balena-image here.
           matrix=$(yq -o=json '[.services | to_entries[] | select(.value."x-build") | {
             "service_name": .key,
             "recipe": (.value."x-build".recipe // ""),
+            "image_output": ((.value."x-build".recipe // "balena-image") + "-" + env(MACHINE) + ".docker"),
             "build_args": (.value."x-build".build_args // [] | join(" ")),
-            "assets": (.value."x-build".assets // [] | join("\n")),
+            "assets": (.value."x-build".assets // [] | map(sub("__MACHINE__"; env(MACHINE))) | join("\n")),
             "image_class": (.value.labels."io.balena.image.class" // "overlay")
           }]' "${COMPOSITION}")
 
@@ -553,22 +591,18 @@ jobs:
           fi
 
           services=$(echo "${matrix}" | jq -c '[.[].service_name]')
-          # Matrix contains only services with truthy x-build (registry-pulled extensions are absent).
-          # >1 means at least one extension was built and will produce a .docker artifact to download.
-          # Computed here because GHA `if:` cannot evaluate fromJSON(...).length on a string output.
-          has_extensions=$([ "$(echo "${matrix}" | jq 'length')" -gt 1 ] && echo true || echo false)
 
-          # Whether any service declares release assets. Gates the extension-assets artifact
-          # download so a run with extensions but no declared assets doesn't look for a
-          # non-existent artifact. Same reason as has_extensions: GHA `if:` can't do this.
-          has_extension_assets=$([ "$(echo "${matrix}" | jq '[.[] | select(.assets != "")] | length')" -gt 0 ] && echo true || echo false)
+          # Whether any EXTENSION (non-hostapp) service declares release assets. Gates the
+          # extension attach step (Upload extension release assets) so a run with no extension
+          # assets doesn't try to attach an empty service/ tree. The hostapp always declares
+          # assets and attaches via its own dedicated step, so it must not flip this on. Computed
+          # here because GHA `if:` cannot evaluate fromJSON(...).length on a string output.
+          has_extension_assets=$([ "$(echo "${matrix}" | jq '[.[] | select(.image_class != "hostapp" and .assets != "")] | length')" -gt 0 ] && echo true || echo false)
 
           echo "Build services: ${services}"
           echo "Build matrix: ${matrix}"
-          echo "Has extensions: ${has_extensions}"
           echo "Has extension assets: ${has_extension_assets}"
           echo "services=${services}" >> "${GITHUB_OUTPUT}"
-          echo "has_extensions=${has_extensions}" >> "${GITHUB_OUTPUT}"
           echo "has_extension_assets=${has_extension_assets}" >> "${GITHUB_OUTPUT}"
           delimiter="$(openssl rand -hex 16)"
           {
@@ -841,9 +875,6 @@ jobs:
       # Create an autobuilder configuration file that is loaded before local.conf
       AUTO_CONF_FILE: "${{ github.workspace }}/build/conf/auto.conf"
       BALENARC_BALENA_URL: ${{ needs.balena-lib.outputs.balena_host }}
-      DEPLOY_PATH: ${{ github.workspace }}/deploy
-      # S3_DEPLOY_PATH is the DEPLOY_PATH + the device slug and os version as is expected by the prepare.ts script from image maker
-      S3_DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}
       # Whether to AES-256 encrypt uploaded artifacts (private device types + secure boot).
       # Passed to lzma-artifact-action's encrypt input; the password stays permanently set.
       ARTIFACT_ENCRYPT: ${{ inputs.sign-image || needs.balena-lib.outputs.is_private == 'true' }}
@@ -1424,82 +1455,69 @@ jobs:
           aws s3 sync --sse="${S3_SSE}" "${SHARED_DOWNLOADS_DIR}/" "${S3_URL}/" \
             --exclude "*/*" --exclude "*.tmp" --size-only --follow-symlinks --no-progress
 
-      # TODO: Unroll balena_deploy_artifacts into the workflow shell directly
-      # and only package up what is needed for s3 deploy, hostapp deploy, and leviathan tests.
-      # https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/include/balena-deploy.inc#L23
-      - name: Prepare hostapp artifacts
+      # Stage the two hostapp release assets that no x-build.assets glob can reach, plus the
+      # compressed image parts. Everything else (VERSION, manifests, cyclonedx-export/, licenses/,
+      # secure-boot-lock/, ...) is a raw build output the composition globs in place and the deploy
+      # jobs transform. Kept minimal so balena-deploy.inc is no longer needed:
+      #   - device-type.json (the repo-root <slug>.json renamed) and CHANGELOG.md (a repo-root file):
+      #     neither is a build output, so they're staged here and the upload step adds them to its
+      #     source on the hostapp leg, rather than being listed in x-build.assets.
+      #   - compressed*/ + image*.json: prepare-image.py deflates, plus balena*.img symlinks aliasing
+      #     the raw deploy artifacts (multi-GB images are never copied; the uploads follow symlinks).
+      - name: Stage release assets
         if: matrix.image_class == 'hostapp'
-        env:
-          ARTIFACTS_TAR: "${{ runner.temp }}/artifacts.tar.zst"
         run: |
-          if ! command -v zip; then
-            sudo apt-get update
-            sudo apt-get install -y zip
+          set -e
+          DT_JSON="${SLUG}.json"
+          DEPLOY_ROOT="build/tmp/deploy"
+          YOCTO_DIR="${DEPLOY_ROOT}/images/${MACHINE}"
+          PREPARE_IMAGE="${automation_dir}/conversion_scripts/prepare-image.py"
+
+          cp -v "${DT_JSON}" "${DEPLOY_ROOT}/device-type.json"
+          if [ -f CHANGELOG.md ]; then
+            cp -v CHANGELOG.md "${DEPLOY_ROOT}/"
           fi
 
-          source "${automation_dir}/include/balena-deploy.inc"
-          balena_deploy_artifacts "${SLUG}" "${S3_DEPLOY_PATH}" false
+          # edge / docker-image device types have no compressible/raw image.
+          if [ "$(jq -r '.slug' "${DT_JSON}")" = "edge" ]; then exit 0; fi
+          if [ "$(jq -r '.yocto.deployArtifact' "${DT_JSON}")" = "docker-image" ]; then
+            echo "[INFO] docker-image deploy artifact: no image to compress"
+            exit 0
+          fi
 
-          find "${DEPLOY_PATH}" -exec ls -lh {} \;
+          # Compress a (symlinked) deploy artifact into DEFLATE parts + manifest and alias it to a
+          # normalized balena*.img name. $1 artifact filename, $2 image-type ("" main), $3 link name.
+          stage_image() {
+            local _resolved _type_arg=()
+            _resolved="$(readlink --canonicalize "${YOCTO_DIR}/$1")"
+            [ -n "$2" ] && _type_arg=(--image-type "$2")
+            "${PREPARE_IMAGE}" --output-dir "${YOCTO_DIR}" "${_type_arg[@]}" "${_resolved}"
+            ln -sf "${_resolved}" "${YOCTO_DIR}/$3"
+          }
 
-      # Upload artifacts to be deployed to S3 / webresources along with the hostapp release
-      # (deflates, licenses, manifests, ...). lzma-artifact-action LZMA-compresses them into one
-      # archive and, for private/secure-boot device types, AES-256 encrypts it — replacing the
-      # previous openssl pass. base-directory keeps the stored paths flat (relative to the deploy
-      # dir) so the download restores them where the consumers expect. Optional per-device files
-      # (secure-boot-lock, cyclonedx, CHANGELOG, kernel headers) are tolerated when absent.
-      # TODO: repoint to the merged tag once product-os/lzma-artifact-action#6 releases.
-      - name: Upload hostapp artifacts
-        if: matrix.image_class == 'hostapp'
-        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
-        with:
-          name: hostapp-artifacts
-          base-directory: ${{ env.S3_DEPLOY_PATH }}
-          if-no-files-found: error
-          retention-days: "3"
-          compression-level: "1"
-          encrypt: ${{ env.ARTIFACT_ENCRYPT }}
-          password: ${{ secrets.PBDKF2_PASSPHRASE }}
-          source: |
-            balena-image.docker
-            compressed*/*.deflate
-            *.json
-            *.md
-            VERSION*
-            *.manifest
-            licenses.tar.gz
-            cyclonedx/*/*.json
-            kernel_modules_headers.tar.gz
-            secure-boot-lock.tar.gz
+          stage_image "$(jq -r '.yocto.deployArtifact' "${DT_JSON}")" "" balena.img
+          _flasher=$(jq -r '.yocto.deployFlasherArtifact // empty' "${DT_JSON}")
+          _raw=$(jq -r '.yocto.deployRawArtifact // empty' "${DT_JSON}")
+          [ -n "${_flasher}" ] && stage_image "${_flasher}" flasher balena-flasher.img
+          [ -n "${_raw}" ] && stage_image "${_raw}" raw balena-raw.img
 
-      # Used by Leviathan to test kernel module loading.
+          echo "[INFO] Yocto deploy dir after staging:"
+          ls -lh "${YOCTO_DIR}" || true
+
+      # Used by Leviathan to test kernel module loading. Uploaded straight from the yocto deploy
+      # dir — its filename is already the normalized name consumers expect, so no staging needed.
       - name: Upload kernel-module-headers artifact
         if: matrix.image_class == 'hostapp'
         uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
           name: kernel-module-headers
-          base-directory: ${{ env.S3_DEPLOY_PATH }}
+          base-directory: build/tmp/deploy/images/${{ env.MACHINE }}
           if-no-files-found: error
           retention-days: "3"
           compression-level: "1"
           encrypt: ${{ env.ARTIFACT_ENCRYPT }}
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
           source: kernel_modules_headers.tar.gz
-
-      # Used by Leviathan to test HUP.
-      # Used by Leviathan to test HUP.
-      - name: Upload balena-image.docker artifact
-        if: matrix.image_class == 'hostapp'
-        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
-        with:
-          name: balena-image.docker
-          base-directory: ${{ env.S3_DEPLOY_PATH }}
-          if-no-files-found: error
-          retention-days: "3"
-          compression-level: "1"
-          encrypt: ${{ env.ARTIFACT_ENCRYPT }}
-          password: ${{ secrets.PBDKF2_PASSPHRASE }}
-          source: balena-image.docker
 
       # Raw image for Leviathan OS/cloud suites (selected via test_image) and AMI creation.
       # Uploaded raw: lzma-artifact-action LZMA-compresses in transit, so the previous .img.zip
@@ -1509,7 +1527,7 @@ jobs:
         uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
           name: balena.img
-          base-directory: ${{ env.S3_DEPLOY_PATH }}/image
+          base-directory: build/tmp/deploy/images/${{ env.MACHINE }}
           if-no-files-found: error
           retention-days: "3"
           compression-level: "1"
@@ -1523,7 +1541,7 @@ jobs:
         uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
           name: balena-flasher.img
-          base-directory: ${{ env.S3_DEPLOY_PATH }}/image
+          base-directory: build/tmp/deploy/images/${{ env.MACHINE }}
           if-no-files-found: ignore
           retention-days: "3"
           compression-level: "1"
@@ -1537,7 +1555,7 @@ jobs:
         uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
           name: balena-raw.img
-          base-directory: ${{ env.S3_DEPLOY_PATH }}/image
+          base-directory: build/tmp/deploy/images/${{ env.MACHINE }}
           if-no-files-found: ignore
           retention-days: "3"
           compression-level: "1"
@@ -1545,39 +1563,47 @@ jobs:
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
           source: balena-raw.img
 
-      # The image archive and the release assets are uploaded as separate artifacts.
-      # The image archive is loaded and deployed via `balena deploy`; the assets become
-      # release web resources. Keeping them apart lets the deploy job download each
-      # extension's assets into its own folder and upload them wholesale, without having
-      # to filter the container image archive back out.
-      - name: Upload extension image artifact
-        if: matrix.image_class != 'hostapp'
+      # Every built service's docker image (hostapp included), one artifact per matrix leg. The
+      # image and the release assets are separate artifacts so the deploy job can load the images
+      # and attach the assets independently. matrix.image_output is the built filename in the yocto
+      # deploy dir (balena-image-<machine>.docker for the hostapp, <recipe>-<machine>.docker for
+      # extensions); the deploy job matches it back to this service by the same recipe rule.
+      - name: Upload image artifact
         uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
-          name: extension-image-${{ matrix.service_name }}
+          name: image-${{ matrix.service_name }}
           base-directory: build/tmp/deploy/images/${{ env.MACHINE }}
           if-no-files-found: error
           retention-days: "3"
           compression-level: "1"
           encrypt: ${{ env.ARTIFACT_ENCRYPT }}
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
-          source: ${{ matrix.recipe }}-${{ env.MACHINE }}.docker
+          source: ${{ matrix.image_output }}
 
-      - name: Upload extension asset artifacts
-        if: matrix.image_class != 'hostapp' && matrix.assets != ''
+      # Per-service release assets, one artifact per matrix leg (hostapp included). base-directory is
+      # the deploy-dir root build/tmp/deploy, so the composition's x-build.assets can glob both
+      # machine-native paths (images/<machine>/...) and build/tmp/deploy siblings (cyclonedx-export/)
+      # in place without staging everything into images/<machine>/. The stored keys keep their
+      # sub-path (images/<machine>/..., cyclonedx-export/...); the deploy jobs flatten them to the
+      # flat contract layout before attach/sync. Gated on matrix.assets so services that declare none
+      # are skipped. The two staged non-build-output files, device-type.json and CHANGELOG.md, are
+      # appended to the source (not listed in x-build.assets) guarded on image_class == 'hostapp', so
+      # only the hostapp leg uploads them; "Stage release assets" produced them + the deflates.
+      - name: Upload release assets
+        if: matrix.assets != ''
         uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
-          name: extension-assets-${{ matrix.service_name }}
+          name: release-assets-${{ matrix.service_name }}
+          base-directory: build/tmp/deploy
           if-no-files-found: error
           retention-days: "3"
           compression-level: "1"
           encrypt: ${{ env.ARTIFACT_ENCRYPT }}
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
-          # TODO(phase-2): set base-directory once extension assets are staged under a known
-          # root, so release-asset keys flatten to <service>/<file>. Today the composition's
-          # asset paths are workspace-relative and preserved in the archive as-is.
           source: |
             ${{ matrix.assets }}
+            ${{ matrix.image_class == 'hostapp' && 'CHANGELOG.md' || '' }}
+            ${{ matrix.image_class == 'hostapp' && 'device-type.json' || '' }}
 
   ##############################
   # hostapp Deploy
@@ -1612,18 +1638,12 @@ jobs:
       BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || vars.BALENARC_BALENA_URL || 'balena-cloud.com' }}
       HOSTAPP_ORG: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
       DEPLOY_PATH: ${{ github.workspace }}/deploy
+      # Asset roots the "Transform release assets" step normalizes (relative to DEPLOY_PATH): the
+      # grouped hostapp dir plus any extension service dirs (the "Group" step puts extensions under
+      # release-assets/service/<svc>).
+      ASSET_DIRS: hostapp-assets release-assets/service/*
 
     steps:
-
-      # lzma-artifact-action decrypts (when a password is set and the archive is encrypted) and
-      # decompresses on download, so no separate decrypt/unzip steps are needed. base-directory on
-      # upload kept the archive flat, so extraction restores files at ${DEPLOY_PATH}/... as before.
-      - name: Download artifacts
-        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
-        with:
-          name: hostapp-artifacts
-          destination: ${{ env.DEPLOY_PATH }}
-          password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
       - name: Download composition file
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
@@ -1631,31 +1651,31 @@ jobs:
           name: hostapp-composition
           path: ${{ env.DEPLOY_PATH }}
 
-      - name: Download extension image artifacts
-        # Only run when the build matrix produced a non-hostapp service — an extension this workflow
-        # actually built. Registry-pulled extensions (concrete image, no x-build) are absent from the
-        # matrix and have nothing to download. Gated via a precomputed output because GHA `if:` cannot
-        # evaluate fromJSON(...).length on a string output.
-        # merge-multiple flattens all image archives into extensions/; their filenames
-        # (${recipe}-${MACHINE}.docker) are unique, so they can't collide.
-        if: needs.balena-lib.outputs.has_extensions == 'true'
+      # Every built service's docker image (hostapp + extensions), one image-<service> artifact each.
+      # merge-multiple flattens them all into images/; their filenames (balena-image-<machine>.docker,
+      # <recipe>-<machine>.docker) are unique, so they can't collide. The Deploy step docker-loads
+      # each and matches it back to its service. Ungated: the hostapp image is always present.
+      # lzma-artifact-action decrypts (when encrypted) + decompresses on download.
+      - name: Download image artifacts
         uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
-          pattern: extension-image-*
-          destination: ${{ env.DEPLOY_PATH }}/extensions
+          pattern: image-*
+          destination: ${{ env.DEPLOY_PATH }}/images
           merge-multiple: "true"
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
-      - name: Download extension release assets
-        # Each extension's assets land in their own extension-assets-<service>/ folder
-        # (merge-multiple defaults to false), so identically named assets from different
-        # extensions can't overwrite each other. Everything downloaded here is uploaded
-        # as a release asset wholesale.
-        if: needs.balena-lib.outputs.has_extension_assets == 'true'
+      # Every service's release assets (hostapp + any extensions) arrive as one artifact each,
+      # named release-assets-<service>. With merge-multiple:false the download lays each out in
+      # its own release-assets-<service>/ folder WHEN two or more match; a lone artifact (hostapp
+      # only, no extension assets) extracts flat into the destination. The "Group release assets
+      # by service" step below handles both layouts. release-assets-hostapp always exists (the
+      # hostapp always declares assets), so this is ungated.
+      - name: Download release assets
         uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
-          pattern: extension-assets-*
+          pattern: release-assets-*
           destination: ${{ env.DEPLOY_PATH }}/release-assets
+          merge-multiple: "false"
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
       - name: Setup balena CLI
@@ -1700,14 +1720,7 @@ jobs:
 
           ## Adapted from https://github.com/balena-os/balena-yocto-scripts/blob/fe5debadae75e2b9cda9bd40aa2d0aced777860a/automation/entry_scripts/balena-deploy-block.sh
           ## That script was executed from inside a helper image - here we're doing it inline
-
-          # Load hostapp image
-          _local_image=$(docker load -i "${DEPLOY_PATH}/balena-image.docker" | cut -d: -f1 --complement | tr -d " ")
-
-          if [[ -z "${_local_image}" ]]; then
-            echo "[ERROR] Failed to load balena-image.docker"
-            exit 1
-          fi
+          ## The hostapp + extension images are loaded and matched to services further down.
 
           echo "[INFO] Logging into ${API_ENV} as ${BALENAOS_ACCOUNT}"
           export BALENARC_BALENA_URL="${API_ENV}"
@@ -1760,43 +1773,48 @@ jobs:
           echo "[INFO] Using composition file: ${COMPOSITION}"
           cp "${COMPOSITION}" "${WORKSPACE}/docker-compose.yml"
 
-          # Substitute hostapp image reference
-          yq -i "(.services.hostapp.image) = \"${_local_image}\"" "${WORKSPACE}/docker-compose.yml"
+          # Load every built image and substitute it into the composition. A service's built docker
+          # filename is <recipe>-${MACHINE}.docker, with the recipe defaulting to balena-image for
+          # the hostapp (which declares none). Match each downloaded archive to its service by that
+          # exact filename (avoids recipe-prefix collisions
+          # and regex interpretation). Remember the hostapp's loaded ref for the deploy call below.
+          _local_image=""
+          for docker_archive in "${DEPLOY_PATH}"/images/*.docker; do
+            [ -f "${docker_archive}" ] || continue
+            _loaded_image=$(docker load -i "${docker_archive}" | cut -d: -f1 --complement | tr -d " ")
+            if [ -z "${_loaded_image}" ]; then
+              echo "[ERROR] Failed to load image archive ${docker_archive}"
+              exit 1
+            fi
+            echo "[INFO] Loaded image: ${_loaded_image} from ${docker_archive}"
 
-          # Load and substitute extension images
-          if [ -d "${DEPLOY_PATH}/extensions" ]; then
-            for docker_archive in "${DEPLOY_PATH}"/extensions/*.docker; do
-              [ -f "${docker_archive}" ] || continue
-              _ext_image=$(docker load -i "${docker_archive}" | cut -d: -f1 --complement | tr -d " ")
-              if [ -z "${_ext_image}" ]; then
-                echo "[ERROR] Failed to load extension archive ${docker_archive}"
-                exit 1
-              fi
-              echo "[INFO] Loaded extension image: ${_ext_image} from ${docker_archive}"
-
-              # Build uploads each extension image as ${recipe}-${MACHINE}.docker (see Upload extension image artifact).
-              # Match that exact filename to avoid recipe-name prefix collisions and regex interpretation.
-              _archive_name=$(basename "${docker_archive}" .docker)
-              _matched=0
-              for svc in $(yq '.services | keys | .[]' "${WORKSPACE}/docker-compose.yml"); do
-                _svc_image=$(yq ".services.${svc}.image" "${WORKSPACE}/docker-compose.yml")
-                _svc_recipe=$(yq ".services.${svc}.\"x-build\".recipe // \"\"" "${WORKSPACE}/docker-compose.yml")
-                if [ -z "${_svc_recipe}" ]; then
-                  continue
+            _archive_name=$(basename "${docker_archive}")
+            _matched=0
+            for svc in $(yq '.services | keys | .[]' "${WORKSPACE}/docker-compose.yml"); do
+              _svc_image=$(yq ".services.${svc}.image" "${WORKSPACE}/docker-compose.yml")
+              [ "${_svc_image}" = "__BUILD_OUTPUT__" ] || continue
+              # Built filename is <recipe>-${MACHINE}.docker; the hostapp has no recipe and is
+              # produced by the balena-image recipe, so default to balena-image (matches the matrix).
+              _svc_recipe=$(yq ".services.${svc}.\"x-build\".recipe // \"balena-image\"" "${WORKSPACE}/docker-compose.yml")
+              if [ "${_archive_name}" = "${_svc_recipe}-${MACHINE}.docker" ]; then
+                yq -i "(.services.${svc}.image) = \"${_loaded_image}\"" "${WORKSPACE}/docker-compose.yml"
+                echo "[INFO] Set ${svc} image to ${_loaded_image}"
+                if [ "$(yq ".services.${svc}.labels.\"io.balena.image.class\" // \"\"" "${WORKSPACE}/docker-compose.yml")" = "hostapp" ]; then
+                  _local_image="${_loaded_image}"
                 fi
-                if [ "${_svc_image}" = "__BUILD_OUTPUT__" ] && [ "${_archive_name}" = "${_svc_recipe}-${MACHINE}" ]; then
-                  yq -i "(.services.${svc}.image) = \"${_ext_image}\"" "${WORKSPACE}/docker-compose.yml"
-                  echo "[INFO] Set ${svc} image to ${_ext_image}"
-                  _matched=1
-                  break
-                fi
-              done
-              if [ "${_matched}" -eq 0 ]; then
-                _candidates=$(yq '.services[] | .["x-build"].recipe | select(. != null)' "${WORKSPACE}/docker-compose.yml" | sed "s/$/-${MACHINE}.docker/" | tr '\n' ' ')
-                echo "::error title=Orphan extension archive::${docker_archive} did not match any service. Expected filenames were: ${_candidates}"
-                exit 1
+                _matched=1
+                break
               fi
             done
+            if [ "${_matched}" -eq 0 ]; then
+              echo "::error title=Orphan image archive::${docker_archive} did not match any built service"
+              exit 1
+            fi
+          done
+
+          if [ -z "${_local_image}" ]; then
+            echo "[ERROR] No hostapp image was loaded (expected balena-image-${MACHINE}.docker among the image-* artifacts)"
+            exit 1
           fi
 
           # Replace literal "__DEVICE_REPO_REV__" placeholder values with the env value.
@@ -1906,7 +1924,85 @@ jobs:
             fi
           fi
 
-      - name: Upload release assets
+      # Split the downloaded release assets into the two attach roots. The hostapp attaches with
+      # flat, top-level keys (image-maker contract), so its files move to hostapp-assets/. Each
+      # extension attaches under service/<name>/, so its folder moves there. The download extracts
+      # a lone artifact flat but gives each of several its own release-assets-<service>/ subdir, so
+      # detect which happened by the presence of the hostapp subdir.
+      - name: Group release assets by service
+        run: |
+          set -e
+          cd "${DEPLOY_PATH}/release-assets"
+          mkdir -p "${DEPLOY_PATH}/hostapp-assets"
+
+          shopt -s dotglob
+          if [ -d release-assets-hostapp ]; then
+            mv release-assets-hostapp/* "${DEPLOY_PATH}/hostapp-assets/"
+            rmdir release-assets-hostapp
+          else
+            # Single artifact (no extension assets): everything here is the hostapp's.
+            for entry in *; do
+              [ -e "${entry}" ] || continue
+              mv "${entry}" "${DEPLOY_PATH}/hostapp-assets/"
+            done
+          fi
+          shopt -u dotglob
+
+          # Remaining release-assets-<service>/ folders are extensions; regroup to service/<name>/.
+          mkdir -p service
+          for dir in release-assets-*/; do
+            [ -d "${dir}" ] || continue
+            svc="${dir#release-assets-}"
+            svc="${svc%/}"
+            echo "[INFO] Grouping extension assets: ${dir} -> service/${svc}/"
+            mv "${dir%/}" "service/${svc}"
+          done
+
+      # The release-asset globs are rooted at build/tmp/deploy, so keys arrive as raw build outputs:
+      # images/<machine>/... (machine-native), cyclonedx-export/, licenses/, rpi-eeprom/secure-boot-lock/.
+      # Transform each asset root (ASSET_DIRS, relative to DEPLOY_PATH) into the flat image-maker
+      # contract: lift images/<machine>/* up, rename cyclonedx-export/ -> cyclonedx/, tar licenses/ ->
+      # licenses.tar.gz and rpi-eeprom/secure-boot-lock/ -> secure-boot-lock.tar.gz. Bare files
+      # (device-type.json, CHANGELOG.md) are never under those paths, so they pass through and Verify's
+      # hostapp-assets/device-type.json read still resolves. Anchored so s3-deploy reuses it verbatim;
+      # each job sets ASSET_DIRS (hostapp roots here, the DEPLOY_PATH root there). The order matters:
+      # strip images/<machine>/ first so rpi-eeprom/secure-boot-lock/ lands at the root before its tar.
+      - &transform_release_assets
+        name: Transform release assets
+        run: |
+          set -e
+          _transform() {
+            local _d="$1" _files
+            if [ -d "${_d}/images/${MACHINE}" ]; then
+              shopt -s dotglob nullglob
+              _files=("${_d}/images/${MACHINE}"/*)
+              [ "${#_files[@]}" -gt 0 ] && mv "${_files[@]}" "${_d}/"
+              shopt -u dotglob nullglob
+              rm -rf "${_d}/images"
+            fi
+            if [ -d "${_d}/cyclonedx-export" ]; then
+              rm -rf "${_d}/cyclonedx"
+              mv "${_d}/cyclonedx-export" "${_d}/cyclonedx"
+            fi
+            if [ -d "${_d}/licenses" ]; then
+              tar -czf "${_d}/licenses.tar.gz" -C "${_d}" licenses
+              rm -rf "${_d}/licenses"
+            fi
+            if [ -d "${_d}/rpi-eeprom/secure-boot-lock" ]; then
+              tar -czf "${_d}/secure-boot-lock.tar.gz" -C "${_d}/rpi-eeprom/secure-boot-lock" .
+              rm -rf "${_d}/rpi-eeprom"
+            fi
+          }
+          cd "${DEPLOY_PATH}"
+          for _d in ${ASSET_DIRS}; do
+            [ -d "${_d}" ] || continue
+            echo "[INFO] Transforming ${_d}"
+            _transform "${_d}"
+          done
+
+      # Rooted at hostapp-assets/ so the single-pattern glob base is hostapp-assets and each key is
+      # flat (VERSION, image.json, compressed/part-N.deflate, ...) per the image-maker contract.
+      - name: Upload hostapp release assets
         uses: balena-io/upload-balena-release-asset@52cceb8fc25e0bfdb433b92567a434d1a5baecda # v0.1.6
         with:
           balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
@@ -1914,37 +2010,11 @@ jobs:
           release-id: ${{ steps.deploy-hostapp.outputs.release_id }}
           if-no-files-found: error
           path: |
-            ${{ env.DEPLOY_PATH }}/CHANGELOG.md
-            ${{ env.DEPLOY_PATH }}/VERSION
-            ${{ env.DEPLOY_PATH }}/VERSION_HOSTOS
-            ${{ env.DEPLOY_PATH }}/*.manifest
-            ${{ env.DEPLOY_PATH }}/*.json
-            ${{ env.DEPLOY_PATH }}/compressed*/*.deflate
-            ${{ env.DEPLOY_PATH }}/kernel_modules_headers.tar.gz
-            ${{ env.DEPLOY_PATH }}/licenses.tar.gz
-            ${{ env.DEPLOY_PATH }}/cyclonedx/*/*.json
-            ${{ env.DEPLOY_PATH }}/secure-boot-lock.tar.gz
+            ${{ env.DEPLOY_PATH }}/hostapp-assets/**
 
-      # download-artifact names each extension's folder after its artifact
-      # (extension-assets-<service>). Rename to the bare service name so the uploaded
-      # release-asset keys are grouped as <service>/<file> rather than
-      # extension-assets-<service>/<file>.
-      - name: Group extension assets by service name
-        if: needs.balena-lib.outputs.has_extension_assets == 'true'
-        run: |
-          set -e
-          cd "${DEPLOY_PATH}/release-assets"
-          for dir in extension-assets-*/; do
-            [ -d "${dir}" ] || continue
-            svc="${dir#extension-assets-}"
-            svc="${svc%/}"
-            echo "[INFO] Grouping assets: ${dir} -> ${svc}/"
-            mv "${dir}" "${svc}"
-          done
-
-      # Uploaded as a dedicated step rooted at release-assets/ so the least-common-ancestor
-      # is release-assets and each key becomes <service>/<file>. Folding these into the step
-      # above would root the LCA at DEPLOY_PATH and leak a release-assets/ segment into the key.
+      # Rooted at release-assets/ so the single-pattern glob base is release-assets and each key
+      # becomes service/<service>/<file>. Folding this into the step above would collapse to one
+      # glob base and leak a hostapp-assets/ segment into the keys.
       - name: Upload extension release assets
         if: needs.balena-lib.outputs.has_extension_assets == 'true'
         uses: balena-io/upload-balena-release-asset@52cceb8fc25e0bfdb433b92567a434d1a5baecda # v0.1.6
@@ -1972,14 +2042,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          DTJSON="${DEPLOY_PATH}/device-type.json"
+          # device-type.json arrives in release-assets-hostapp and is grouped into hostapp-assets/
+          # by "Group release assets by service".
+          DTJSON="${DEPLOY_PATH}/hostapp-assets/device-type.json"
           if [ ! -f "${DTJSON}" ]; then
             echo "::error title=Missing device-type.json::${DTJSON} not found; cannot determine required assets"
             exit 1
           fi
 
           _deploy_artifact=$(jq -r '.yocto.deployArtifact // empty' "${DTJSON}")
-          _archive=$(jq -r '.yocto.archive // empty' "${DTJSON}")
           _slug=$(jq -r '.slug // empty' "${DTJSON}")
           _flasher=$(jq -r '.yocto.deployFlasherArtifact // empty' "${DTJSON}")
           _raw=$(jq -r '.yocto.deployRawArtifact // empty' "${DTJSON}")
@@ -1989,10 +2060,10 @@ jobs:
           required_prefix=()
 
           # image*.json + compressed*/ deflates only exist for standard compressible images;
-          # edge, docker-image and archive device types return before prepare-image.py runs
-          # (see balena_deploy_artifacts). image-{flasher,raw}.json + compressed-{flasher,raw}/
-          # are produced only when the device type declares that deploy artifact.
-          if [ "${_slug}" != "edge" ] && [ "${_deploy_artifact}" != "docker-image" ] && [ "${_archive}" != "true" ]; then
+          # edge and docker-image device types skip them in the build "Stage release assets" step.
+          # image-{flasher,raw}.json + compressed-{flasher,raw}/ are produced only when the device
+          # type declares that deploy artifact.
+          if [ "${_slug}" != "edge" ] && [ "${_deploy_artifact}" != "docker-image" ]; then
             required_exact+=(image.json)
             required_prefix+=(compressed/)
             if [ -n "${_flasher}" ]; then
@@ -2089,10 +2160,14 @@ jobs:
       AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET || vars.S3_BUCKET }}
       AWS_S3_SSE_ALGORITHM: ${{ vars.SOURCE_MIRROR_S3_SSE_ALGORITHM || vars.AWS_S3_SSE_ALGORITHM || vars.S3_SSE_ALGORITHM || vars.SSE_ALGORITHM || vars.SSE || 'AES256' }}
 
-      # For this job only, the DEPLOY_PATH is the same as the S3_DEPLOY_PATH
+      # Release assets are downloaded into this <slug>/<version> dir — the layout image-maker's
+      # prepare.ts expects on S3. The Deploy to S3 step syncs this dir and also writes the sibling
+      # <slug>/latest pointer, so it bases off ${workspace}/deploy (SOURCE_DIR) and appends
+      # <slug>/<version> itself rather than reusing this variable.
       DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}
-      # S3_DEPLOY_PATH is the DEPLOY_PATH + the device slug and os version as is expected by the prepare.ts script from image maker
-      S3_DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}
+      # The shared "Transform release assets" step normalizes DEPLOY_PATH itself (single artifact,
+      # no per-service grouping here).
+      ASSET_DIRS: "."
 
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
@@ -2103,14 +2178,22 @@ jobs:
 
     steps:
 
-      # lzma-artifact-action decrypts + decompresses on download; base-directory kept the archive
-      # flat so files restore under ${DEPLOY_PATH} (= <slug>/<version>) for the S3 sync below.
-      - name: Download artifacts
+      # S3 needs the composition's release assets (deflates, manifests, image*.json, device-type.json,
+      # licenses, cyclonedx, ...) but NOT the deploy docker image. release-assets-hostapp is exactly
+      # that set; a single named download extracts flat into ${DEPLOY_PATH} (= <slug>/<version>) for
+      # the S3 sync below. lzma-artifact-action decrypts + decompresses automatically.
+      - name: Download release assets
         uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
-          name: hostapp-artifacts
+          name: release-assets-hostapp
           destination: ${{ env.DEPLOY_PATH }}
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
+
+      # release-assets-hostapp keys arrive as raw build outputs (images/<machine>/, cyclonedx-export/,
+      # licenses/, rpi-eeprom/secure-boot-lock/); image-maker's prepare.ts expects the <slug>/<version>/
+      # S3 tree in the flat contract layout. Reuse the hostapp-deploy transform verbatim via the
+      # YAML alias (ASSET_DIRS="." above targets the DEPLOY_PATH root).
+      - *transform_release_assets
 
       # https://github.com/unfor19/install-aws-cli-action
       # https://github.com/aws/aws-cli/tags
@@ -2821,7 +2904,7 @@ jobs:
           git submodule update --init --recursive
 
       # lzma-artifact-action decrypts + decompresses on download; the raw image lands directly
-      # under ${DEPLOY_PATH}/image (no unzip), and balena-image.docker / kernel headers under
+      # under ${DEPLOY_PATH}/image (no unzip), and the hostapp docker image / kernel headers under
       # ${DEPLOY_PATH}, ready for the workspace prep below.
       - name: Download OS image
         uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
@@ -2830,10 +2913,12 @@ jobs:
           destination: ${{ env.DEPLOY_PATH }}/image
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
-      - name: Download balena-image.docker
+      # The hostapp image artifact holds balena-image-<machine>.docker (its native yocto name);
+      # Prepare workspace renames it to balena-image.docker for the suite.
+      - name: Download hostapp image
         uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
         with:
-          name: balena-image.docker
+          name: image-hostapp
           destination: ${{ env.DEPLOY_PATH }}
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
@@ -2867,7 +2952,7 @@ jobs:
 
           # The test suite expects the image to be tested to be called "balena.img.gz" - regardless of what it may have been called before
           gzip -9 -c "${DEPLOY_PATH}/image/${BALENA_OS_IMAGE}" >"${LEVIATHAN_WORKSPACE}/balena.img.gz"
-          mv -v "${DEPLOY_PATH}/balena-image.docker" "${LEVIATHAN_WORKSPACE}/balena-image.docker"
+          mv -v "${DEPLOY_PATH}/balena-image-${MACHINE}.docker" "${LEVIATHAN_WORKSPACE}/balena-image.docker"
           mv -v "${DEPLOY_PATH}/kernel_modules_headers.tar.gz" "${LEVIATHAN_WORKSPACE}/kernel_modules_headers.tar.gz"
 
           cp -v "${SUITES}/${TEST_SUITE}/config.js" "${LEVIATHAN_WORKSPACE}/config.js"
