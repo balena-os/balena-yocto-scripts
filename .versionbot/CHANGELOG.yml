@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update docker/login-action action to v4
+      hash: 215d51d8a9266bf3b6a23111be920d3f3f47a126
+      body: |
+        Update docker/login-action from 3.7.0 to 4.5.1
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.41.9
+  title: ""
+  date: 2026-07-24T15:12:10.086Z
+- commits:
     - subject: Update GitHub Actions
       hash: 4514bea4032abfdacbb32c4e0363d69249c3ca3b
       body: |
