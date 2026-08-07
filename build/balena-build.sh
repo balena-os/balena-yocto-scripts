@@ -86,7 +86,9 @@ balena_build_run_barys() {
 
 	"${DOCKER}" stop $BUILD_CONTAINER_NAME 2> /dev/null || true
 	"${DOCKER}" rm --volumes $BUILD_CONTAINER_NAME 2> /dev/null || true
-	if ! balena_lib_docker_pull_helper_image "${HELPER_IMAGE_REPO}" "" "yocto-build-env" helper_image_id; then
+	# Build the helper image from this checkout's own automation/Dockerfile_yocto-build-env
+	# instead of pulling a published one, so local Dockerfile changes always take effect.
+	if ! balena_lib_docker_build_helper_image "${HELPER_IMAGE_REPO}" "" "yocto-build-env" helper_image_id; then
 		exit 1
 	fi
 	[ -z "${SSH_AUTH_SOCK}" ] && echo "No SSH_AUTH_SOCK in environment - private repositories won't be accessible to the builder" && SSH_AUTH_SOCK="/dev/null"

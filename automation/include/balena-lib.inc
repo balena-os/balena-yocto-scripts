@@ -70,6 +70,37 @@ balena_lib_docker_pull_helper_image() {
 	eval "$_retvalue"='${_image_id}'
 }
 
+# Build a helper image from the Dockerfile in this checkout instead of
+# pulling a published one - for iterating on automation/Dockerfile_<variant>
+# itself without needing the change merged and published by CI first.
+# Inputs:
+# $1: Helper image repository
+# $2: Helper image version (defaults to balena-yocto-scripts version)
+# $3: Helper image variant (e.g. yocto-build-env) - also selects
+#     automation/Dockerfile_<variant> and its build target
+# $4: Return value variable name
+balena_lib_docker_build_helper_image() {
+	local _image_repo="${1:-"${HELPER_IMAGE_REPO}"}"
+	local _image_version="${2:-"${BALENA_YOCTO_SCRIPTS_VERSION}"}"
+	local _image_variant="${3:-}"
+	local _retvalue="${4:-helper_image_id}"
+
+	local _image_tag="${_image_repo}":"${_image_version}"
+	local _image_id
+
+	if [ -n "${_image_variant}" ]; then
+		_image_tag="${_image_tag}-${_image_variant}"
+	fi
+
+	docker build \
+		-f "${include_dir}/../Dockerfile_${_image_variant}" \
+		--target "${_image_variant}" \
+		-t "${_image_tag}" \
+		"${include_dir}/.."
+	_image_id="$(docker images --format "{{.ID}}" "${_image_tag}")"
+	eval "$_retvalue"='${_image_id}'
+}
+
 # Remove all versions of the helper images
 balena_lib_docker_remove_helper_images() {
 	local _image_repo="${1:-"${HELPER_IMAGE_REPO}"}"
