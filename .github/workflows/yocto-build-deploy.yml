@@ -994,9 +994,23 @@ jobs:
           SOURCE_MIRROR_URL: ${{ needs.source-mirror-setup.outputs.https-url }}
         run: |
           mkdir -p "$(dirname "${AUTO_CONF_FILE}")"
+
+          # pyro/rocko/sumo/thud/warrior/dunfell-era bitbake only understands
+          # the old VAR_append override syntax and hard-fails to parse the
+          # newer VAR:append form as an "unparsed line" - detect this the
+          # same way build/barys does (LAYERSERIES_COMPAT in the device's own
+          # board integration layer) and emit whichever syntax it accepts.
+          MIRRORS_OP="MIRRORS:append"
+          for release in pyro rocko sumo thud warrior dunfell; do
+            if grep -rq "LAYERSERIES_COMPAT.*${release}" layers/meta-balena-*/conf/layer.conf 2>/dev/null; then
+              MIRRORS_OP="MIRRORS_append"
+              break
+            fi
+          done
+
           cat <<EOF >> "${AUTO_CONF_FILE}"
 
-          MIRRORS:append = "\\
+          ${MIRRORS_OP} = "\\
             cvs://.*/.* ${SOURCE_MIRROR_URL} \\
             svn://.*/.* ${SOURCE_MIRROR_URL} \\
             git://.*/.* ${SOURCE_MIRROR_URL} \\
