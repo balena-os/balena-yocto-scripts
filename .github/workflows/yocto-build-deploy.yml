@@ -339,7 +339,7 @@ jobs:
 
       # https://github.com/actions/checkout
       - name: Clone device repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ inputs.device-repo }}
           token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
@@ -636,7 +636,7 @@ jobs:
             return data.d[0].is_private
 
       - name: Checkout private contracts
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.is-private.outputs.result == 'true'
         with:
           repository: balena-io/private-contracts
@@ -964,7 +964,7 @@ jobs:
 
       # https://github.com/actions/checkout
       - name: Clone device repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ inputs.device-repo }}
           token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
@@ -2873,7 +2873,7 @@ jobs:
       # Clone the device respository to fetch Leviathan
       # https://github.com/actions/checkout
       - name: Clone device repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ inputs.device-repo }}
           token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
@@ -2931,7 +2931,7 @@ jobs:
 
       # Check out private contracts if this is a private device type - as these are required for the tests
       - name: Checkout private Contracts
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: needs.balena-lib.outputs.is_private == 'true'
         with:
           repository: balena-io/private-contracts
