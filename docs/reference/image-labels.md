@@ -19,7 +19,7 @@ semantics change.
 | `io.balena.image.class`          | mobynit, extension-runtime, supervisor                         | Yocto recipe / image Dockerfile                     | Identifies image role. Accepted values: `hostapp`, `overlay`.                        |
 | `io.balena.image.override`       | mobynit                                                        | Image Dockerfile                                    | Numeric priority `N` — mounts extension left of hostapp in lowerdir.                 |
 | `io.balena.image.kernel-version` | mobynit, extension-runtime (cleanup)                           | Yocto recipe                                        | Coarse userspace kernel ABI (`M.m.p`) for module and userspace compatibility checks. |
-| `io.balena.image.kernel-abi-id`  | mobynit (`FilterByKernelABIID`), extension-runtime (hooks env) | Yocto recipe (truncated sha256 of `Module.symvers`) | Precise kernel-ABI fingerprint for module compatibility checks.                      |
+| `io.balena.image.kernel-abi-id`  | mobynit (`FilterByKernelABIID`), extension-runtime (cleanup)   | Yocto recipe (sha256 of the kernel image)           | Precise kernel-ABI fingerprint for kernel-module and BTF/eBPF compatibility checks.  |
 | `io.balena.image.store`          | supervisor (`extensions.ts:32-33, 264`)                        | Supervisor default `data`, or compose labels        | Where to materialise the extension (`data` vs `root`).                               |
 | `io.balena.image.os-version`     | (no consumer yet)                                              | Yocto recipe (`${HOSTOS_VERSION}`)                  | OS version pin. Stamped onto extension images for future use and debugging.          |
 
@@ -51,17 +51,24 @@ Two of the labels above gate whether an extension may load on a given device:
 
 - `io.balena.image.kernel-version` (`M.m.p`) covers userspace / syscall / sysfs
   compatibility. Sufficient for extensions that only use userspace interfaces.
-- `io.balena.image.kernel-abi-id` is the truncated sha256 of the kernel's
-  `Module.symvers`. It changes whenever any exported symbol's CRC changes, which
-  catches modversions-level incompatibilities for kernel modules and BTF-level
-  incompatibilities for eBPF programs. Required for extensions that load kernel
+- `io.balena.image.kernel-abi-id` is the sha256 of the kernel image. It changes
+  whenever the kernel binary changes, so it catches both modversions-level
+  incompatibilities for kernel modules and BTF-level incompatibilities for eBPF
+  programs. It replaced a hash of `Module.symvers`: that value covers modules,
+  but two rebuilds of the same kernel config can share a `Module.symvers` while
+  carrying incompatible vmlinux/module BTF, so it can't disambiguate them. The
+  kernel-image hash covers every case. Required for extensions that load kernel
   modules or use eBPF.
 
-Both labels are stamped at Yocto build time. The
-[supervisor](https://github.com/balena-os/balena-supervisor) and the
+Both labels are stamped at Yocto build time. At runtime the booted kernel's
+identity comes from the `balena_kernel_abi` token on `/proc/cmdline`, published
+by the initrd and carrying the sha256 of the kexec'd kernel image; when the
+token is absent (a stock, non-kexec boot) there is no running abi-id, so any
+extension that claims a `kernel-abi-id` fails the match. The
+[supervisor](https://github.com/balena-os/balena-supervisor) and
 [balena-extension-runtime](https://github.com/balena-os/balena-extension-runtime)
-component (under development) consume them during extension lifecycle
-management; mobynit applies them at overlay mount time.
+consume the labels during extension lifecycle management; mobynit applies them
+at overlay mount time.
 
 ## References
 
@@ -72,3 +79,8 @@ management; mobynit applies them at overlay mount time.
   — supervisor compose handling
 - [`balena-extension-runtime`](https://github.com/balena-os/balena-extension-runtime)
   — extension lifecycle component (under development)
+- [mobynit#25](https://github.com/balena-os/mobynit/pull/25) — switches
+  `kernel-abi-id` from a `Module.symvers` hash to the kernel-image sha256 (BTF
+  disambiguation)
+- [balena-extension-runtime#6](https://github.com/balena-os/balena-extension-runtime/pull/6)
+  — reads the running kernel's abi-id from the `balena_kernel_abi` cmdline token

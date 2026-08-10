@@ -41,7 +41,7 @@
               "items": { "type": "string" }
             },
             "assets": {
-              "description": "File paths uploaded as web resources attached to the balenaCloud release.",
+              "description": "Globs of raw build outputs relative to the deploy dir root build/tmp/deploy/, uploaded as web resources attached to the balenaCloud release. Use images/__MACHINE__/ (substituted at build-matrix parse time) for machine-specific output, or a build/tmp/deploy/ sibling (e.g. cyclonedx-export/**/*.json, licenses/**) in place. The deploy side transforms these to the flat contract layout: strip images/<machine>/, cyclonedx-export/ -> cyclonedx/, and tar licenses/ -> licenses.tar.gz and rpi-eeprom/secure-boot-lock/ -> secure-boot-lock.tar.gz.",
               "type": "array",
               "items": { "type": "string" }
             }

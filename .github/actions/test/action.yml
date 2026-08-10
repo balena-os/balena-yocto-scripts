@@ -1,0 +1,30 @@
+# Flowzone self-test: discovered by directory existence (.github/actions/test) and run
+# during Flowzone's test phase. Exercises the stdlib-only prepare-image.py compressor via
+# its golden regression tests (tests/) — no build, no network, no external dependencies.
+name: Test balena-yocto-scripts
+description: Run the prepare-image.py golden regression tests
+
+# Flowzone always passes these three inputs, so they must be declared even when unused.
+inputs:
+  json:
+    description: JSON-stringified object of all workflow inputs
+    required: true
+  secrets:
+    description: JSON-stringified object of all workflow secrets
+    required: true
+  variables:
+    description: JSON-stringified object of all workflow variables
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Run prepare-image golden tests
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 --version
+        # Byte-compile the script so a syntax error fails here rather than mid-deploy.
+        python3 -m py_compile automation/conversion_scripts/prepare-image.py
+        # stdlib unittest; discovers every tests/test_*.py.
+        python3 -m unittest discover --start-directory tests --pattern 'test_*.py' --verbose
