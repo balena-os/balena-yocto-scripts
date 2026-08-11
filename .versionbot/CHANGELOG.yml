@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update Pin ubuntu Docker tag to 3b06811
+      hash: a1231bad9f7e5f67f481d1904fe8a39cc5c833ac
+      body: |
+        Update ubuntu
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.42.1
+  title: ""
+  date: 2026-08-11T01:38:01.933Z
+- commits:
     - subject: "yocto-build-deploy: Transport artifacts via lzma-artifact-action"
       hash: c3aaf0e52128824c8dbefbe13adb792318cb5a97
       body: >
