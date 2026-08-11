@@ -1684,8 +1684,14 @@ jobs:
           # renovate: datasource=github-releases depName=balena-io/balena-cli
           BALENA_CLI_VERSION: v25.1.10
         with:
-          # balena CLI version to install
-          cli-version: ${{ env.BALENA_CLI_VERSION }}
+          # A channel is named after a balena CLI pull request branch and moves as
+          # that branch gains commits, so this installs unreviewed code into the
+          # hostApp deploy job. Drop it and restore cli-version below once the CLI
+          # change it is testing has been released.
+          cli-channel: os-profiles
+          # cli-version and cli-channel are mutually exclusive, so the pinned
+          # version above goes unused while a channel is set.
+          # cli-version: ${{ env.BALENA_CLI_VERSION }}
           # balenaCloud API token to login automatically
           balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
 
