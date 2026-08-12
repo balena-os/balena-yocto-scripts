@@ -2999,6 +2999,7 @@ jobs:
     needs:
       - approved-commit
       - balena-lib
+      - source-mirror-setup
       - build
       - s3-deploy
       - ami-deploy
