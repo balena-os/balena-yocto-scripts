@@ -1,4 +1,16 @@
 - commits:
+    - subject: Add source-mirror-setup dependency to All Jobs
+      hash: cfd9b04da5abda6e8495ded8796b27b22eed9626
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Kyle Harding
+      nested: []
+  version: 1.42.2
+  title: ""
+  date: 2026-08-12T00:49:58.776Z
+- commits:
     - subject: Update Pin ubuntu Docker tag to 3b06811
       hash: a1231bad9f7e5f67f481d1904fe8a39cc5c833ac
       body: |
