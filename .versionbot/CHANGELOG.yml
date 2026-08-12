@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update GitHub Actions
+      hash: 72fa14c6875acd783a5251cf7b9deeb7b90979da
+      body: |
+        Update actions/checkout from 6.0.3 to 6.1.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.42.3
+  title: ""
+  date: 2026-08-12T05:19:09.347Z
+- commits:
     - subject: Add source-mirror-setup dependency to All Jobs
       hash: cfd9b04da5abda6e8495ded8796b27b22eed9626
       body: ""
