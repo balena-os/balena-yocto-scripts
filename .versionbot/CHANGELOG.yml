@@ -1,4 +1,17 @@
 - commits:
+    - subject: Deploy the hostApp with `os-profiles` draft release channel
+      hash: 772f3cc8b5203605857dd148a3cd9c556004c170
+      body: |
+        Bump setup-balena-action to v0.1.0, which adds `cli-channel`.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Christina Ying Wang
+      nested: []
+  version: 1.42.4
+  title: ""
+  date: 2026-08-12T18:12:59.907Z
+- commits:
     - subject: Update GitHub Actions
       hash: 72fa14c6875acd783a5251cf7b9deeb7b90979da
       body: |
