@@ -1473,6 +1473,25 @@ jobs:
           YOCTO_DIR="${DEPLOY_ROOT}/images/${MACHINE}"
           PREPARE_IMAGE="${automation_dir}/conversion_scripts/prepare-image.py"
 
+          # Drop the container-path symlinks poky leaves in the licenses tree.
+          # license_image.bbclass writes licenses/<arch>/<IMAGE_LINK_NAME> as an *absolute* symlink
+          # under the build container's /work mount (build/balena-build.sh), so the link text is
+          # /work/build/tmp/deploy/... on every build. Whether it resolves here on the runner depends
+          # on the /work -> workspace symlink, which is a side effect of "Sync shared downloads to
+          # S3" and is skipped for private device types. Both outcomes break "Upload release assets",
+          # which archives licenses/** with tar --dereference:
+          #   - no /work: the link dangles, tar exits 1 ("File removed before we read it") and fails
+          #     the step under pipefail, even though the archive it wrote is complete
+          #   - /work present: tar follows the link and stores every manifest twice
+          # Matching on the link text rather than on reachability sends both cases the same way, so
+          # public and private device types produce the same archive. The links only alias the
+          # timestamped manifest dirs, which are archived in their own right, so nothing is lost.
+          # Kept ahead of the edge / docker-image early exits below: those legs upload licenses/**
+          # too.
+          if [ -d "${DEPLOY_ROOT}/licenses" ]; then
+            find "${DEPLOY_ROOT}/licenses" -type l -lname '/work/*' -print -delete
+          fi
+
           cp -v "${DT_JSON}" "${DEPLOY_ROOT}/device-type.json"
           if [ -f CHANGELOG.md ]; then
             cp -v CHANGELOG.md "${DEPLOY_ROOT}/"
