@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update lodash to v4.18.1 [SECURITY]
+      hash: 0e53b8f952a12c1c928443d57c097c36684eb66e
+      body: |
+        Update lodash from 4.17.21 to 4.18.1
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.42.7
+  title: ""
+  date: 2026-08-19T21:52:37.501Z
+- commits:
     - subject: Update actions/github-script action to v9
       hash: eef1c91a266b5c4e00de200fe65a46cfca305af0
       body: |
