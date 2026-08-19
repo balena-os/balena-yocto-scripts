@@ -1,4 +1,54 @@
 - commits:
+    - subject: "yocto-build-deploy: Drop container-path license symlinks before upload"
+      hash: 5d93f21159fafb8867189e797ec5356743b9b94a
+      body: >
+        license_image.bbclass writes licenses/<arch>/<IMAGE_LINK_NAME> as an
+        absolute
+
+        symlink under the build container's /work mount, so the link text is
+
+        /work/build/tmp/deploy/... on every build. Whether it resolves on the
+        runner
+
+        depends on the /work -> workspace symlink, which is created as a side
+        effect of
+
+        "Sync shared downloads to S3" and is skipped for private device types.
+
+
+        Both outcomes are wrong for "Upload release assets", which archives
+        licenses/**
+
+        with tar --dereference. Without /work the link dangles, GNU tar exits 1
+        ("File
+
+        removed before we read it") and the composite action's pipefail fails
+        the step
+
+        even though 7-Zip wrote a complete archive. With /work present tar
+        follows the
+
+        link and stores every license manifest twice.
+
+
+        Match on the link text rather than on reachability, so public and
+        private device
+
+        types produce the same archive. The links only alias the timestamped
+        manifest
+
+        directories, which are archived in their own right.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.42.5
+  title: ""
+  date: 2026-08-19T08:33:45.321Z
+- commits:
     - subject: Deploy the hostApp with `os-profiles` draft release channel
       hash: 772f3cc8b5203605857dd148a3cd9c556004c170
       body: |
