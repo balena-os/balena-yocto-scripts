@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/github-script action to v9
+      hash: eef1c91a266b5c4e00de200fe65a46cfca305af0
+      body: |
+        Update actions/github-script from 8.0.0 to 9.0.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.42.6
+  title: ""
+  date: 2026-08-19T15:33:17.799Z
+- commits:
     - subject: "yocto-build-deploy: Drop container-path license symlinks before upload"
       hash: 5d93f21159fafb8867189e797ec5356743b9b94a
       body: >
