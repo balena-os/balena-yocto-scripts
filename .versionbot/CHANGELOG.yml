@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io/upload-balena-release-asset action to v0.2.0
+      hash: 83044a0832a0266c65e0f8bd75c077743e228aab
+      body: |
+        Update balena-io/upload-balena-release-asset from 0.1.6 to 0.2.0
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.42.8
+  title: ""
+  date: 2026-08-20T14:34:17.825Z
+- commits:
     - subject: Update lodash to v4.18.1 [SECURITY]
       hash: 0e53b8f952a12c1c928443d57c097c36684eb66e
       body: |
