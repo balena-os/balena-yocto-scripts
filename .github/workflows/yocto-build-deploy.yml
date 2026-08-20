@@ -2028,7 +2028,7 @@ jobs:
       # Rooted at hostapp-assets/ so the single-pattern glob base is hostapp-assets and each key is
       # flat (VERSION, image.json, compressed/part-N.deflate, ...) per the image-maker contract.
       - name: Upload hostapp release assets
-        uses: balena-io/upload-balena-release-asset@52cceb8fc25e0bfdb433b92567a434d1a5baecda # v0.1.6
+        uses: balena-io/upload-balena-release-asset@1bfbc63a7a61a22fbb07f04c3e2d553ff1d2a167 # v0.2.0
         with:
           balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
           balena-host: ${{ env.BALENARC_BALENA_URL }}
@@ -2042,7 +2042,7 @@ jobs:
       # glob base and leak a hostapp-assets/ segment into the keys.
       - name: Upload extension release assets
         if: needs.balena-lib.outputs.has_extension_assets == 'true'
-        uses: balena-io/upload-balena-release-asset@52cceb8fc25e0bfdb433b92567a434d1a5baecda # v0.1.6
+        uses: balena-io/upload-balena-release-asset@1bfbc63a7a61a22fbb07f04c3e2d553ff1d2a167 # v0.2.0
         with:
           balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
           balena-host: ${{ env.BALENARC_BALENA_URL }}
