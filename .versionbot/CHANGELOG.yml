@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update aws/aws-cli to v2.36.33
+      hash: 8df2ae0cd1f46dc92049cf95024fc330ea4c0589
+      body: |
+        Update aws/aws-cli from 2.34.61 to 2.36.33
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.42.10
+  title: ""
+  date: 2026-08-28T21:15:33.933Z
+- commits:
     - subject: Update flowzonify to v0.4.2
       hash: e2691a502ca964f83922e704328844a87eb16adf
       body: |
