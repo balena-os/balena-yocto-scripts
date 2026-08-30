@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update GitHub Actions
+      hash: c8b1539cc32bc97e88c6827d0f90d70965987fec
+      body: |
+        Update aws-actions/configure-aws-credentials from 6.2.2 to 6.2.3
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.42.11
+  title: ""
+  date: 2026-08-30T15:29:48.255Z
+- commits:
     - subject: Update aws/aws-cli to v2.36.33
       hash: 8df2ae0cd1f46dc92049cf95024fc330ea4c0589
       body: |
