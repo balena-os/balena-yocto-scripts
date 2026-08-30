@@ -826,7 +826,7 @@ jobs:
       # We don't use this session, it's just to check if the credentials are valid
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         continue-on-error: true # Don't fail at this point as there is still value in running builds and tests
         with:
           role-to-assume: ${{ vars.AWS_IAM_ROLE }}
@@ -1422,7 +1422,7 @@ jobs:
 
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         if: cancelled() == false && needs.source-mirror-setup.outputs.aws-iam-role != ''
         continue-on-error: true
         with:
@@ -1527,7 +1527,7 @@ jobs:
       # dir — its filename is already the normalized name consumers expect, so no staging needed.
       - name: Upload kernel-module-headers artifact
         if: matrix.image_class == 'hostapp'
-        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
+        uses: product-os/lzma-artifact-action/upload@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
           name: kernel-module-headers
           base-directory: build/tmp/deploy/images/${{ env.MACHINE }}
@@ -1543,7 +1543,7 @@ jobs:
       # step is redundant.
       - name: Upload balena.img artifact
         if: matrix.image_class == 'hostapp'
-        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
+        uses: product-os/lzma-artifact-action/upload@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
           name: balena.img
           base-directory: build/tmp/deploy/images/${{ env.MACHINE }}
@@ -1557,7 +1557,7 @@ jobs:
       # May be used by Leviathan OS/cloud suites depending on test_image.
       - name: Upload balena-flasher.img artifact
         if: matrix.image_class == 'hostapp'
-        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
+        uses: product-os/lzma-artifact-action/upload@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
           name: balena-flasher.img
           base-directory: build/tmp/deploy/images/${{ env.MACHINE }}
@@ -1571,7 +1571,7 @@ jobs:
       # May be used by Leviathan OS/cloud suites depending on test_image.
       - name: Upload balena-raw.img artifact
         if: matrix.image_class == 'hostapp'
-        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
+        uses: product-os/lzma-artifact-action/upload@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
           name: balena-raw.img
           base-directory: build/tmp/deploy/images/${{ env.MACHINE }}
@@ -1588,7 +1588,7 @@ jobs:
       # deploy dir (balena-image-<machine>.docker for the hostapp, <recipe>-<machine>.docker for
       # extensions); the deploy job matches it back to this service by the same recipe rule.
       - name: Upload image artifact
-        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
+        uses: product-os/lzma-artifact-action/upload@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
           name: image-${{ matrix.service_name }}
           base-directory: build/tmp/deploy/images/${{ env.MACHINE }}
@@ -1610,7 +1610,7 @@ jobs:
       # only the hostapp leg uploads them; "Stage release assets" produced them + the deflates.
       - name: Upload release assets
         if: matrix.assets != ''
-        uses: product-os/lzma-artifact-action/upload@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
+        uses: product-os/lzma-artifact-action/upload@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
           name: release-assets-${{ matrix.service_name }}
           base-directory: build/tmp/deploy
@@ -1676,7 +1676,7 @@ jobs:
       # each and matches it back to its service. Ungated: the hostapp image is always present.
       # lzma-artifact-action decrypts (when encrypted) + decompresses on download.
       - name: Download image artifacts
-        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
+        uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
           pattern: image-*
           destination: ${{ env.DEPLOY_PATH }}/images
@@ -1690,7 +1690,7 @@ jobs:
       # by service" step below handles both layouts. release-assets-hostapp always exists (the
       # hostapp always declares assets), so this is ungated.
       - name: Download release assets
-        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
+        uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
           pattern: release-assets-*
           destination: ${{ env.DEPLOY_PATH }}/release-assets
@@ -2208,7 +2208,7 @@ jobs:
       # that set; a single named download extracts flat into ${DEPLOY_PATH} (= <slug>/<version>) for
       # the S3 sync below. lzma-artifact-action decrypts + decompresses automatically.
       - name: Download release assets
-        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
+        uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
           name: release-assets-hostapp
           destination: ${{ env.DEPLOY_PATH }}
@@ -2232,7 +2232,7 @@ jobs:
 
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:
           role-to-assume: ${{ env.AWS_IAM_ROLE }}
           role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -2329,7 +2329,7 @@ jobs:
       # lzma-artifact-action decrypts + decompresses on download, yielding the raw balena.img
       # directly under ${DEPLOY_PATH}/image (no unzip needed).
       - name: Download artifacts
-        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
+        uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
           name: balena.img
           destination: ${{ env.DEPLOY_PATH }}/image
@@ -2347,7 +2347,7 @@ jobs:
 
       # https://github.com/aws-actions/configure-aws-credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:
           role-to-assume: ${{ env.AWS_IAM_ROLE }}
           role-session-name: github-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -2932,7 +2932,7 @@ jobs:
       # under ${DEPLOY_PATH}/image (no unzip), and the hostapp docker image / kernel headers under
       # ${DEPLOY_PATH}, ready for the workspace prep below.
       - name: Download OS image
-        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
+        uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
           name: ${{ env.BALENA_OS_IMAGE }}
           destination: ${{ env.DEPLOY_PATH }}/image
@@ -2941,14 +2941,14 @@ jobs:
       # The hostapp image artifact holds balena-image-<machine>.docker (its native yocto name);
       # Prepare workspace renames it to balena-image.docker for the suite.
       - name: Download hostapp image
-        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
+        uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
           name: image-hostapp
           destination: ${{ env.DEPLOY_PATH }}
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
       - name: Download kernel-module-headers
-        uses: product-os/lzma-artifact-action/download@5511f3bc35b6252ff4edd7b0b2f5408f92230169 # v0.1.0
+        uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
           name: kernel-module-headers
           destination: ${{ env.DEPLOY_PATH }}
