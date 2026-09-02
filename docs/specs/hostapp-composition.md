@@ -119,6 +119,11 @@ builds via `balena-kernel-modules-block`.
 | `build_args` | list of strings | no       | Extra barys arguments specific to this service. Joined with spaces and appended to common args.  |
 | `assets`     | list of strings | no       | Globs of raw build outputs under `build/tmp/deploy/`; transformed to flat keys on deploy.        |
 
+### Overlay services name their runtime
+
+A service labelled `io.balena.image.class: overlay` must declare compose-spec's
+`runtime`, and the schema requires it.
+
 ### Opt-out signals
 
 A device overlay opts out of base-composition services by setting keys to null
