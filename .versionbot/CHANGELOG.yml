@@ -1,4 +1,22 @@
 - commits:
+    - subject: "yocto-build-deploy: Use authenticated user to update submodules"
+      hash: 2d810521a03200ae0ef9c4e61419ac408be32592
+      body: >
+        Avoid GitHub rate-limiting of self-hosted runners by using an
+        authenticated
+
+        user when updating submodules.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.42.13
+  title: ""
+  date: 2026-09-03T20:30:42.658Z
+- commits:
     - subject: Update actions/upload-artifact action to v7
       hash: 9b783d47dc1b0409e2bed7c0b30d98f3306b68ed
       body: |
