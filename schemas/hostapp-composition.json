@@ -15,7 +15,25 @@
             "type": "object",
             "properties": {
               "x-build": { "$ref": "#/$defs/x-build" }
-            }
+            },
+            "allOf": [
+              {
+                "$comment": "An overlay runs under a named OCI runtime.",
+                "if": {
+                  "properties": {
+                    "labels": {
+                      "type": "object",
+                      "properties": {
+                        "io.balena.image.class": { "const": "overlay" }
+                      },
+                      "required": ["io.balena.image.class"]
+                    }
+                  },
+                  "required": ["labels"]
+                },
+                "then": { "required": ["runtime"] }
+              }
+            ]
           }
         }
       }
