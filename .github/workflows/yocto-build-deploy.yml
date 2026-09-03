@@ -351,25 +351,61 @@ jobs:
           # and prefer that each step provide credentials where required
           persist-credentials: false
 
-      # Checkout the right ref for meta-balena submodule
-      - name: Update meta-balena submodule to ${{ inputs.meta-balena-ref }}
+      # Set an authenticated github config for the submodule checkouts,
+      # so we can fetch submodules without hitting rate limits on self-hosted runners.
+      # We can use any authenticated token here as long as the submodules are public.
+      - &gitHubAuthconfig
+        name: Set auth config
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        id: github-authconfig
+        env:
+          GIT_AUTH_TOKEN: ${{ github.token }}
+        with:
+          result-encoding: string
+          # Use git-c for non-persistent credential configuration
+          #
+          # The git -c option sets a configuration value for a single Git command invocation.
+          # It does not modify any configuration files or persist the setting beyond this specific command.
+          #
+          # This approach ensures that the authentication credentials are used securely for this
+          # specific operation without risk of unintended persistence or exposure in configuration files.
+          script: |
+            const token = process.env.GIT_AUTH_TOKEN;
+            const authHeader = Buffer.from(`x-access-token:${token}`).toString('base64');
+            const authConfig = `http.https://github.com/.extraheader=Authorization: basic ${authHeader}`;
+            // Add the base64 authHeader to GitHub masked values
+            core.setSecret(authHeader);
+            return authConfig;
+
+      # Checkout the provided ref for meta-balena submodule
+      # Use an authenticated user auth to avoid rate-limiting on self-hosted runners.
+      - &updateMetaBalena
+        name: Update meta-balena submodule to ${{ inputs.meta-balena-ref }}
         if: inputs.meta-balena-ref != ''
         working-directory: ./layers/meta-balena
+        env:
+          GIT_AUTHCONFIG: ${{ steps.github-authconfig.outputs.result }}
         run: |
           git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
-          git fetch --all
+          git -c "$GIT_AUTHCONFIG" fetch --all
           git checkout --force "${{ inputs.meta-balena-ref }}"
-          git submodule update --init --recursive
+          git -c "$GIT_AUTHCONFIG" submodule update --init --recursive
 
-      # Checkout the right ref for balena-yocto-scripts submodule
-      - name: Update balena-yocto-scripts submodule to ${{ inputs.yocto-scripts-ref }}
+
+      # Checkout the provided ref for balena-yocto-scripts submodule
+      # Use an authenticated user auth to avoid rate-limiting on self-hosted runners.
+      - &updateYoctoScripts
+        name: Update balena-yocto-scripts submodule to ${{ inputs.yocto-scripts-ref }}
         if: inputs.yocto-scripts-ref != ''
         working-directory: ./balena-yocto-scripts
+        env:
+          GIT_AUTHCONFIG: ${{ steps.github-authconfig.outputs.result }}
         run: |
           git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
-          git fetch --all
+          git -c "$GIT_AUTHCONFIG" fetch --all
           git checkout --force "${{ inputs.yocto-scripts-ref }}"
-          git submodule update --init --recursive
+          git -c "$GIT_AUTHCONFIG" submodule update --init --recursive
+
 
       # Check if the repository is a yocto device respository
       - name: Device repository check
@@ -976,25 +1012,18 @@ jobs:
           # and prefer that each step provide credentials where required
           persist-credentials: false
 
-      # Checkout the right ref for meta-balena submodule
-      - name: Update meta-balena submodule to ${{ inputs.meta-balena-ref }}
-        if: inputs.meta-balena-ref != ''
-        working-directory: ./layers/meta-balena
-        run: |
-          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
-          git fetch --all
-          git checkout --force "${{ inputs.meta-balena-ref }}"
-          git submodule update --init --recursive
+      # Set an authenticated github config for the submodule checkouts,
+      # so we can fetch submodules without hitting rate limits on self-hosted runners.
+      # We can use any authenticated token here as long as the submodules are public.
+      - *gitHubAuthconfig
 
-      # Checkout the right ref for balena-yocto-scripts submodule
-      - name: Update balena-yocto-scripts submodule to ${{ inputs.yocto-scripts-ref }}
-        if: inputs.yocto-scripts-ref != ''
-        working-directory: ./balena-yocto-scripts
-        run: |
-          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
-          git fetch --all
-          git checkout --force "${{ inputs.yocto-scripts-ref }}"
-          git submodule update --init --recursive
+      # Checkout the provided ref for meta-balena submodule
+      # Use an authenticated user auth to avoid rate-limiting on self-hosted runners.
+      - *updateMetaBalena
+
+      # Checkout the provided ref for balena-yocto-scripts submodule
+      # Use an authenticated user auth to avoid rate-limiting on self-hosted runners.
+      - *updateYoctoScripts
 
       # Causes tarballs of the source control repositories (e.g. Git repositories), including metadata, to be placed in the DL_DIR directory.
       # https://docs.yoctoproject.org/4.0.5/ref-manual/variables.html?highlight=compress#term-BB_GENERATE_MIRROR_TARBALLS
@@ -2798,6 +2827,7 @@ jobs:
 
     permissions:
       actions: read # Required to download artifacts from build job for private repos:- https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28#download-an-artifact
+      contents: read
 
     strategy:
       fail-fast: false
@@ -2918,15 +2948,14 @@ jobs:
             exit 1
           fi
 
-      # This is useful as it allows us to try out test suite changes not yet merged in meta balena
-      - name: Update meta-balena submodule to ${{ inputs.meta-balena-ref }}
-        if: inputs.meta-balena-ref != ''
-        working-directory: ./layers/meta-balena
-        run: |
-          git config --add remote.origin.fetch '+refs/pull/*:refs/remotes/origin/pr/*'
-          git fetch --all
-          git checkout --force "${{ inputs.meta-balena-ref }}"
-          git submodule update --init --recursive
+      # Set an authenticated github config for the submodule checkouts,
+      # so we can fetch submodules without hitting rate limits on self-hosted runners.
+      # We can use any authenticated token here as long as the submodules are public.
+      - *gitHubAuthconfig
+
+      # Checkout the provided ref for meta-balena submodule
+      # Use an authenticated user auth to avoid rate-limiting on self-hosted runners.
+      - *updateMetaBalena
 
       # lzma-artifact-action decrypts + decompresses on download; the raw image lands directly
       # under ${DEPLOY_PATH}/image (no unzip), and the hostapp docker image / kernel headers under
