@@ -1723,6 +1723,38 @@ jobs:
           # balenaCloud API token to login automatically
           balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
 
+      # `runtime` sits on SERVICE_CONFIG_DENY_LIST in @balena/compose-parser, so the CLI
+      # refuses a composition naming an OCI runtime.
+      - name: Allow service.runtime in the CLI compose parser
+        run: |
+          set -euo pipefail
+
+          cli_bin="$(readlink -f "$(command -v balena)")"
+          search_roots=("$(dirname "$(dirname "${cli_bin}")")")
+          npm_root="$(npm root -g 2>/dev/null || true)"
+          [ -n "${npm_root}" ] && [ -d "${npm_root}" ] && search_roots+=("${npm_root}")
+
+          targets=()
+          while IFS= read -r f; do
+            targets+=("${f}")
+          done < <(grep -rl --include='*.js' --include='*.cjs' --include='*.mjs' \
+            'SERVICE_CONFIG_DENY_LIST' "${search_roots[@]}" 2>/dev/null | sort -u)
+
+          if [ "${#targets[@]}" -eq 0 ]; then
+            echo "::error title=Hotpatch target missing::No file under ${search_roots[*]} declares SERVICE_CONFIG_DENY_LIST"
+            exit 1
+          fi
+
+          for f in "${targets[@]}"; do
+            sed -i -E "/^[[:space:]]*['\"]runtime['\"],[[:space:]]*$/d" "${f}"
+            # The CLI install is cached, so a hit arrives already patched.
+            # Scan the whole deny list, to catch a reformat the sed cannot reach.
+            if sed -n "/SERVICE_CONFIG_DENY_LIST/,/\]/p" "${f}" | grep -qE "['\"]runtime['\"]"; then
+              echo "::error title=Hotpatch failed::runtime is still on the deny list in ${f}"
+              exit 1
+            fi
+          done
+
       # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
       # https://github.com/balena-io/deploy-to-balena-action/issues/286
       - name: Deploy to balena
