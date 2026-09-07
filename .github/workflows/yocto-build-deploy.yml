@@ -1714,6 +1714,42 @@ jobs:
           # balenaCloud API token to login automatically
           balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
 
+      # `runtime` sits on SERVICE_CONFIG_DENY_LIST in @balena/compose-parser, so the CLI
+      # refuses a composition naming an OCI runtime.
+      - name: Allow service.runtime in the CLI compose parser
+        run: |
+          set -euo pipefail
+
+          cli_bin="$(readlink -f "$(command -v balena)")"
+          search_roots=("$(dirname "$(dirname "${cli_bin}")")")
+          npm_root="$(npm root -g 2>/dev/null || true)"
+          [ -n "${npm_root}" ] && [ -d "${npm_root}" ] && search_roots+=("${npm_root}")
+
+          targets=()
+          while IFS= read -r f; do
+            targets+=("${f}")
+          done < <(grep -rl --include='*.js' --include='*.cjs' --include='*.mjs' \
+            'SERVICE_CONFIG_DENY_LIST' "${search_roots[@]}" 2>/dev/null | sort -u)
+
+          if [ "${#targets[@]}" -eq 0 ]; then
+            echo "::error title=Hotpatch target missing::No file under ${search_roots[*]} declares SERVICE_CONFIG_DENY_LIST"
+            exit 1
+          fi
+
+          patched=0
+          for f in "${targets[@]}"; do
+            grep -qE "^[[:space:]]*['\"]runtime['\"],[[:space:]]*$" "${f}" || continue
+            sed -i -E "/^[[:space:]]*['\"]runtime['\"],[[:space:]]*$/d" "${f}"
+            echo "[INFO] Dropped runtime from the deny list in ${f}"
+            patched=$((patched + 1))
+          done
+
+          # A silent no-op would surface much later as an opaque deploy failure, so fail here.
+          if [ "${patched}" -eq 0 ]; then
+            echo "::error title=Hotpatch no-op::runtime was not on the deny list in: ${targets[*]}"
+            exit 1
+          fi
+
       # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
       # https://github.com/balena-io/deploy-to-balena-action/issues/286
       - name: Deploy to balena
