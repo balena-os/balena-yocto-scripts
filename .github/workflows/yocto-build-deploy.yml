@@ -1927,7 +1927,7 @@ jobs:
           set -e
 
           ## Adapted from https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc
-          _regex="^[1-3][0-9]{3}\.${Q1ESR}|${Q2ESR}|${Q3ESR}|${Q4ESR}\.[0-9]*$"
+          _regex="^[1-3][0-9]{3}\.(${Q1ESR}|${Q2ESR}|${Q3ESR}|${Q4ESR})\.[0-9]*$"
 
           if ! echo "${VERSION}" | grep -Eq "${_regex}"; then
             >&2 echo "Invalid ESR release ${VERSION}"
@@ -1937,6 +1937,23 @@ jobs:
           BALENARC_BALENA_URL=${API_ENV} balena tag set meta-balena-base "${META_BALENA_VERSION}" --release "${HOSTAPP_RELEASE_ID}"
 
           _x_version="${VERSION%.*}.x"
+
+          # Sortable "YYYYMM" key for an ESR line (e.g. "2025.10.x" -> 202510,
+          # "2026.1.x" -> 202601), so we can tell whether a release is actually
+          # chronologically newer than what's tracked, instead of just "different
+          # from esr-next". Without this, a backport that lands out of order (e.g.
+          # 2025.10.2 shipping after 2026.1.2 due to merge/backport timing) gets
+          # mistaken for a brand-new ESR quarter and incorrectly cascades the
+          # esr-current/esr-next/esr-sunset tags.
+          _esr_sort_key() {
+            local _year _month
+            _year="${1%%.*}"
+            _month="${1#*.}"
+            _month="${_month%%.*}"
+            printf '%04d%02d' "${_year}" "${_month}"
+          }
+          _x_key=$(_esr_sort_key "${_x_version}")
+
           _json=$(${CURL} -XGET "https://api.${API_ENV}/${TRANSLATION}/application_tag?\$select=tag_key,value&\$filter=(application/app_name%20eq%20%27${APPNAME}%27)%20and%20(tag_key%20eq%20%27esr-current%27)" -H "Content-Type: application/json" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
           last_current=$(echo "${_json}" | jq -r -e '.d[0].value') || true
 
@@ -1955,12 +1972,19 @@ jobs:
               echo "[INFO][${BALENAOS_ACCOUNT}/${APPNAME}] Tagging fleet with esr-next: ${_x_version}"
               BALENARC_BALENA_URL=${API_ENV} balena tag set esr-next "${_x_version}" --fleet "${BALENAOS_ACCOUNT}/${APPNAME}"
             else
-              # Only re-tag if deploying a new x version
-              if [ "${_x_version}" != "${last_next}" ]; then
+              _next_key=$(_esr_sort_key "${last_next}")
+              # Only cascade the fleet tags if this is a genuinely newer ESR line.
+              # A patch to a line we already track (current or next) is a no-op here;
+              # the per-release version/meta-balena-base tags above already cover it.
+              if [ "${_x_version}" = "${last_next}" ] || [ "${_x_version}" = "${last_current}" ]; then
+                echo "[INFO][${BALENAOS_ACCOUNT}/${APPNAME}] ${_x_version} is a patch on an already-tracked ESR line (current: ${last_current}, next: ${last_next}); leaving fleet tags unchanged"
+              elif [ "${_x_key}" -gt "${_next_key}" ]; then
                 echo "[INFO][${BALENAOS_ACCOUNT}/${APPNAME}] Tagging fleet with esr-next: ${_x_version} esr-current: ${last_next} esr-sunset: ${last_current}"
                 BALENARC_BALENA_URL=${API_ENV} balena tag set esr-next "${_x_version}" --fleet "${BALENAOS_ACCOUNT}/${APPNAME}"
                 BALENARC_BALENA_URL=${API_ENV} balena tag set esr-current "${last_next}" --fleet "${BALENAOS_ACCOUNT}/${APPNAME}"
                 BALENARC_BALENA_URL=${API_ENV} balena tag set esr-sunset "${last_current}" --fleet "${BALENAOS_ACCOUNT}/${APPNAME}"
+              else
+                echo "[INFO][${BALENAOS_ACCOUNT}/${APPNAME}] ${_x_version} is older than the tracked esr-next (${last_next}); leaving fleet tags unchanged"
               fi
             fi
           else
@@ -1968,12 +1992,18 @@ jobs:
               >&2 echo "Invalid fleet tags: current: ${last_current} next: ${last_next} sunset: ${last_sunset}"
               exit 1
             else
-              # Only re-tag if deploying a new x version
-              if [ "${_x_version}" != "${last_next}" ]; then
+              _next_key=$(_esr_sort_key "${last_next}")
+              # Same reasoning as above, also covering a very late patch to the
+              # already-sunset line.
+              if [ "${_x_version}" = "${last_next}" ] || [ "${_x_version}" = "${last_current}" ] || [ "${_x_version}" = "${last_sunset}" ]; then
+                echo "[INFO][${BALENAOS_ACCOUNT}/${APPNAME}] ${_x_version} is a patch on an already-tracked ESR line (current: ${last_current}, next: ${last_next}, sunset: ${last_sunset}); leaving fleet tags unchanged"
+              elif [ "${_x_key}" -gt "${_next_key}" ]; then
                 echo "[INFO][${BALENAOS_ACCOUNT}/${APPNAME}] Tagging fleet with esr-next: ${_x_version} esr-current: ${last_next} esr-sunset: ${last_current}"
                 BALENARC_BALENA_URL=${API_ENV} balena tag set esr-next "${_x_version}" --fleet "${BALENAOS_ACCOUNT}/${APPNAME}"
                 BALENARC_BALENA_URL=${API_ENV} balena tag set esr-current "${last_next}" --fleet "${BALENAOS_ACCOUNT}/${APPNAME}"
                 BALENARC_BALENA_URL=${API_ENV} balena tag set esr-sunset "${last_current}" --fleet "${BALENAOS_ACCOUNT}/${APPNAME}"
+              else
+                echo "[INFO][${BALENAOS_ACCOUNT}/${APPNAME}] ${_x_version} is older than the tracked esr-next (${last_next}); leaving fleet tags unchanged"
               fi
             fi
           fi
