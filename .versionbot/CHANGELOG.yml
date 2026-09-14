@@ -1,4 +1,21 @@
 - commits:
+    - subject: Fix ESR tagging step
+      hash: f2c61d1131f1e65491cc00970f669b742121295e
+      body: >
+        THere was a flaw in the ESR tagging logic that would tag the most
+        recently published ESR release as next etc. even if it was an older base
+        version - this could happen in the case of backports
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Ryan Cooke <ryan@balena.io>
+        signed-off-by: Ryan Cooke <ryan@balena.io>
+      author: Ryan Cooke
+      nested: []
+  version: 1.42.14
+  title: ""
+  date: 2026-09-14T19:03:42.788Z
+- commits:
     - subject: "yocto-build-deploy: Use authenticated user to update submodules"
       hash: 2d810521a03200ae0ef9c4e61419ac408be32592
       body: >
