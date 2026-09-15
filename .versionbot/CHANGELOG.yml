@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update actions/download-artifact action to v8
+      hash: 6889fb775db182554bfc6299f6c4656f61b0271f
+      body: |
+        Update actions/download-artifact from 7.0.0 to 8.0.1
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.42.15
+  title: ""
+  date: 2026-09-15T00:23:21.877Z
+- commits:
     - subject: Fix ESR tagging step
       hash: f2c61d1131f1e65491cc00970f669b742121295e
       body: >
