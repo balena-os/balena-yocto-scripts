@@ -41,7 +41,7 @@
   ],
   "$defs": {
     "x-build": {
-      "description": "Build directive for balena-yocto-scripts. Either an object with the build config, or null (~) to opt out of the build matrix while keeping the service in the deployed composition.",
+      "description": "Build directive for balena-yocto-scripts. Either an object with the build config, or null (~) to opt out of the build while keeping the service in the deployed composition.",
       "oneOf": [
         { "type": "null" },
         {
@@ -49,17 +49,17 @@
           "additionalProperties": false,
           "properties": {
             "recipe": {
-              "description": "Bitbake image target. Omitted for hostapp (falls back to the device type's deploy_artifact); required for extensions.",
+              "description": "Bitbake image target. Omitted for hostapp (falls back to the device type's yocto.image); required for extensions.",
               "type": "string",
               "minLength": 1
             },
             "build_args": {
-              "description": "Extra barys arguments specific to this service. Joined with spaces and appended to common args.",
+              "description": "Extra barys arguments. Merged across all services and applied to every bitbake target; conflicting -t or -a values fail the build.",
               "type": "array",
               "items": { "type": "string" }
             },
             "assets": {
-              "description": "Globs of raw build outputs relative to the deploy dir root build/tmp/deploy/, uploaded as web resources attached to the balenaCloud release. Use images/__MACHINE__/ (substituted at build-matrix parse time) for machine-specific output, or a build/tmp/deploy/ sibling (e.g. cyclonedx-export/**/*.json, licenses/**) in place. The deploy side transforms these to the flat contract layout: strip images/<machine>/, cyclonedx-export/ -> cyclonedx/, and tar licenses/ -> licenses.tar.gz and rpi-eeprom/secure-boot-lock/ -> secure-boot-lock.tar.gz.",
+              "description": "Globs of raw build outputs relative to the deploy dir root build/tmp/deploy/, uploaded as web resources attached to the balenaCloud release. Use images/__MACHINE__/ (substituted at composition parse time) for machine-specific output, or a build/tmp/deploy/ sibling (e.g. cyclonedx-export/balena-image*/*.json, licenses/**) in place. The deploy side transforms these to the flat contract layout: strip images/<machine>/, cyclonedx-export/ -> cyclonedx/, and tar licenses/ -> licenses.tar.gz and rpi-eeprom/secure-boot-lock/ -> secure-boot-lock.tar.gz.",
               "type": "array",
               "items": { "type": "string" }
             }
