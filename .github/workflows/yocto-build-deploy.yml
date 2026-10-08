@@ -198,6 +198,9 @@ env:
   SLUG: ${{ inputs.slug || inputs.machine }}
   VERBOSE: verbose
   WORKFLOW_NAME: ${{ github.workflow }}
+  # Test suites that consume the built extension images. Each one reads them
+  # from an extensions directory inside its own suite.
+  EXTENSION_SUITES: '["hup"]'
 
 # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
@@ -273,6 +276,7 @@ jobs:
       build_services: ${{ steps.build-matrix.outputs.services }}
       build_matrix: ${{ steps.build-matrix.outputs.matrix }}
       has_extension_assets: ${{ steps.build-matrix.outputs.has_extension_assets }}
+      has_extensions: ${{ steps.build-matrix.outputs.has_extensions }}
 
     steps:
       # Decode the GitHub App private key.
@@ -599,11 +603,16 @@ jobs:
           # here because GHA `if:` cannot evaluate fromJSON(...).length on a string output.
           has_extension_assets=$([ "$(echo "${matrix}" | jq '[.[] | select(.image_class != "hostapp" and .assets != "")] | length')" -gt 0 ] && echo true || echo false)
 
+          # Gates staging the extension images for the hup test suite
+          has_extensions=$(echo "${matrix}" | jq 'any(.image_class != "hostapp")')
+
           echo "Build services: ${services}"
           echo "Build matrix: ${matrix}"
           echo "Has extension assets: ${has_extension_assets}"
+          echo "Has extensions: ${has_extensions}"
           echo "services=${services}" >> "${GITHUB_OUTPUT}"
           echo "has_extension_assets=${has_extension_assets}" >> "${GITHUB_OUTPUT}"
+          echo "has_extensions=${has_extensions}" >> "${GITHUB_OUTPUT}"
           delimiter="$(openssl rand -hex 16)"
           {
             echo "matrix<<${delimiter}"
@@ -2953,6 +2962,34 @@ jobs:
           name: kernel-module-headers
           destination: ${{ env.DEPLOY_PATH }}
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
+
+      # A consuming suite activates the extensions locally from these images.
+      # The pattern also matches image-hostapp; the staging step skips it.
+      - name: Download extension images
+        if: needs.balena-lib.outputs.has_extensions == 'true' && contains(fromJSON(env.EXTENSION_SUITES), matrix.test_suite)
+        uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
+        with:
+          pattern: image-*
+          destination: ${{ env.DEPLOY_PATH }}/extension-images
+          merge-multiple: "true"
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
+
+      # Leviathan uploads only the suite directory to the core, so the images travel inside it.
+      # The suite keys images by service name; the build names them <recipe>-<machine>.docker.
+      - name: Stage extension images in the test suite
+        if: needs.balena-lib.outputs.has_extensions == 'true' && contains(fromJSON(env.EXTENSION_SUITES), matrix.test_suite)
+        env:
+          BUILD_MATRIX: ${{ needs.balena-lib.outputs.build_matrix }}
+          EXTENSIONS_DIR: ${{ env.SUITES }}/${{ matrix.test_suite }}/extensions
+        run: |
+          mkdir -p "${EXTENSIONS_DIR}"
+          echo "${BUILD_MATRIX}" \
+            | jq -r '.[] | select(.image_class != "hostapp") | [.service_name, .image_output] | @tsv' \
+            | while IFS=$'\t' read -r service image; do
+                mv -v "${DEPLOY_PATH}/extension-images/${image}" "${EXTENSIONS_DIR}/${service}.docker"
+              done
+          rm -rf "${DEPLOY_PATH}/extension-images"
+          ls -l "${EXTENSIONS_DIR}"
 
       # Check out private contracts if this is a private device type - as these are required for the tests
       - name: Checkout private Contracts
