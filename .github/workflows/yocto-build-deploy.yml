@@ -198,6 +198,8 @@ env:
   SLUG: ${{ inputs.slug || inputs.machine }}
   VERBOSE: verbose
   WORKFLOW_NAME: ${{ github.workflow }}
+  # Suites that read extension images from their directory.
+  EXTENSION_SUITES: '["hup"]'
 
 # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
@@ -275,6 +277,7 @@ jobs:
       image_outputs: ${{ steps.composition.outputs.image_outputs }}
       built_images: ${{ steps.composition.outputs.built_images }}
       service_assets: ${{ steps.composition.outputs.service_assets }}
+      extension_images: ${{ steps.composition.outputs.extension_images }}
 
     steps:
       # Decode the GitHub App private key.
@@ -700,6 +703,8 @@ jobs:
             // One "<service>\t<archive>\t<image class>" line per built service, for the deploy job.
             core.setOutput('built_images', services.map((service) => [service.name, service.image_output, service.image_class].join('\t')).join('\n'));
             core.setOutput('service_assets', serviceAssets.join('\n'));
+            // The test job keys staged images by service name.
+            core.setOutput('extension_images', extensions.map((service) => `${service.name}\t${service.image_output}`).join('\n'));
 
       # Unrolled balena_api_is_dt_private function - https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
       # Had to be unrolled due to this: https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191 function relying on a jenkins env var to select the balena env - so failed
@@ -3027,6 +3032,22 @@ jobs:
           name: kernel-module-headers
           destination: ${{ env.DEPLOY_PATH }}
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
+
+      # Leviathan uploads only the suite directory to the core.
+      - name: Stage extension images in the test suite
+        if: needs.balena-lib.outputs.extension_images != '' && contains(fromJSON(env.EXTENSION_SUITES), matrix.test_suite)
+        env:
+          EXTENSION_IMAGES: ${{ needs.balena-lib.outputs.extension_images }}
+          EXTENSIONS_DIR: ${{ env.SUITES }}/${{ matrix.test_suite }}/extensions
+        run: |
+          set -euo pipefail
+          mkdir -p "${EXTENSIONS_DIR}"
+          # One "<service>\t<image filename>" line per extension.
+          while IFS=$'\t' read -r svc image; do
+            [ -n "${svc}" ] || continue
+            mv -v "${DEPLOY_PATH}/${image}" "${EXTENSIONS_DIR}/${svc}.docker"
+          done <<< "${EXTENSION_IMAGES}"
+          ls -l "${EXTENSIONS_DIR}"
 
       # Check out private contracts if this is a private device type - as these are required for the tests
       - name: Checkout private Contracts
