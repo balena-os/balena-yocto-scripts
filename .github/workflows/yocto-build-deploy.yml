@@ -136,6 +136,7 @@ on:
       # - worker_type: The worker type to use for testing. The valid worker types are `qemu` and `testbot`. The default worker type is `testbot`
       # - worker_fleets: The testbot fleets for finding available Leviathan workers. Not used for QEMU workers. Can accept a list of apps separated by commas, no spaces in between
       # - worker_environment: The environment that holds the rig fleet, when it differs from `environment`, e.g. a production rig driving a device managed by staging. Needs the BALENA_API_WORKER_KEY secret. Defaults to `environment`
+      # - supervisor_release_id: A supervisor release to pin the device to for the hostapp extension tests, which need a helios 0.28.0 or later. Falls back to the SUPERVISOR_RELEASE_ID environment variable, and is unset by default
       # - test_org: The organization to use for testing cloud functionality. This default org is `testbot`
       # - runs_on: A JSON array of runner labels to use for the test job(s). For qemu workers use the labels `["self-hosted", "X64", "kvm"]`.
       # - secure_boot: (truthy) Enable secure boot testing flags QEMU_SECUREBOOT=1 and FLASHER_SECUREBOOT=1. Default is false.
@@ -1648,6 +1649,9 @@ jobs:
     # We don't need significant resources for this step, and it downloads artifacts faster when
     # using GitHub hosted runners vs self-hosted.
     runs-on: ubuntu-24.04
+    outputs:
+      # The test job pins the device to this release for the hostapp extension tests
+      release_id: ${{ steps.deploy-hostapp.outputs.release_id }}
     # We want to push a hostapp on push events (PR merge) or dispatch
     # These conditions should match s3-deploy
     # Force finlize will finalize no matter what - so we want to make sure there is something to finlize - so it will always trigger this if true
@@ -2821,6 +2825,7 @@ jobs:
       - approved-commit
       - balena-lib
       - build
+      - hostapp-deploy
     # Specify the runner type in the test_matrix input.
     # QEMU workers need ["self-hosted", "X64", "kvm"] or ["self-hosted", "ARM64", "kvm"] runners.
     # Testbot workers can use any GitHub hosted (ubuntu-latest) or self-hosted runner.
@@ -2830,7 +2835,13 @@ jobs:
     environment: ${{ matrix.environment }}
     # https://docs.github.com/en/actions/learn-github-actions/expressions#functions
     # this expression checks to make sure at least one test suite was provided via either matrix syntax
+    # hostapp-deploy is a dependency only so its release id is readable. It is
+    # skipped on most events, and a skipped dependency would otherwise skip this
+    # job, so the success of build is asserted instead: it transitively requires
+    # approved-commit and balena-lib.
     if: |
+      !cancelled() &&
+      needs.build.result == 'success' &&
       github.event_name != 'push' &&
       inputs.test_matrix &&
       (
@@ -3031,6 +3042,29 @@ jobs:
               done
           rm -rf "${DEPLOY_PATH}/extension-images"
           ls -l "${EXTENSIONS_DIR}"
+
+      # A workflow env var cannot reach a test: the Leviathan core receives only
+      # FLASHER_SECUREBOOT, and it builds the suite options from a fixed list of
+      # config keys. The suite directory is uploaded whole, so the ids travel
+      # inside it, the same route the extension archives take.
+      - name: Stage the hostapp release ids for the cloud suite
+        if: matrix.test_suite == 'cloud' && needs.hostapp-deploy.outputs.release_id != ''
+        env:
+          HOSTAPP_RELEASE_ID: ${{ needs.hostapp-deploy.outputs.release_id }}
+          SUPERVISOR_RELEASE_ID: ${{ matrix.supervisor_release_id || vars.SUPERVISOR_RELEASE_ID }}
+          HAS_EXTENSIONS: ${{ needs.balena-lib.outputs.has_extensions }}
+          STAGED: ${{ env.SUITES }}/${{ matrix.test_suite }}/hostapp.json
+        run: |
+          jq -n \
+            --argjson releaseId "${HOSTAPP_RELEASE_ID}" \
+            --arg supervisorReleaseId "${SUPERVISOR_RELEASE_ID}" \
+            --argjson extensionsExpected "${HAS_EXTENSIONS:-false}" \
+            '{
+               releaseId: $releaseId,
+               supervisorReleaseId: (if $supervisorReleaseId == "" then null else ($supervisorReleaseId | tonumber) end),
+               extensionsExpected: $extensionsExpected
+             }' > "${STAGED}"
+          cat "${STAGED}"
 
       # Check out private contracts if this is a private device type - as these are required for the tests
       - name: Checkout private Contracts
