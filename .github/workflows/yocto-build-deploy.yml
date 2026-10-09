@@ -13,6 +13,11 @@ on:
       BALENA_API_TEST_KEY:
         description: balena API key for the test environment, used for finding autokit workers and creating test fleets
         required: false
+      # BALENA_API_WORKER_KEY is only needed when the rig fleet lives on another environment
+      # than the device under test. It pairs with the worker_environment test matrix field.
+      BALENA_API_WORKER_KEY:
+        description: balena API key for the environment that holds the rig fleet, when it differs from the test environment
+        required: false
       # Dockerhub secrets are used only for pulling the helper image for "Prepare files for S3" step - if we simplify this to not use the
       # helper image, these secrets can be removed
       DOCKERHUB_USER:
@@ -130,6 +135,8 @@ on:
       # - environment: (required) The balenaCloud environment to use for testing, e.g. `bm.balena-dev.com` or `balena-cloud.com`
       # - worker_type: The worker type to use for testing. The valid worker types are `qemu` and `testbot`. The default worker type is `testbot`
       # - worker_fleets: The testbot fleets for finding available Leviathan workers. Not used for QEMU workers. Can accept a list of apps separated by commas, no spaces in between
+      # - worker_environment: The environment that holds the rig fleet, when it differs from `environment`, e.g. a production rig driving a device managed by staging. Needs the BALENA_API_WORKER_KEY secret. Defaults to `environment`
+      # - supervisor_release_id: A supervisor release to pin the device to for the hostapp extension tests, which need a helios 0.28.0 or later. Falls back to the SUPERVISOR_RELEASE_ID environment variable, and is unset by default
       # - test_org: The organization to use for testing cloud functionality. This default org is `testbot`
       # - runs_on: A JSON array of runner labels to use for the test job(s). For qemu workers use the labels `["self-hosted", "X64", "kvm"]`.
       # - secure_boot: (truthy) Enable secure boot testing flags QEMU_SECUREBOOT=1 and FLASHER_SECUREBOOT=1. Default is false.
@@ -198,6 +205,9 @@ env:
   SLUG: ${{ inputs.slug || inputs.machine }}
   VERBOSE: verbose
   WORKFLOW_NAME: ${{ github.workflow }}
+  # Test suites that consume the built extension images. Each one reads them
+  # from an extensions directory inside its own suite.
+  EXTENSION_SUITES: '["hup"]'
 
 # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
@@ -273,6 +283,7 @@ jobs:
       build_services: ${{ steps.build-matrix.outputs.services }}
       build_matrix: ${{ steps.build-matrix.outputs.matrix }}
       has_extension_assets: ${{ steps.build-matrix.outputs.has_extension_assets }}
+      has_extensions: ${{ steps.build-matrix.outputs.has_extensions }}
 
     steps:
       # Decode the GitHub App private key.
@@ -635,11 +646,16 @@ jobs:
           # here because GHA `if:` cannot evaluate fromJSON(...).length on a string output.
           has_extension_assets=$([ "$(echo "${matrix}" | jq '[.[] | select(.image_class != "hostapp" and .assets != "")] | length')" -gt 0 ] && echo true || echo false)
 
+          # Gates staging the extension images for the hup test suite
+          has_extensions=$(echo "${matrix}" | jq 'any(.image_class != "hostapp")')
+
           echo "Build services: ${services}"
           echo "Build matrix: ${matrix}"
           echo "Has extension assets: ${has_extension_assets}"
+          echo "Has extensions: ${has_extensions}"
           echo "services=${services}" >> "${GITHUB_OUTPUT}"
           echo "has_extension_assets=${has_extension_assets}" >> "${GITHUB_OUTPUT}"
+          echo "has_extensions=${has_extensions}" >> "${GITHUB_OUTPUT}"
           delimiter="$(openssl rand -hex 16)"
           {
             echo "matrix<<${delimiter}"
@@ -1662,6 +1678,9 @@ jobs:
     # We don't need significant resources for this step, and it downloads artifacts faster when
     # using GitHub hosted runners vs self-hosted.
     runs-on: ubuntu-24.04
+    outputs:
+      # The test job pins the device to this release for the hostapp extension tests
+      release_id: ${{ steps.deploy-hostapp.outputs.release_id }}
     # We want to push a hostapp on push events (PR merge) or dispatch
     # These conditions should match s3-deploy
     # Force finlize will finalize no matter what - so we want to make sure there is something to finlize - so it will always trigger this if true
@@ -1742,6 +1761,38 @@ jobs:
           # cli-version: ${{ env.BALENA_CLI_VERSION }}
           # balenaCloud API token to login automatically
           balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
+
+      # `runtime` sits on SERVICE_CONFIG_DENY_LIST in @balena/compose-parser, so the CLI
+      # refuses a composition naming an OCI runtime.
+      - name: Allow service.runtime in the CLI compose parser
+        run: |
+          set -euo pipefail
+
+          cli_bin="$(readlink -f "$(command -v balena)")"
+          search_roots=("$(dirname "$(dirname "${cli_bin}")")")
+          npm_root="$(npm root -g 2>/dev/null || true)"
+          [ -n "${npm_root}" ] && [ -d "${npm_root}" ] && search_roots+=("${npm_root}")
+
+          targets=()
+          while IFS= read -r f; do
+            targets+=("${f}")
+          done < <(grep -rl --include='*.js' --include='*.cjs' --include='*.mjs' \
+            'SERVICE_CONFIG_DENY_LIST' "${search_roots[@]}" 2>/dev/null | sort -u)
+
+          if [ "${#targets[@]}" -eq 0 ]; then
+            echo "::error title=Hotpatch target missing::No file under ${search_roots[*]} declares SERVICE_CONFIG_DENY_LIST"
+            exit 1
+          fi
+
+          for f in "${targets[@]}"; do
+            sed -i -E "/^[[:space:]]*['\"]runtime['\"],[[:space:]]*$/d" "${f}"
+            # The CLI install is cached, so a hit arrives already patched.
+            # Scan the whole deny list, to catch a reformat the sed cannot reach.
+            if sed -n "/SERVICE_CONFIG_DENY_LIST/,/\]/p" "${f}" | grep -qE "['\"]runtime['\"]"; then
+              echo "::error title=Hotpatch failed::runtime is still on the deny list in ${f}"
+              exit 1
+            fi
+          done
 
       # TODO: replace this with balena-io/deploy-to-balena-action when it supports deploy-only
       # https://github.com/balena-io/deploy-to-balena-action/issues/286
@@ -2833,6 +2884,7 @@ jobs:
       - approved-commit
       - balena-lib
       - build
+      - hostapp-deploy
     # Specify the runner type in the test_matrix input.
     # QEMU workers need ["self-hosted", "X64", "kvm"] or ["self-hosted", "ARM64", "kvm"] runners.
     # Testbot workers can use any GitHub hosted (ubuntu-latest) or self-hosted runner.
@@ -2842,7 +2894,13 @@ jobs:
     environment: ${{ matrix.environment }}
     # https://docs.github.com/en/actions/learn-github-actions/expressions#functions
     # this expression checks to make sure at least one test suite was provided via either matrix syntax
+    # hostapp-deploy is a dependency only so its release id is readable. It is
+    # skipped on most events, and a skipped dependency would otherwise skip this
+    # job, so the success of build is asserted instead: it transitively requires
+    # approved-commit and balena-lib.
     if: |
+      !cancelled() &&
+      needs.build.result == 'success' &&
       github.event_name != 'push' &&
       inputs.test_matrix &&
       (
@@ -2866,6 +2924,9 @@ jobs:
     env:
       # Variables provided via the selected GitHub environment
       BALENACLOUD_API_URL: ${{ vars.BALENA_HOST || matrix.environment || 'balena-cloud.com' }}
+      # The rig fleet can live on another environment than the device under test. Leviathan
+      # falls back to the values above when these are empty, so both must be set together.
+      BALENACLOUD_WORKER_API_URL: ${{ matrix.worker_environment }}
       BALENACLOUD_SSH_PORT: ${{ vars.BALENACLOUD_SSH_PORT || '22' }}
       BALENACLOUD_SSH_URL: ${{ vars.BALENACLOUD_SSH_URL || 'ssh.balena-devices.com' }}
 
@@ -3013,6 +3074,57 @@ jobs:
           destination: ${{ env.DEPLOY_PATH }}
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
+      # A consuming suite activates the extensions locally from these images.
+      # The pattern also matches image-hostapp; the staging step skips it.
+      - name: Download extension images
+        if: needs.balena-lib.outputs.has_extensions == 'true' && contains(fromJSON(env.EXTENSION_SUITES), matrix.test_suite)
+        uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
+        with:
+          pattern: image-*
+          destination: ${{ env.DEPLOY_PATH }}/extension-images
+          merge-multiple: "true"
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
+
+      # Leviathan uploads only the suite directory to the core, so the images travel inside it.
+      # The suite keys images by service name; the build names them <recipe>-<machine>.docker.
+      - name: Stage extension images in the test suite
+        if: needs.balena-lib.outputs.has_extensions == 'true' && contains(fromJSON(env.EXTENSION_SUITES), matrix.test_suite)
+        env:
+          BUILD_MATRIX: ${{ needs.balena-lib.outputs.build_matrix }}
+          EXTENSIONS_DIR: ${{ env.SUITES }}/${{ matrix.test_suite }}/extensions
+        run: |
+          mkdir -p "${EXTENSIONS_DIR}"
+          echo "${BUILD_MATRIX}" \
+            | jq -r '.[] | select(.image_class != "hostapp") | [.service_name, .image_output] | @tsv' \
+            | while IFS=$'\t' read -r service image; do
+                mv -v "${DEPLOY_PATH}/extension-images/${image}" "${EXTENSIONS_DIR}/${service}.docker"
+              done
+          rm -rf "${DEPLOY_PATH}/extension-images"
+          ls -l "${EXTENSIONS_DIR}"
+
+      # A workflow env var cannot reach a test: the Leviathan core receives only
+      # FLASHER_SECUREBOOT, and it builds the suite options from a fixed list of
+      # config keys. The suite directory is uploaded whole, so the ids travel
+      # inside it, the same route the extension archives take.
+      - name: Stage the hostapp release ids for the cloud suite
+        if: matrix.test_suite == 'cloud' && needs.hostapp-deploy.outputs.release_id != ''
+        env:
+          HOSTAPP_RELEASE_ID: ${{ needs.hostapp-deploy.outputs.release_id }}
+          SUPERVISOR_RELEASE_ID: ${{ matrix.supervisor_release_id || vars.SUPERVISOR_RELEASE_ID }}
+          HAS_EXTENSIONS: ${{ needs.balena-lib.outputs.has_extensions }}
+          STAGED: ${{ env.SUITES }}/${{ matrix.test_suite }}/hostapp.json
+        run: |
+          jq -n \
+            --argjson releaseId "${HOSTAPP_RELEASE_ID}" \
+            --arg supervisorReleaseId "${SUPERVISOR_RELEASE_ID}" \
+            --argjson extensionsExpected "${HAS_EXTENSIONS:-false}" \
+            '{
+               releaseId: $releaseId,
+               supervisorReleaseId: (if $supervisorReleaseId == "" then null else ($supervisorReleaseId | tonumber) end),
+               extensionsExpected: $extensionsExpected
+             }' > "${STAGED}"
+          cat "${STAGED}"
+
       # Check out private contracts if this is a private device type - as these are required for the tests
       - name: Checkout private Contracts
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -3073,6 +3185,8 @@ jobs:
           # BALENA_API_TEST_KEY is a secret that should be specific to the runtime environment
           # It requires permissions to manage autokit workers, and create test fleets
           BALENACLOUD_API_KEY: ${{ secrets.BALENA_API_TEST_KEY }}
+          # Only set when worker_environment names a different environment to the one tested
+          BALENACLOUD_WORKER_API_KEY: ${{ secrets.BALENA_API_WORKER_KEY }}
 
   # This job always runs and will fail if any of the builds or tests fail.
   # This way we can mark this job as required for merging PRs.
