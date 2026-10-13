@@ -1,4 +1,20 @@
 - commits:
+    - subject: "hostapp-composition(overlays): extend schema to check for runtime"
+      hash: 29a5adcbec208f1f723d464c5dcce3ae81ac0b75
+      body: |
+        An image declaring io.balena.image.class as overlay needs to define
+        what runtime to use.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Alex Gonzalez <alexg@balena.io>
+        signed-off-by: Alex Gonzalez <alexg@balena.io>
+      author: Alex Gonzalez
+      nested: []
+  version: 1.42.17
+  title: ""
+  date: 2026-10-13T20:35:35.076Z
+- commits:
     - subject: Update ubuntu:22.04 Docker digest to b8b6ee6
       hash: 13d81e84787dfd8d7f090de65c38faeade4af4f8
       body: |
