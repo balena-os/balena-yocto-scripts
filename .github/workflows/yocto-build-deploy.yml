@@ -202,6 +202,8 @@ env:
   # Test suites that consume the built extension images. Each one reads them
   # from an extensions directory inside its own suite.
   EXTENSION_SUITES: '["hup"]'
+  # Test suites whose module probes need base and extension headers.
+  HEADERS_SUITES: '["hup","cloud"]'
 
 # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
@@ -2985,6 +2987,17 @@ jobs:
           merge-multiple: "true"
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
+      # Kernel override extensions publish headers as a release asset.
+      # Hostapp also matches, so each artifact gets a folder.
+      - name: Download extension release assets
+        if: needs.balena-lib.outputs.has_extension_assets == 'true' && contains(fromJSON(env.HEADERS_SUITES), matrix.test_suite)
+        uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
+        with:
+          pattern: release-assets-*
+          destination: ${{ env.DEPLOY_PATH }}/extension-assets
+          merge-multiple: "false"
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
+
       # Leviathan uploads only the suite directory to the core, so the images travel inside it.
       # The suite keys images by service name; the build names them <recipe>-<machine>.docker.
       - name: Stage extension images in the test suite
@@ -3001,6 +3014,29 @@ jobs:
               done
           rm -rf "${DEPLOY_PATH}/extension-images"
           ls -l "${EXTENSIONS_DIR}"
+
+      # The module probes build against both kernels, so headers travel the same way.
+      - name: Stage kernel headers in the test suite
+        if: needs.balena-lib.outputs.has_extensions == 'true' && contains(fromJSON(env.HEADERS_SUITES), matrix.test_suite)
+        env:
+          BUILD_MATRIX: ${{ needs.balena-lib.outputs.build_matrix }}
+          HEADERS_DIR: ${{ env.SUITES }}/${{ matrix.test_suite }}/headers
+        run: |
+          mkdir -p "${HEADERS_DIR}"
+          # Copy: Prepare workspace moves this file for the os suite.
+          cp -v "${DEPLOY_PATH}/kernel_modules_headers.tar.gz" "${HEADERS_DIR}/base.tar.gz"
+          echo "${BUILD_MATRIX}" \
+            | jq -r '.[] | select(.image_class != "hostapp") | .service_name' \
+            | while read -r service; do
+                headers="${DEPLOY_PATH}/extension-assets/release-assets-${service}/images/${MACHINE}/kernel-extension/kernel_modules_headers.tar.gz"
+                if [ -f "${headers}" ]; then
+                  mv -v "${headers}" "${HEADERS_DIR}/${service}.tar.gz"
+                else
+                  echo "[INFO] No kernel headers for extension ${service}"
+                fi
+              done
+          rm -rf "${DEPLOY_PATH}/extension-assets"
+          ls -l "${HEADERS_DIR}"
 
       # A workflow env var cannot reach a test: the Leviathan core receives only
       # FLASHER_SECUREBOOT, and it builds the suite options from a fixed list of
