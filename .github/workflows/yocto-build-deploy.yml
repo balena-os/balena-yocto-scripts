@@ -201,6 +201,8 @@ env:
   WORKFLOW_NAME: ${{ github.workflow }}
   # Suites that read the built extension images from their own directory.
   EXTENSION_SUITES: '["hup"]'
+  # Suites whose module probes need the base and extension headers.
+  HEADERS_SUITES: '["hup","cloud"]'
 
 # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
@@ -3077,6 +3079,16 @@ jobs:
           destination: ${{ env.DEPLOY_PATH }}
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
+      # Kernel override extensions publish headers as a release asset. One build wrote every
+      # extension asset under build/tmp/deploy, so they arrive in one artifact at those paths.
+      - name: Download extension release assets
+        if: needs.balena-lib.outputs.extension_assets != '' && contains(fromJSON(env.HEADERS_SUITES), matrix.test_suite)
+        uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
+        with:
+          name: release-assets-extensions
+          destination: ${{ env.DEPLOY_PATH }}/extension-assets
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
+
       # Leviathan uploads only the suite directory to the core, so the images travel inside it.
       # The suite keys images by service name; the build names them <recipe>-<machine>.docker.
       - name: Stage extension images in the test suite
@@ -3093,6 +3105,44 @@ jobs:
             mv -v "${DEPLOY_PATH}/${image}" "${EXTENSIONS_DIR}/${svc}.docker"
           done <<< "${EXTENSION_IMAGES}"
           ls -l "${EXTENSIONS_DIR}"
+
+      # The module probes build against both kernels, so stage both header sets.
+      - name: Stage kernel headers in the test suite
+        if: needs.balena-lib.outputs.extension_assets != '' && contains(fromJSON(env.HEADERS_SUITES), matrix.test_suite)
+        env:
+          EXTENSION_ASSETS: ${{ needs.balena-lib.outputs.extension_assets }}
+          HEADERS_DIR: ${{ env.SUITES }}/${{ matrix.test_suite }}/headers
+        run: |
+          set -euo pipefail
+          mkdir -p "${HEADERS_DIR}"
+          # Copy, because Prepare workspace moves this file for the os suite.
+          cp -v "${DEPLOY_PATH}/kernel_modules_headers.tar.gz" "${HEADERS_DIR}/base.tar.gz"
+          # The globs are relative to the deploy dir root, so expand them from there.
+          cd "${DEPLOY_PATH}/extension-assets"
+          # One "<service>\t<space-separated globs>" line per extension. Re-expanding the globs
+          # picks out what they matched at build time, as the deploy job splits them.
+          # Copy, not move: two extensions can declare a glob that matches the same file.
+          while IFS=$'\t' read -r svc assets; do
+            [ -n "${svc}" ] || continue
+            found=
+            for entry in ${assets}; do
+              for f in ${entry}; do
+                if [ -e "${f}" ]; then
+                  case "${f}" in
+                    */kernel_modules_headers.tar.gz) found="${f}" ;;
+                  esac
+                fi
+              done
+            done
+            if [ -n "${found}" ]; then
+              cp -v "${found}" "${HEADERS_DIR}/${svc}.tar.gz"
+            else
+              echo "[INFO] No kernel headers for extension ${svc}"
+            fi
+          done <<< "${EXTENSION_ASSETS}"
+          cd "${WORKSPACE}"
+          rm -rf "${DEPLOY_PATH}/extension-assets"
+          ls -l "${HEADERS_DIR}"
 
       # The cloud suite skips its extension tests when no release id is staged,
       # and still reports green. A failed deploy must fail the leg here.
