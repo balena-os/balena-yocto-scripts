@@ -489,7 +489,7 @@ fi
 
 if [ -z "${TEMPLATECONF_PATH}" ] ; then
     # Look on the BSP integration layer meta-balena-*
-    TEMPLATECONF_PATH=$(dirname $(find "${SCRIPTPATH}/../../layers/meta-balena"* -name bblayers.conf.sample))
+    TEMPLATECONF_PATH=$(dirname $(find -L "${SCRIPTPATH}/../../layers/meta-balena"* -name bblayers.conf.sample))
 else
     if [ "${TEMPLATECONF_PATH#/}" = "${TEMPLATECONF_PATH}" ]; then
         # Does not start with /
@@ -505,11 +505,11 @@ fi
 # make sure it contains templates
 if [ "$(echo "${TEMPLATECONF_PATH}" | wc -w)" -gt "1" ]; then
     highest_prio_layer_path=$(find_highest_prio_layer)
-    TEMPLATECONF_PATH=$(find "${highest_prio_layer_path}" -name bblayers.conf.sample)
+    TEMPLATECONF_PATH=$(find -L "${highest_prio_layer_path}" -name bblayers.conf.sample)
     log INFO "Multiple bblayers.conf.sample files found no custom path provided - using ${TEMPLATECONF_PATH}."
 fi
 
-TEMPLATECONF_PATH=$(dirname $(find "${TEMPLATECONF_PATH}" -name bblayers.conf.sample))
+TEMPLATECONF_PATH=$(dirname $(find -L "${TEMPLATECONF_PATH}" -name bblayers.conf.sample))
 if [ ! -d "${TEMPLATECONF_PATH}" ]; then
     log ERROR "The provided templates path does not exist: ${TEMPLATECONF_PATH}"
 fi
