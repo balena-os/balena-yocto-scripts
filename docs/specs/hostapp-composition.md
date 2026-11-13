@@ -4,16 +4,17 @@ The `yocto-build-deploy` workflow builds a balenaOS hostapp release from a
 Docker Compose composition declared by the device repo. The composition
 specifies the hostapp service and any extension services (kernel modules,
 firmware, drivers) the device type needs. Services with build metadata are built
-in parallel via a matrix; build outputs and pre-existing registry images are
-then assembled into a single release at deploy time.
+together by one bitbake invocation, so they share one task graph and one
+configuration; build outputs and pre-existing registry images are then
+assembled into a single release at deploy time.
 
 ## Composition files
 
 The workflow reads a composition file at `${MACHINE}.hostapp.yml` in the device
 repo root. When a meta-balena base composition exists at
 `layers/meta-balena/hostapp.yml`, the workflow deep-merges the two with overlay
-precedence. The merged result is the source of truth for both the build matrix
-and the deployed composition.
+precedence. The merged result is the source of truth for both the build and the
+deployed composition.
 
 Repos that build multiple device types provide per-device overlays
 (`raspberrypi4-64.hostapp.yml`, `raspberrypi3-64.hostapp.yml`). If neither the
@@ -59,7 +60,8 @@ are deliberate:
 
 Note that compose-spec permits any `x-*` key at the service level, so a typo
 on the `x-build` key itself (e.g., `x-buld`) passes the structural schema —
-the semantic layer catches it by producing an empty build matrix.
+the semantic layer catches it: a service with `image: __BUILD_OUTPUT__` and no
+truthy `x-build` fails the composition check.
 
 ## Service contract
 
@@ -107,17 +109,39 @@ services:
         - layers/meta-kernel-modules-block/conf/samples
 ```
 
-The merged composition contains both services. The hostapp service builds with
-no `-i` flag (falls back to the device type's `deploy_artifact`); kernel-modules
-builds via `balena-kernel-modules-block`.
+The merged composition contains both services. The build runs one bitbake
+invocation with two targets: the device type's `yocto.image` for the hostapp,
+and `balena-kernel-modules-block` for kernel-modules. The `-t` argument applies
+to both targets.
 
 ### `x-build` schema
 
-| Field        | Type            | Required | Description                                                                                      |
-| ------------ | --------------- | -------- | ------------------------------------------------------------------------------------------------ |
-| `recipe`     | string          | no       | Bitbake image target. Omitted for hostapp (falls back to `deploy_artifact`); set for extensions. |
-| `build_args` | list of strings | no       | Extra barys arguments specific to this service. Joined with spaces and appended to common args.  |
-| `assets`     | list of strings | no       | Globs of raw build outputs under `build/tmp/deploy/`; transformed to flat keys on deploy.        |
+| Field        | Type            | Required | Description                                                                                                    |
+| ------------ | --------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
+| `recipe`     | string          | no       | Bitbake image target. Omitted for hostapp (falls back to the device type's `yocto.image`); set for extensions. |
+| `build_args` | list of strings | no       | Extra barys arguments. Merged across all services and applied to every target (see below).                     |
+| `assets`     | list of strings | no       | Globs of raw build outputs under `build/tmp/deploy/`; transformed to flat keys on deploy.                      |
+
+### Merged `build_args`
+
+All services build in one bitbake invocation, so one barys argument set applies
+to every target. A per-service set would give shared tasks (toolchain, kernel)
+different signatures, and an extension could then build against a different
+kernel than the hostapp.
+
+The workflow merges `build_args` at composition parse time:
+
+1. Split all items on whitespace, as the build script does. `["-a FOO=1"]` and
+   `["-a", "FOO=1"]` are equal.
+2. Pair each flag with the value that follows it, and remove duplicate pairs.
+3. Fail when two services set different `-t` values. Barys keeps only the last
+   `-t`.
+4. Fail when two services set different values for one `-a` key. The last
+   assignment in `local.conf` wins.
+
+The workflow's `build-args` input is not part of the merge. The build passes it
+after the merged set, so it acts as a global override on a repeated `-t` or `-a`
+key, and a duplicate is not an error.
 
 ### Overlay services name their runtime
 
@@ -141,7 +165,7 @@ scope:
   ```
 
   The merged composition has `kernel-modules: ~`, which the prepare step deletes
-  before the build matrix and deploy.
+  before the build and deploy.
 
 - **Replace a built image with a registry image** — null only the `x-build`
   block and provide a concrete `image:`:
@@ -154,8 +178,8 @@ scope:
       x-build: ~
   ```
 
-  The service remains in the deployed composition but is no longer in the build
-  matrix. Without a concrete `image:`, this combination fails the composition
+  The service remains in the deployed composition but is no longer built.
+  Without a concrete `image:`, this combination fails the composition
   validation.
 
 ## Placeholders
@@ -166,13 +190,13 @@ interpolation](https://github.com/compose-spec/compose-spec/blob/master/12-inter
 (`$VAR` / `${VAR}`), which compose parsers may apply before our substitution step
 runs. `__BUILD_OUTPUT__` and `__DEVICE_REPO_REV__` are rewritten into the
 composition before it is passed to `balena deploy`; `__MACHINE__` is substituted
-earlier, at build-matrix parse time, only within `x-build.assets`.
+earlier, at composition parse time, only within `x-build.assets`.
 
 | Placeholder           | Valid in         | Resolves to                                                                                    |
 | --------------------- | ---------------- | ---------------------------------------------------------------------------------------------- |
 | `__BUILD_OUTPUT__`    | service `image:` | The image reference returned by `docker load` for that service's built `.docker` archive.      |
 | `__DEVICE_REPO_REV__` | any string value | The device repo's git revision (exposed to the deploy step via the `DEVICE_REPO_REV` env var). |
-| `__MACHINE__`         | `x-build.assets` | Yocto MACHINE, substituted into asset globs at build-matrix parse time.                        |
+| `__MACHINE__`         | `x-build.assets` | Yocto MACHINE, substituted into asset globs at composition parse time.                         |
 
 `__BUILD_OUTPUT__` is matched structurally by path (`.services.<svc>.image`) —
 services with concrete `image:` values are passed through unchanged. After
@@ -185,11 +209,11 @@ in the composition, so it's immune to substring collisions in other label
 values. The workflow's `${DEVICE_REPO_REV:?...}` guard fails fast if the
 env var is unset, preventing silent empty-string substitution.
 
-`__MACHINE__` is substituted at build-matrix parse time, only within each
+`__MACHINE__` is substituted at composition parse time, only within each
 service's `x-build.assets` globs, because those globs are relative to
 `build/tmp/deploy/` and need the concrete yocto `MACHINE` to reach the
 `images/<machine>/` build output. The on-disk composition keeps the literal;
-only the parsed matrix `assets` value is resolved. The `images/<machine>/`
+only the parsed `assets` value is resolved. The `images/<machine>/`
 prefix it produces (and the other raw-output paths like `cyclonedx-export/`,
 `licenses/`, `rpi-eeprom/secure-boot-lock/`) is transformed to the flat contract
 layout on the deploy side (`hostapp-deploy` and `s3-deploy` share one anchored
@@ -223,8 +247,8 @@ and consumer table.
 ## Profiles
 
 Services may use the compose `profiles` field for selective activation. The
-pipeline treats `profiles` as pass-through: matrix parse, build, and deploy do
-not interpret profile values. The default-generated composition does not set
+pipeline treats `profiles` as pass-through: composition parse, build, and deploy
+do not interpret profile values. The default-generated composition does not set
 `profiles`. Compose-parser support for `profiles` at deploy time is handled by a
 runtime patch when the deployed composition uses them.
 
