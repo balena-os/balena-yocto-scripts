@@ -1,4 +1,27 @@
 - commits:
+    - subject: "build/barys: Follow symlinks when looking for conf sample files"
+      hash: 7ce9e549c2efc31a9c0058b49345a6a81d5da2f7
+      body: >
+        When using additional layers like the ones adding secure boot support
+
+        (which would have conf/templates as symlink to conf/samples in order to
+        support
+
+        multiple Yocto releases at the same time) we need to make sure the
+        "find" command
+
+        is able to search into such symkinked directories.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Florin Sarbu <florin@balena.io>
+        signed-off-by: Florin Sarbu <florin@balena.io>
+      author: Florin Sarbu
+      nested: []
+  version: 1.42.18
+  title: ""
+  date: 2026-11-13T19:35:23.517Z
+- commits:
     - subject: "hostapp-composition(overlays): extend schema to check for runtime"
       hash: 29a5adcbec208f1f723d464c5dcce3ae81ac0b75
       body: |
