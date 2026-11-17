@@ -2085,6 +2085,12 @@ jobs:
           _release_id=$(echo "${_json}" | jq -r '.d[0].id')
           echo "${_release_id}"
 
+          # jq returns "null" for no match or an error
+          if [ -z "${_release_id}" ] || [ "${_release_id}" = "null" ]; then
+            echo "::error title=Release lookup failed::No release found for commit ${releaseCommit}"
+            exit 1
+          fi
+
           echo "release_id=${_release_id}" >>"${GITHUB_OUTPUT}"
 
       - name: Tag ESR release
