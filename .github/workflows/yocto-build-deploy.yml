@@ -1027,7 +1027,7 @@ jobs:
             core.exportVariable('BARYS_ARGUMENTS_VAR', newValue);
 
       - name: Enable signed images
-        if: inputs.sign-image == true && matrix.image_class == 'hostapp'
+        if: inputs.sign-image == true && (matrix.image_class == 'hostapp' || matrix.image_class == 'overlay')
         env:
           SIGN_API: "${{ vars.SIGN_API_URL || 'https://sign.balena-cloud.com' }}"
           SIGN_API_KEY: "${{ secrets.SIGN_API_KEY }}"
@@ -1162,9 +1162,9 @@ jobs:
             BITBAKE_TARGET_ARG="-i ${MATRIX_RECIPE}"
           fi
 
-          # Hostapp additionally receives the caller's build-args input (used e.g. for a sample conf); extensions rely on x-build.build_args alone.
+          # Hostapp and extension additionally receives the caller's build-args input (used e.g. for a sample conf or sign variables); extensions rely on x-build.build_args alone.
           BARYS_ARGS="${COMMON_ARGS} ${MATRIX_BUILD_ARGS}"
-          if [ "${MATRIX_IMAGE_CLASS}" = "hostapp" ]; then
+          if [ "${MATRIX_IMAGE_CLASS}" = "hostapp" ] || [ "${MATRIX_IMAGE_CLASS}" = "overlay" ]; then
             BARYS_ARGS="${BARYS_ARGS} ${BARYS_ARGUMENTS_VAR}"
           fi
 
