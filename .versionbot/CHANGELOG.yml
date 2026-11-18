@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update Lock file maintenance
+      hash: 4be9cd19f94e88acd1c678fefbcf8a2159641f54
+      body: |
+        Update 
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.42.20
+  title: ""
+  date: 2026-11-18T23:33:26.645Z
+- commits:
     - subject: "hostapp-deploy: Stop depending on s3-deploy"
       hash: 667d2aad52da867ba651c5169ac7e0e410e5e309
       body: |
