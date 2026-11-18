@@ -1,4 +1,21 @@
 - commits:
+    - subject: "hostapp-deploy: Stop depending on s3-deploy"
+      hash: 667d2aad52da867ba651c5169ac7e0e410e5e309
+      body: |
+        web-artifacts are now the required release artifact and fail the
+        deploy if missing. S3 is legacy and slated for deprecation, so an S3
+        failure should no longer block the hostapp release.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Kyle Harding <kyle@balena.io>
+        signed-off-by: Kyle Harding <kyle@balena.io>
+      author: Kyle Harding
+      nested: []
+  version: 1.42.19
+  title: ""
+  date: 2026-11-18T17:07:59.256Z
+- commits:
     - subject: "build/barys: Follow symlinks when looking for conf sample files"
       hash: 7ce9e549c2efc31a9c0058b49345a6a81d5da2f7
       body: >
