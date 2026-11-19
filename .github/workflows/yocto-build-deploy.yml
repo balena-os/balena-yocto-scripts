@@ -272,6 +272,7 @@ jobs:
       balena_host: ${{ env.BALENARC_BALENA_URL }}
       build_services: ${{ steps.build-matrix.outputs.services }}
       build_matrix: ${{ steps.build-matrix.outputs.matrix }}
+      built_images: ${{ steps.build-matrix.outputs.built_images }}
       has_extension_assets: ${{ steps.build-matrix.outputs.has_extension_assets }}
 
     steps:
@@ -644,6 +645,10 @@ jobs:
           {
             echo "matrix<<${delimiter}"
             echo "${matrix}"
+            echo "${delimiter}"
+            # One "<service>\t<archive>\t<image class>" line per built service, for the deploy job.
+            echo "built_images<<${delimiter}"
+            echo "${matrix}" | jq -r '.[] | [.service_name, .image_output, .image_class] | @tsv'
             echo "${delimiter}"
           } >> "${GITHUB_OUTPUT}"
 
@@ -1768,6 +1773,7 @@ jobs:
           HOSTAPP_ACCESS_TEAM: OS%20Devs
           HOSTAPP_ACCESS_ROLE: developer
           API_ENV: ${{ env.BALENARC_BALENA_URL }}
+          BUILT_IMAGES: ${{ needs.balena-lib.outputs.built_images }}
         run: |
           set -e
 
@@ -1826,44 +1832,23 @@ jobs:
           echo "[INFO] Using composition file: ${COMPOSITION}"
           cp "${COMPOSITION}" "${WORKSPACE}/docker-compose.yml"
 
-          # Load every built image and substitute it into the composition. A service's built docker
-          # filename is <recipe>-${MACHINE}.docker, with the recipe defaulting to balena-image for
-          # the hostapp (which declares none). Match each downloaded archive to its service by that
-          # exact filename (avoids recipe-prefix collisions
-          # and regex interpretation). Remember the hostapp's loaded ref for the deploy call below.
+          # Load each built image and substitute it into its service. BUILT_IMAGES holds one
+          # "<service>\t<archive>\t<image class>" line per built service, from the composition parse.
+          # Remember the hostapp's loaded ref for the deploy call below.
           _local_image=""
-          for docker_archive in "${DEPLOY_PATH}"/images/*.docker; do
-            [ -f "${docker_archive}" ] || continue
-            _loaded_image=$(docker load -i "${docker_archive}" | cut -d: -f1 --complement | tr -d " ")
+          while IFS=$'\t' read -r svc archive image_class; do
+            _loaded_image=$(docker load -i "${DEPLOY_PATH}/images/${archive}" | cut -d: -f1 --complement | tr -d " ")
             if [ -z "${_loaded_image}" ]; then
-              echo "[ERROR] Failed to load image archive ${docker_archive}"
+              echo "[ERROR] Failed to load image archive ${archive} for service ${svc}"
               exit 1
             fi
-            echo "[INFO] Loaded image: ${_loaded_image} from ${docker_archive}"
-
-            _archive_name=$(basename "${docker_archive}")
-            _matched=0
-            for svc in $(yq '.services | keys | .[]' "${WORKSPACE}/docker-compose.yml"); do
-              _svc_image=$(yq ".services.${svc}.image" "${WORKSPACE}/docker-compose.yml")
-              [ "${_svc_image}" = "__BUILD_OUTPUT__" ] || continue
-              # Built filename is <recipe>-${MACHINE}.docker; the hostapp has no recipe and is
-              # produced by the balena-image recipe, so default to balena-image (matches the matrix).
-              _svc_recipe=$(yq ".services.${svc}.\"x-build\".recipe // \"balena-image\"" "${WORKSPACE}/docker-compose.yml")
-              if [ "${_archive_name}" = "${_svc_recipe}-${MACHINE}.docker" ]; then
-                yq -i "(.services.${svc}.image) = \"${_loaded_image}\"" "${WORKSPACE}/docker-compose.yml"
-                echo "[INFO] Set ${svc} image to ${_loaded_image}"
-                if [ "$(yq ".services.${svc}.labels.\"io.balena.image.class\" // \"\"" "${WORKSPACE}/docker-compose.yml")" = "hostapp" ]; then
-                  _local_image="${_loaded_image}"
-                fi
-                _matched=1
-                break
-              fi
-            done
-            if [ "${_matched}" -eq 0 ]; then
-              echo "::error title=Orphan image archive::${docker_archive} did not match any built service"
-              exit 1
+            # strenv() reads the service name as one key, so yq does not split a dotted name into a path.
+            SVC="${svc}" IMAGE="${_loaded_image}" yq -i '.services[strenv(SVC)].image = strenv(IMAGE)' "${WORKSPACE}/docker-compose.yml"
+            echo "[INFO] Set ${svc} image to ${_loaded_image} from ${archive}"
+            if [ "${image_class}" = "hostapp" ]; then
+              _local_image="${_loaded_image}"
             fi
-          done
+          done <<< "${BUILT_IMAGES}"
 
           if [ -z "${_local_image}" ]; then
             echo "[ERROR] No hostapp image was loaded (expected balena-image-${MACHINE}.docker among the image-* artifacts)"
