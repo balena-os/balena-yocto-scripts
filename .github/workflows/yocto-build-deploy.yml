@@ -274,8 +274,7 @@ jobs:
       build_args: ${{ steps.composition.outputs.build_args }}
       image_outputs: ${{ steps.composition.outputs.image_outputs }}
       built_images: ${{ steps.composition.outputs.built_images }}
-      hostapp_assets: ${{ steps.composition.outputs.hostapp_assets }}
-      extension_assets: ${{ steps.composition.outputs.extension_assets }}
+      service_assets: ${{ steps.composition.outputs.service_assets }}
 
     steps:
       # Decode the GitHub App private key.
@@ -457,28 +456,30 @@ jobs:
           dt_arch="$(balena_lib_get_dt_arch "${SLUG}")"
           echo "dt_arch=${dt_arch}" >>"${GITHUB_OUTPUT}"
 
+      # Merge the meta-balena base composition with the device repo overlay. A missing file merges
+      # as an empty one. With neither file, the base is a default hostapp-only composition.
+      # *d merges arrays by index, so an overlay list would replace the base entries at the same
+      # positions and keep the rest. Concatenate the lists instead, base first:
+      #   - x-build-args, so the overlay's args come last and win in barys.
+      #   - each service's x-build.assets, so a device overlay can add assets. An overlay that
+      #     nulls the service, its x-build, or its assets keeps the null.
+      # A device overlay opts out of a service entirely by nulling the whole key (e.g.,
+      # `kernel-modules: ~`). *d propagates the null, and the merge then deletes the service. For a
+      # build-only opt-out, the overlay sets x-build: ~ alongside a concrete image: field.
+      # TEMPORARY: a hostapp whose base declares no x-build.assets gets $defaults as its base list,
+      # so device repos that pin an older meta-balena still attach release assets. Keep $defaults
+      # equal to the meta-balena hostapp.yml list (narrowed in balena-os/meta-balena#3980). The
+      # device overlay lists device-specific paths such as rpi-eeprom/secure-boot-lock/. Remove
+      # $defaults once device repos pin a meta-balena whose hostapp.yml declares x-build.assets.
       - name: Prepare hostapp composition
         run: |
           COMPOSITION="${MACHINE}.hostapp.yml"
           META_COMPOSITION="layers/meta-balena/hostapp.yml"
+          EMPTY="$(mktemp)"
+          echo '{}' > "${EMPTY}"
 
-          if [ -f "${META_COMPOSITION}" ] && [ -f "${COMPOSITION}" ]; then
-            echo "[INFO] Merging meta-balena composition with device repo overlay"
-            # *d merges arrays by index, which would let the overlay replace some base args and keep
-            # others. Concatenate x-build-args instead, so the overlay's args come last and win in barys.
-            # shellcheck disable=SC2016 # $base, $overlay and $args are yq variables.
-            yq eval-all '
-              select(fileIndex == 0) as $base | select(fileIndex == 1) as $overlay
-              | (($base."x-build-args" // []) + ($overlay."x-build-args" // [])) as $args
-              | ($base *d $overlay) | del(."x-build-args")
-              | with(select($args | length > 0); ."x-build-args" = $args)
-            ' "${META_COMPOSITION}" "${COMPOSITION}" > "${COMPOSITION}.tmp"
-            mv "${COMPOSITION}.tmp" "${COMPOSITION}"
-          elif [ -f "${META_COMPOSITION}" ]; then
-            echo "[INFO] Using meta-balena composition (no device repo overlay)"
-            cp "${META_COMPOSITION}" "${COMPOSITION}"
-          elif [ ! -f "${COMPOSITION}" ]; then
-            echo "[INFO] No composition file found, generating default"
+          if [ ! -f "${META_COMPOSITION}" ] && [ ! -f "${COMPOSITION}" ]; then
+            echo "[INFO] No composition file found, using the default"
             cat > "${COMPOSITION}" <<'COMPEOF'
           # yaml-language-server: $schema=https://raw.githubusercontent.com/balena-os/balena-yocto-scripts/master/schemas/hostapp-composition.json
           version: '2.4'
@@ -493,54 +494,42 @@ jobs:
                 io.balena.private.hostapp.board-rev: '__DEVICE_REPO_REV__'
           COMPEOF
           fi
+          base="${META_COMPOSITION}"
+          [ -f "${base}" ] || base="${EMPTY}"
+          overlay="${COMPOSITION}"
+          [ -f "${overlay}" ] || overlay="${EMPTY}"
+          echo "[INFO] Merging base ${base} with overlay ${overlay}"
 
-          # A device overlay opts out of a service entirely by nulling the whole key (e.g., `kernel-modules: ~`).
-          # yq's *d operator propagates the null through the merge; this step then deletes the null entries.
-          # For build-only opt-out (keep the service in deploy but drop it from the build), a device overlay
-          # sets x-build: ~ alongside a concrete image: field — same null-override pattern, applied to a nested key.
-          yq -i '.services |= with_entries(select(.value != null))' "${COMPOSITION}"
-
-          echo "[INFO] Composition:"
-          cat "${COMPOSITION}"
-
-      # TEMPORARY (scaffold): meta-balena does not yet declare x-build.assets for the hostapp, so
-      # inject the canonical release-asset set here to exercise the composition-driven asset flow.
-      # Only fills when the hostapp declares no assets, so a real meta-balena base or device overlay
-      # overrides it. Paths are relative to the deploy-dir root build/tmp/deploy/ (the upload
-      # base-directory): machine-native files under images/__MACHINE__/ (__MACHINE__ is substituted
-      # at composition parse time), and build/tmp/deploy/ siblings (cyclonedx-export/) globbed in
-      # place. These list only real build outputs; the deploy jobs transform them into the flat
-      # contract layout (strip images/<machine>/, cyclonedx-export/ -> cyclonedx/, tar licenses/ and
-      # rpi-eeprom/secure-boot-lock/). The two staged files that aren't build outputs, device-type.json
-      # (the repo-root <slug>.json renamed) and CHANGELOG.md, are added by the upload step instead of
-      # listed here.
-      # The hostapp's globs name its own outputs, because the extensions share build/tmp/deploy:
-      # the two manifest names are the yocto.image link names (meta-balena sets an empty
-      # IMAGE_NAME_SUFFIX), and cyclonedx-export/ holds one directory per image recipe. licenses/**
-      # stays whole, because the per-recipe license texts are shared with the extensions.
-      # Remove once layers/meta-balena/hostapp.yml ships x-build.assets.
-      - name: Inject default hostapp assets
-        run: |
-          COMPOSITION="${MACHINE}.hostapp.yml"
-          yq -i '
-            (.services[]
-              | select(.labels."io.balena.image.class" == "hostapp")
-              | select(((."x-build".assets) // []) | length == 0)
-              | ."x-build".assets) = [
+          # shellcheck disable=SC2016 # $base, $overlay, $args, $defaults, $svc, $inject and $baseassets are yq variables.
+          yq eval-all '
+            select(fileIndex == 0) as $base | select(fileIndex == 1) as $overlay
+            | (($base."x-build-args" // []) + ($overlay."x-build-args" // [])) as $args
+            | ($base *d $overlay) | del(."x-build-args")
+            | [
                 "images/__MACHINE__/VERSION",
                 "images/__MACHINE__/VERSION_HOSTOS",
                 "images/__MACHINE__/image*.json",
                 "images/__MACHINE__/compressed*/part-*.deflate",
-                "images/__MACHINE__/balena-image-__MACHINE__.manifest",
-                "images/__MACHINE__/balena-image-flasher-__MACHINE__.manifest",
+                "images/__MACHINE__/balena-image*-__MACHINE__.manifest",
                 "images/__MACHINE__/kernel_modules_headers.tar.gz",
-                "images/__MACHINE__/rpi-eeprom/secure-boot-lock/",
                 "cyclonedx-export/balena-image*/*.json",
                 "licenses/**"
-              ]
-          ' "${COMPOSITION}"
+              ] as $defaults
+            | with(select($args | length > 0); ."x-build-args" = $args)
+            | .services |= with_entries(
+                select(.value != null)
+                | .key as $svc
+                | (.value.labels."io.balena.image.class" == "hostapp" and (($base.services[$svc]."x-build".assets // []) | length) == 0) as $inject
+                | (($defaults | select($inject)) // ($base.services[$svc]."x-build".assets // [])) as $baseassets
+                | with(select($inject and (.value | has("x-build") | not)); .value."x-build" = {})
+                | with(select((.value."x-build" | tag) == "!!map"
+                      and ((($overlay.services[$svc]."x-build".assets | tag) == "!!seq")
+                        or ($inject and (.value."x-build" | has("assets") | not))));
+                    .value."x-build".assets = $baseassets + ($overlay.services[$svc]."x-build".assets // [])))
+          ' "${base}" "${overlay}" > "${COMPOSITION}.tmp"
+          mv "${COMPOSITION}.tmp" "${COMPOSITION}"
 
-          echo "[INFO] Composition after hostapp asset injection:"
+          echo "[INFO] Composition:"
           cat "${COMPOSITION}"
 
       - name: Validate composition
@@ -671,8 +660,8 @@ jobs:
             if (perServiceArgs.length > 0) {
               fail(`x-build.build_args is not supported: move these services' args to the top-level x-build-args: ${perServiceArgs.join(', ')}`);
             }
-            // Deploy requires release-assets-hostapp, and its upload is the only one that carries
-            // device-type.json and CHANGELOG.md.
+            // The hostapp assets carry the image-maker contract keys, so a release without them is
+            // not buildable.
             if (hostapp.assets.length === 0) {
               fail('Missing hostapp assets: the hostapp service declares no x-build.assets');
             }
@@ -696,10 +685,9 @@ jobs:
             // after the meta-balena base's args, so the overlay wins on a repeated flag or -a key.
             const buildArgs = parsed['x-build-args'] ?? [];
 
-            // One "<service>\t<space-separated globs>" line per extension that declares release assets.
-            // Gates and drives the extension asset staging, upload, and attach steps. The hostapp
-            // attaches via its own dedicated steps, so it is not listed.
-            const extensionAssets = extensions
+            // One "<service>\t<space-separated globs>" line per service that declares assets, for the
+            // build job's "Collect release assets" step.
+            const serviceAssets = services
               .filter((service) => service.assets.length > 0)
               .map((service) => `${service.name}\t${service.assets.join(' ')}`);
 
@@ -711,8 +699,7 @@ jobs:
             core.setOutput('image_outputs', services.map((service) => service.image_output).join('\n'));
             // One "<service>\t<archive>\t<image class>" line per built service, for the deploy job.
             core.setOutput('built_images', services.map((service) => [service.name, service.image_output, service.image_class].join('\t')).join('\n'));
-            core.setOutput('hostapp_assets', hostapp.assets.join('\n'));
-            core.setOutput('extension_assets', extensionAssets.join('\n'));
+            core.setOutput('service_assets', serviceAssets.join('\n'));
 
       # Unrolled balena_api_is_dt_private function - https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
       # Had to be unrolled due to this: https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191 function relying on a jenkins env var to select the balena env - so failed
@@ -975,6 +962,8 @@ jobs:
       # Whether to AES-256 encrypt uploaded artifacts (private device types + secure boot).
       # Passed to lzma-artifact-action's encrypt input; the password stays permanently set.
       ARTIFACT_ENCRYPT: ${{ inputs.sign-image || needs.balena-lib.outputs.is_private == 'true' }}
+      # Staging dir for the release-assets artifact. Must be on the build/tmp/deploy filesystem for hard links.
+      RELEASE_ASSETS: build/tmp/release-assets
 
     defaults:
       run:
@@ -1527,13 +1516,9 @@ jobs:
           aws s3 sync --sse="${S3_SSE}" "${SHARED_DOWNLOADS_DIR}/" "${S3_URL}/" \
             --exclude "*/*" --exclude "*.tmp" --size-only --follow-symlinks --no-progress
 
-      # Stage the two hostapp release assets that no x-build.assets glob can reach, plus the
-      # compressed image parts. Everything else (VERSION, manifests, cyclonedx-export/, licenses/,
-      # secure-boot-lock/, ...) is a raw build output the composition globs in place and the deploy
-      # jobs transform. Kept minimal so balena-deploy.inc is no longer needed:
-      #   - device-type.json (the repo-root <slug>.json renamed) and CHANGELOG.md (a repo-root file):
-      #     neither is a build output, so they're staged here and the hostapp upload step adds them
-      #     to its source, rather than being listed in x-build.assets.
+      # Stage the compressed image parts. Everything else (VERSION, manifests, cyclonedx-export/,
+      # licenses/, secure-boot-lock/, ...) is a raw build output the composition globs in place and
+      # "Transform release assets" transforms. Kept minimal so balena-deploy.inc is no longer needed:
       #   - compressed*/ + image*.json: prepare-image.py deflates, plus balena*.img symlinks aliasing
       #     the raw deploy artifacts (multi-GB images are never copied; the uploads follow symlinks).
       - name: Stage release assets
@@ -1543,30 +1528,6 @@ jobs:
           DEPLOY_ROOT="build/tmp/deploy"
           YOCTO_DIR="${DEPLOY_ROOT}/images/${MACHINE}"
           PREPARE_IMAGE="${automation_dir}/conversion_scripts/prepare-image.py"
-
-          # Drop the container-path symlinks poky leaves in the licenses tree.
-          # license_image.bbclass writes licenses/<arch>/<IMAGE_LINK_NAME> as an *absolute* symlink
-          # under the build container's /work mount (build/balena-build.sh), so the link text is
-          # /work/build/tmp/deploy/... on every build. Whether it resolves here on the runner depends
-          # on the /work -> workspace symlink, which is a side effect of "Sync shared downloads to
-          # S3" and is skipped for private device types. Both outcomes break "Upload release assets",
-          # which archives licenses/** with tar --dereference:
-          #   - no /work: the link dangles, tar exits 1 ("File removed before we read it") and fails
-          #     the step under pipefail, even though the archive it wrote is complete
-          #   - /work present: tar follows the link and stores every manifest twice
-          # Matching on the link text rather than on reachability sends both cases the same way, so
-          # public and private device types produce the same archive. The links only alias the
-          # timestamped manifest dirs, which are archived in their own right, so nothing is lost.
-          # Kept ahead of the edge / docker-image early exits below: those builds upload licenses/**
-          # too.
-          if [ -d "${DEPLOY_ROOT}/licenses" ]; then
-            find "${DEPLOY_ROOT}/licenses" -type l -lname '/work/*' -print -delete
-          fi
-
-          cp -v "${DT_JSON}" "${DEPLOY_ROOT}/device-type.json"
-          if [ -f CHANGELOG.md ]; then
-            cp -v CHANGELOG.md "${DEPLOY_ROOT}/"
-          fi
 
           # edge / docker-image device types have no compressible/raw image.
           if [ "$(jq -r '.slug' "${DT_JSON}")" = "edge" ]; then exit 0; fi
@@ -1667,36 +1628,142 @@ jobs:
           done
           exit "${missing}"
 
-      # Expand each extension's globs once, on the runner that built the files, and stage the
-      # matches under service/<svc>/, the layout the deploy job attaches. cp -L follows symlinks, as
-      # the upload action's tar --dereference does. A service with no match fails here.
-      - name: Stage extension release assets
-        if: needs.balena-lib.outputs.extension_assets != ''
+      # Collect every service's release assets into RELEASE_ASSETS, at their deploy-dir paths, plus
+      # device-type.json (the repo-root <slug>.json renamed) and CHANGELOG.md, which are not build
+      # outputs. All services glob build/tmp/deploy, and the deploy job attaches the union to one
+      # release. The globs expand as plain bash globs, so ** acts as *. cp -l hard-links instead of
+      # copying, so the multi-GB deflates cost nothing. cp -L follows symlinks. Two globs that match
+      # one file stage it once. The step fails when:
+      #   - a match resolves outside build/tmp/deploy
+      #   - a match is not in the staging dir after cp
+      #   - all globs of a service match nothing
+      - name: Collect release assets
         env:
-          EXTENSION_ASSETS: ${{ needs.balena-lib.outputs.extension_assets }}
-          STAGING: ${{ runner.temp }}/extension-assets
+          SERVICE_ASSETS: ${{ needs.balena-lib.outputs.service_assets }}
         run: |
           set -euo pipefail
-          cd build/tmp/deploy
-          missing=0
-          # One "<service>\t<space-separated globs>" line per extension.
-          while IFS=$'\t' read -r svc assets; do
-            dest="${STAGING}/service/${svc}"
-            mkdir -p "${dest}"
-            for entry in ${assets}; do
+          root="${PWD}"
+          staging="${root}/${RELEASE_ASSETS}"
+          deploy="${root}/build/tmp/deploy"
+          rm -rf "${staging}"
+          mkdir -p "${staging}"
+
+          # Drop the container-path symlinks poky leaves in the licenses tree.
+          # license_image.bbclass writes licenses/<arch>/<IMAGE_LINK_NAME> as an absolute symlink
+          # under the build container's /work mount (build/balena-build.sh), so the link text is
+          # /work/build/tmp/deploy/... on every build. The link resolves on the runner only when the
+          # /work -> workspace symlink exists, which "Sync shared downloads to S3" creates for public
+          # device types only. A dangling link makes cp below warn. A resolved link makes
+          # licenses.tar.gz store every manifest twice. Matching on the link text sends public and
+          # private device types the same way. The links only alias the timestamped manifest dirs,
+          # which are archived in their own right, so nothing is lost.
+          if [ -d "${deploy}/licenses" ]; then
+            find "${deploy}/licenses" -type l -lname '/work/*' -print -delete
+          fi
+
+          cd "${deploy}"
+          # realpath builds on the physical cwd, so compare with the physical deploy dir.
+          deploy_physical="$(pwd -P)"
+          failed=0
+          # One "<service>\t<space-separated globs>" line per service with assets.
+          while IFS=$'\t' read -r svc globs; do
+            matched=0
+            for entry in ${globs}; do
               for f in ${entry}; do
                 [ -e "${f}" ] || continue
-                # cp copies the rest of a directory when one symlink in it dangles, then exits 1.
-                # The upload action tolerates the same tar error, so warn instead of failing.
-                cp -rL --parents "${f}" "${dest}/" || echo "::warning title=Extension asset copy::cp reported errors for ${f} of ${svc}"
+                matched=1
+                # cp -L copies symlink targets, so check the resolved path of every file and directory
+                # that cp reads. find -L lists a dangling link as type l. A dangling link has no
+                # content, so the check skips it.
+                outside="$(find -L "${f}" ! -type l -print0 | xargs -0r realpath -e -- | awk -v p="${deploy_physical}/" 'index($0, p) != 1')"
+                if [ -n "${outside}" ]; then
+                  echo "::error title=Release asset outside the deploy dir::${f} of ${svc} resolves outside build/tmp/deploy: ${outside//$'\n'/, }"
+                  failed=1
+                  continue
+                fi
+                # cp links the rest of a directory when one symlink in it dangles, then exits 1.
+                # A dangling link has no content to attach, so warn. The check below fails when
+                # nothing landed.
+                cp -rlL --parents -f "${f%/}" "${staging}/" || echo "::warning title=Release asset link::cp reported errors for ${f} of ${svc}"
+                if [ ! -e "${staging}/${f%/}" ]; then
+                  echo "::error title=Release asset not staged::${f} of ${svc} is not in the staging dir"
+                  failed=1
+                fi
               done
             done
-            if [ -z "$(ls -A "${dest}")" ]; then
-              echo "::error title=No extension assets::no files matched the assets of ${svc}"
-              missing=1
+            if [ "${matched}" -eq 0 ]; then
+              echo "::error title=No release assets::no files matched the assets of ${svc}"
+              failed=1
             fi
-          done <<< "${EXTENSION_ASSETS}"
-          exit "${missing}"
+          done <<< "${SERVICE_ASSETS}"
+          exit "${failed}"
+
+      # Transform the collected raw build outputs into the flat image-maker contract layout
+      # (docs/specs/hostapp-release-assets.md), then add device-type.json and CHANGELOG.md. Lift
+      # images/<machine>/ first, so rpi-eeprom/secure-boot-lock/ is at the root before its tar. The
+      # failure cases are in docs/specs/hostapp-composition.md (x-build.assets). The build job runs
+      # this step on PRs, so a conflict fails before merge.
+      # The staged files are hard links to the build outputs: only rename, archive, or remove them.
+      # An in-place edit would change the build output too.
+      - name: Transform release assets
+        run: |
+          set -euo pipefail
+          root="${PWD}"
+          cd "${RELEASE_ASSETS}"
+          # _claim <key> <incoming path>: fail when the key is already taken.
+          _claim() {
+            if [ -e "$1" ]; then
+              echo "::error title=Release asset key conflict::$2 and an existing $1 map to the same key $1"
+              exit 1
+            fi
+          }
+          # _remove_empty <dir>: remove a directory that the transform emptied. Fail when the
+          # directory still has content, because no key covers that content.
+          _remove_empty() {
+            local left
+            left="$(find "$1" -mindepth 1 -maxdepth 1 -exec basename {} \; | tr '\n' ' ')"
+            if [ -n "${left}" ]; then
+              echo "::error title=Release asset without a key::$1 still has content that the transform does not cover: ${left}"
+              exit 1
+            fi
+            rmdir "$1"
+          }
+          if [ -d "images/${MACHINE}" ]; then
+            shopt -s dotglob nullglob
+            files=("images/${MACHINE}"/*)
+            shopt -u dotglob nullglob
+            for f in "${files[@]}"; do
+              _claim "${f##*/}" "${f}"
+              mv "${f}" .
+            done
+            rmdir "images/${MACHINE}"
+            _remove_empty images
+          fi
+          if [ -d cyclonedx-export ]; then
+            _claim cyclonedx cyclonedx-export
+            mv cyclonedx-export cyclonedx
+          fi
+          if [ -d licenses ]; then
+            _claim licenses.tar.gz licenses
+            tar -czf licenses.tar.gz licenses
+            rm -rf licenses
+          fi
+          if [ -d rpi-eeprom/secure-boot-lock ]; then
+            _claim secure-boot-lock.tar.gz rpi-eeprom/secure-boot-lock
+            tar -czf secure-boot-lock.tar.gz -C rpi-eeprom/secure-boot-lock .
+            rm -rf rpi-eeprom/secure-boot-lock
+          fi
+          if [ -d rpi-eeprom ]; then
+            _remove_empty rpi-eeprom
+          fi
+          _claim device-type.json "${SLUG}.json"
+          cp "${root}/${SLUG}.json" device-type.json
+          if [ -f "${root}/CHANGELOG.md" ]; then
+            _claim CHANGELOG.md CHANGELOG.md
+            cp "${root}/CHANGELOG.md" CHANGELOG.md
+          fi
+          echo "[INFO] Release asset keys:"
+          find . -type f | sed 's|^\./||' | sort
 
       # Every built service's container image (docker-save tarball) in one artifact, hostapp
       # included. The images and the release assets are separate artifacts so the deploy job can
@@ -1716,43 +1783,19 @@ jobs:
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
           source: ${{ needs.balena-lib.outputs.image_outputs }}
 
-      # The hostapp release assets. base-directory is the deploy-dir root build/tmp/deploy, so the
-      # composition's x-build.assets can glob both machine-native paths (images/<machine>/...) and
-      # build/tmp/deploy siblings (cyclonedx-export/) in place without staging everything into
-      # images/<machine>/. The stored keys keep their sub-path (images/<machine>/...,
-      # cyclonedx-export/...); the deploy jobs flatten them to the flat contract layout before
-      # attach/sync. device-type.json and CHANGELOG.md are not build outputs, so they are appended
-      # to the source here; "Stage release assets" produced them + the deflates.
-      - name: Upload hostapp release assets
+      # Every service's release assets in one artifact, already in the flat contract layout, so the
+      # deploy jobs attach (hostapp-deploy) or sync (s3-deploy) the files as they are.
+      - name: Upload release assets
         uses: product-os/lzma-artifact-action/upload@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
-          name: release-assets-hostapp
-          base-directory: build/tmp/deploy
+          name: release-assets
+          base-directory: ${{ env.RELEASE_ASSETS }}
           if-no-files-found: error
           retention-days: "3"
           compression-level: "1"
           encrypt: ${{ env.ARTIFACT_ENCRYPT }}
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
-          source: |
-            ${{ needs.balena-lib.outputs.hostapp_assets }}
-            CHANGELOG.md
-            device-type.json
-
-      # Every extension's staged release assets in one artifact, as service/<svc>/<deploy-dir path>.
-      # The hostapp keeps its own artifact because the two sets can overlap (both may glob
-      # licenses/**).
-      - name: Upload extension release assets
-        if: needs.balena-lib.outputs.extension_assets != ''
-        uses: product-os/lzma-artifact-action/upload@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
-        with:
-          name: release-assets-extensions
-          base-directory: ${{ runner.temp }}/extension-assets
-          if-no-files-found: error
-          retention-days: "3"
-          compression-level: "1"
-          encrypt: ${{ env.ARTIFACT_ENCRYPT }}
-          password: ${{ secrets.PBDKF2_PASSPHRASE }}
-          source: service
+          source: .
 
   ##############################
   # hostapp Deploy
@@ -1786,9 +1829,6 @@ jobs:
       BALENARC_BALENA_URL: ${{ vars.BALENA_HOST || vars.BALENARC_BALENA_URL || 'balena-cloud.com' }}
       HOSTAPP_ORG: ${{ vars.HOSTAPP_ORG || 'balena_os' }}
       DEPLOY_PATH: ${{ github.workspace }}/deploy
-      # Asset roots the "Transform release assets" step normalizes (relative to DEPLOY_PATH): the
-      # hostapp dir plus any extension service dirs (downloaded to release-assets/service/<svc>).
-      ASSET_DIRS: hostapp-assets release-assets/service/*
 
     steps:
 
@@ -1809,22 +1849,12 @@ jobs:
           destination: ${{ env.DEPLOY_PATH }}/images
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
-      # The two attach roots. The hostapp attaches with flat, top-level keys (image-maker contract),
-      # so its assets land in hostapp-assets/. Each extension attaches under service/<name>/, which
-      # the build job staged, so release-assets-extensions extracts straight into release-assets/.
-      # The parse step requires hostapp assets, so release-assets-hostapp always exists.
-      - name: Download hostapp release assets
+      # Every service's release assets, already in the flat contract layout. The build job's
+      # "Transform release assets" step guarantees one file per key.
+      - name: Download release assets
         uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
-          name: release-assets-hostapp
-          destination: ${{ env.DEPLOY_PATH }}/hostapp-assets
-          password: ${{ secrets.PBDKF2_PASSPHRASE }}
-
-      - name: Download extension release assets
-        if: needs.balena-lib.outputs.extension_assets != ''
-        uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
-        with:
-          name: release-assets-extensions
+          name: release-assets
           destination: ${{ env.DEPLOY_PATH }}/release-assets
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
@@ -2090,65 +2120,9 @@ jobs:
             fi
           fi
 
-      # The release-asset globs are rooted at build/tmp/deploy, so keys arrive as raw build outputs:
-      # images/<machine>/... (machine-native), cyclonedx-export/, licenses/, rpi-eeprom/secure-boot-lock/.
-      # Transform each asset root (ASSET_DIRS, relative to DEPLOY_PATH) into the flat image-maker
-      # contract: lift images/<machine>/* up, rename cyclonedx-export/ -> cyclonedx/, tar licenses/ ->
-      # licenses.tar.gz and rpi-eeprom/secure-boot-lock/ -> secure-boot-lock.tar.gz. Bare files
-      # (device-type.json, CHANGELOG.md) are never under those paths, so they pass through and Verify's
-      # hostapp-assets/device-type.json read still resolves. Anchored so s3-deploy reuses it verbatim;
-      # each job sets ASSET_DIRS (hostapp roots here, the DEPLOY_PATH root there). The order matters:
-      # strip images/<machine>/ first so rpi-eeprom/secure-boot-lock/ lands at the root before its tar.
-      - &transform_release_assets
-        name: Transform release assets
-        run: |
-          set -e
-          _transform() {
-            local _d="$1" _files
-            if [ -d "${_d}/images/${MACHINE}" ]; then
-              shopt -s dotglob nullglob
-              _files=("${_d}/images/${MACHINE}"/*)
-              [ "${#_files[@]}" -gt 0 ] && mv "${_files[@]}" "${_d}/"
-              shopt -u dotglob nullglob
-              rm -rf "${_d}/images"
-            fi
-            if [ -d "${_d}/cyclonedx-export" ]; then
-              rm -rf "${_d}/cyclonedx"
-              mv "${_d}/cyclonedx-export" "${_d}/cyclonedx"
-            fi
-            if [ -d "${_d}/licenses" ]; then
-              tar -czf "${_d}/licenses.tar.gz" -C "${_d}" licenses
-              rm -rf "${_d}/licenses"
-            fi
-            if [ -d "${_d}/rpi-eeprom/secure-boot-lock" ]; then
-              tar -czf "${_d}/secure-boot-lock.tar.gz" -C "${_d}/rpi-eeprom/secure-boot-lock" .
-              rm -rf "${_d}/rpi-eeprom"
-            fi
-          }
-          cd "${DEPLOY_PATH}"
-          for _d in ${ASSET_DIRS}; do
-            [ -d "${_d}" ] || continue
-            echo "[INFO] Transforming ${_d}"
-            _transform "${_d}"
-          done
-
-      # Rooted at hostapp-assets/ so the single-pattern glob base is hostapp-assets and each key is
+      # Rooted at release-assets/ so the single-pattern glob base is release-assets and each key is
       # flat (VERSION, image.json, compressed/part-N.deflate, ...) per the image-maker contract.
-      - name: Upload hostapp release assets
-        uses: balena-io/upload-balena-release-asset@1bfbc63a7a61a22fbb07f04c3e2d553ff1d2a167 # v0.2.0
-        with:
-          balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
-          balena-host: ${{ env.BALENARC_BALENA_URL }}
-          release-id: ${{ steps.deploy-hostapp.outputs.release_id }}
-          if-no-files-found: error
-          path: |
-            ${{ env.DEPLOY_PATH }}/hostapp-assets/**
-
-      # Rooted at release-assets/ so the single-pattern glob base is release-assets and each key
-      # becomes service/<service>/<file>. Folding this into the step above would collapse to one
-      # glob base and leak a hostapp-assets/ segment into the keys.
-      - name: Upload extension release assets
-        if: needs.balena-lib.outputs.extension_assets != ''
+      - name: Upload release assets
         uses: balena-io/upload-balena-release-asset@1bfbc63a7a61a22fbb07f04c3e2d553ff1d2a167 # v0.2.0
         with:
           balena-token: ${{ secrets.BALENA_API_DEPLOY_KEY }}
@@ -2174,8 +2148,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          # device-type.json arrives in release-assets-hostapp, downloaded to hostapp-assets/.
-          DTJSON="${DEPLOY_PATH}/hostapp-assets/device-type.json"
+          # device-type.json arrives in the release-assets artifact, downloaded to release-assets/.
+          DTJSON="${DEPLOY_PATH}/release-assets/device-type.json"
           if [ ! -f "${DTJSON}" ]; then
             echo "::error title=Missing device-type.json::${DTJSON} not found; cannot determine required assets"
             exit 1
@@ -2296,9 +2270,6 @@ jobs:
       # <slug>/latest pointer, so it bases off ${workspace}/deploy (SOURCE_DIR) and appends
       # <slug>/<version> itself rather than reusing this variable.
       DEPLOY_PATH: ${{ github.workspace }}/deploy/${{ needs.balena-lib.outputs.device_slug }}/${{ needs.balena-lib.outputs.os_version }}
-      # The shared "Transform release assets" step normalizes DEPLOY_PATH itself (single artifact,
-      # no per-service grouping here).
-      ASSET_DIRS: "."
 
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
@@ -2310,21 +2281,17 @@ jobs:
     steps:
 
       # S3 needs the composition's release assets (deflates, manifests, image*.json, device-type.json,
-      # licenses, cyclonedx, ...) but NOT the deploy docker image. release-assets-hostapp is exactly
-      # that set; a single named download extracts flat into ${DEPLOY_PATH} (= <slug>/<version>) for
-      # the S3 sync below. lzma-artifact-action decrypts + decompresses automatically.
+      # licenses, cyclonedx, ...) but NOT the deploy docker image. release-assets is that set, plus
+      # any extension assets, which S3 receives too. The build job already transformed it to the
+      # flat contract layout that image-maker's prepare.ts expects on S3. A single named download
+      # extracts flat into ${DEPLOY_PATH} (= <slug>/<version>) for the S3 sync below.
+      # lzma-artifact-action decrypts + decompresses automatically.
       - name: Download release assets
         uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
         with:
-          name: release-assets-hostapp
+          name: release-assets
           destination: ${{ env.DEPLOY_PATH }}
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
-
-      # release-assets-hostapp keys arrive as raw build outputs (images/<machine>/, cyclonedx-export/,
-      # licenses/, rpi-eeprom/secure-boot-lock/); image-maker's prepare.ts expects the <slug>/<version>/
-      # S3 tree in the flat contract layout. Reuse the hostapp-deploy transform verbatim via the
-      # YAML alias (ASSET_DIRS="." above targets the DEPLOY_PATH root).
-      - *transform_release_assets
 
       # https://github.com/unfor19/install-aws-cli-action
       # https://github.com/aws/aws-cli/tags
