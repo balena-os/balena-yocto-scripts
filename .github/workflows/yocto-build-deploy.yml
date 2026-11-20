@@ -130,6 +130,7 @@ on:
       # - environment: (required) The balenaCloud environment to use for testing, e.g. `bm.balena-dev.com` or `balena-cloud.com`
       # - worker_type: The worker type to use for testing. The valid worker types are `qemu` and `testbot`. The default worker type is `testbot`
       # - worker_fleets: The testbot fleets for finding available Leviathan workers. Not used for QEMU workers. Can accept a list of apps separated by commas, no spaces in between
+      # - supervisor_release_id: The supervisor release to pin on the test device. The hostapp extension tests need helios 0.28.0 or later. Falls back to the SUPERVISOR_RELEASE_ID repository or environment variable. Unset by default
       # - test_org: The organization to use for testing cloud functionality. This default org is `testbot`
       # - runs_on: A JSON array of runner labels to use for the test job(s). For qemu workers use the labels `["self-hosted", "X64", "kvm"]`.
       # - secure_boot: (truthy) Enable secure boot testing flags QEMU_SECUREBOOT=1 and FLASHER_SECUREBOOT=1. Default is false.
@@ -198,6 +199,10 @@ env:
   SLUG: ${{ inputs.slug || inputs.machine }}
   VERBOSE: verbose
   WORKFLOW_NAME: ${{ github.workflow }}
+  # Suites that read the built extension images from their own directory.
+  EXTENSION_SUITES: '["hup"]'
+  # Suites whose module probes need the base and extension headers.
+  HEADERS_SUITES: '["hup","cloud"]'
 
 # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
@@ -276,6 +281,7 @@ jobs:
       built_images: ${{ steps.composition.outputs.built_images }}
       hostapp_assets: ${{ steps.composition.outputs.hostapp_assets }}
       extension_assets: ${{ steps.composition.outputs.extension_assets }}
+      extension_images: ${{ steps.composition.outputs.extension_images }}
 
     steps:
       # Decode the GitHub App private key.
@@ -713,6 +719,9 @@ jobs:
             core.setOutput('built_images', services.map((service) => [service.name, service.image_output, service.image_class].join('\t')).join('\n'));
             core.setOutput('hostapp_assets', hostapp.assets.join('\n'));
             core.setOutput('extension_assets', extensionAssets.join('\n'));
+            // image_outputs drops the service name, which the test job needs to key the
+            // staged images. Empty when the build produces no extensions.
+            core.setOutput('extension_images', extensions.map((service) => `${service.name}\t${service.image_output}`).join('\n'));
 
       # Unrolled balena_api_is_dt_private function - https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-api.inc#L424
       # Had to be unrolled due to this: https://github.com/balena-os/balena-yocto-scripts/blob/master/automation/include/balena-lib.inc#L191 function relying on a jenkins env var to select the balena env - so failed
@@ -1763,6 +1772,9 @@ jobs:
     # We don't need significant resources for this step, and it downloads artifacts faster when
     # using GitHub hosted runners vs self-hosted.
     runs-on: ubuntu-24.04
+    outputs:
+      # The test job pins the device to this release for the extension tests
+      release_id: ${{ steps.deploy-hostapp.outputs.release_id }}
     # We want to push a hostapp on push events (PR merge) or dispatch
     # These conditions should match s3-deploy
     # Force finlize will finalize no matter what - so we want to make sure there is something to finlize - so it will always trigger this if true
@@ -1986,6 +1998,12 @@ jobs:
           _json=$(${CURL} -XGET -H "Content-type: application/json" "https://api.${API_ENV}/${TRANSLATION}/release?\$filter=commit%20eq%20%27${releaseCommit}%27" -H "Authorization: Bearer ${BALENAOS_TOKEN}")
           _release_id=$(echo "${_json}" | jq -r '.d[0].id')
           echo "${_release_id}"
+
+          # jq prints "null" and exits 0 for an empty result or an error body
+          if [ -z "${_release_id}" ] || [ "${_release_id}" = "null" ]; then
+            echo "::error title=Release lookup failed::No release found for commit ${releaseCommit}"
+            exit 1
+          fi
 
           echo "release_id=${_release_id}" >>"${GITHUB_OUTPUT}"
 
@@ -2880,6 +2898,7 @@ jobs:
       - approved-commit
       - balena-lib
       - build
+      - hostapp-deploy
     # Specify the runner type in the test_matrix input.
     # QEMU workers need ["self-hosted", "X64", "kvm"] or ["self-hosted", "ARM64", "kvm"] runners.
     # Testbot workers can use any GitHub hosted (ubuntu-latest) or self-hosted runner.
@@ -2889,7 +2908,12 @@ jobs:
     environment: ${{ matrix.environment }}
     # https://docs.github.com/en/actions/learn-github-actions/expressions#functions
     # this expression checks to make sure at least one test suite was provided via either matrix syntax
+    # hostapp-deploy is a dependency only to read its release id. It is skipped on
+    # most events, and a skipped dependency would otherwise skip this job. This
+    # asserts build success instead, which also covers approved-commit and balena-lib.
     if: |
+      !cancelled() &&
+      needs.build.result == 'success' &&
       github.event_name != 'push' &&
       inputs.test_matrix &&
       (
@@ -3060,6 +3084,106 @@ jobs:
           name: kernel-module-headers
           destination: ${{ env.DEPLOY_PATH }}
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
+
+      # Kernel override extensions publish headers as a release asset. One build wrote every
+      # extension asset under build/tmp/deploy, so they arrive in one artifact at those paths.
+      - name: Download extension release assets
+        if: needs.balena-lib.outputs.extension_assets != '' && contains(fromJSON(env.HEADERS_SUITES), matrix.test_suite)
+        uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
+        with:
+          name: release-assets-extensions
+          destination: ${{ env.DEPLOY_PATH }}/extension-assets
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
+
+      # Leviathan uploads only the suite directory to the core, so the images travel inside it.
+      # The suite keys images by service name; the build names them <recipe>-<machine>.docker.
+      - name: Stage extension images in the test suite
+        if: needs.balena-lib.outputs.extension_images != '' && contains(fromJSON(env.EXTENSION_SUITES), matrix.test_suite)
+        env:
+          EXTENSION_IMAGES: ${{ needs.balena-lib.outputs.extension_images }}
+          EXTENSIONS_DIR: ${{ env.SUITES }}/${{ matrix.test_suite }}/extensions
+        run: |
+          set -euo pipefail
+          mkdir -p "${EXTENSIONS_DIR}"
+          # One "<service>\t<image filename>" line per extension.
+          while IFS=$'\t' read -r svc image; do
+            [ -n "${svc}" ] || continue
+            mv -v "${DEPLOY_PATH}/${image}" "${EXTENSIONS_DIR}/${svc}.docker"
+          done <<< "${EXTENSION_IMAGES}"
+          ls -l "${EXTENSIONS_DIR}"
+
+      # The module probes build against both kernels, so stage both header sets.
+      - name: Stage kernel headers in the test suite
+        if: needs.balena-lib.outputs.extension_assets != '' && contains(fromJSON(env.HEADERS_SUITES), matrix.test_suite)
+        env:
+          EXTENSION_ASSETS: ${{ needs.balena-lib.outputs.extension_assets }}
+          HEADERS_DIR: ${{ env.SUITES }}/${{ matrix.test_suite }}/headers
+        run: |
+          set -euo pipefail
+          mkdir -p "${HEADERS_DIR}"
+          # Copy, because Prepare workspace moves this file for the os suite.
+          cp -v "${DEPLOY_PATH}/kernel_modules_headers.tar.gz" "${HEADERS_DIR}/base.tar.gz"
+          # The globs are relative to the deploy dir root, so expand them from there.
+          cd "${DEPLOY_PATH}/extension-assets"
+          # One "<service>\t<space-separated globs>" line per extension. Re-expanding the globs
+          # picks out what they matched at build time, as the deploy job splits them.
+          # Copy, not move: two extensions can declare a glob that matches the same file.
+          while IFS=$'\t' read -r svc assets; do
+            [ -n "${svc}" ] || continue
+            found=
+            for entry in ${assets}; do
+              for f in ${entry}; do
+                if [ -e "${f}" ]; then
+                  case "${f}" in
+                    */kernel_modules_headers.tar.gz) found="${f}" ;;
+                  esac
+                fi
+              done
+            done
+            if [ -n "${found}" ]; then
+              cp -v "${found}" "${HEADERS_DIR}/${svc}.tar.gz"
+            else
+              echo "[INFO] No kernel headers for extension ${svc}"
+            fi
+          done <<< "${EXTENSION_ASSETS}"
+          cd "${WORKSPACE}"
+          rm -rf "${DEPLOY_PATH}/extension-assets"
+          ls -l "${HEADERS_DIR}"
+
+      # The cloud suite skips its extension tests when no release id is staged,
+      # and still reports green. A failed deploy must fail the leg here.
+      - name: Require a deployed hostapp for the cloud suite
+        if: matrix.test_suite == 'cloud' && needs.hostapp-deploy.result == 'failure'
+        run: |
+          echo "::error title=hostapp-deploy failed::Cloud suite cannot assert hostapp extensions"
+          exit 1
+
+      # A workflow env var cannot reach a test. The Leviathan core receives only
+      # FLASHER_SECUREBOOT, and builds the suite options from a fixed key list.
+      # The suite directory is uploaded whole, so the ids travel inside it.
+      - name: Stage the hostapp release ids for the cloud suite
+        if: matrix.test_suite == 'cloud' && needs.hostapp-deploy.outputs.release_id != '' && needs.hostapp-deploy.outputs.release_id != 'null'
+        env:
+          HOSTAPP_RELEASE_ID: ${{ needs.hostapp-deploy.outputs.release_id }}
+          SUPERVISOR_RELEASE_ID: ${{ matrix.supervisor_release_id || vars.SUPERVISOR_RELEASE_ID }}
+          STAGED: ${{ env.SUITES }}/${{ matrix.test_suite }}/hostapp.json
+        run: |
+          # jq's tonumber would abort the leg without naming the cause
+          case "${SUPERVISOR_RELEASE_ID}" in
+            *[!0-9]*)
+              echo "::error title=Invalid supervisor release id::Expected a number, got '${SUPERVISOR_RELEASE_ID}'"
+              exit 1
+              ;;
+          esac
+
+          jq -n \
+            --argjson releaseId "${HOSTAPP_RELEASE_ID}" \
+            --arg supervisorReleaseId "${SUPERVISOR_RELEASE_ID}" \
+            '{
+               releaseId: $releaseId,
+               supervisorReleaseId: (if $supervisorReleaseId == "" then null else ($supervisorReleaseId | tonumber) end)
+             }' > "${STAGED}"
+          cat "${STAGED}"
 
       # Check out private contracts if this is a private device type - as these are required for the tests
       - name: Checkout private Contracts
