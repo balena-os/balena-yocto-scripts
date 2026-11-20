@@ -59,7 +59,7 @@
               "minLength": 1
             },
             "assets": {
-              "description": "Globs of raw build outputs relative to the deploy dir root build/tmp/deploy/, uploaded as web resources attached to the balenaCloud release. Use images/__MACHINE__/ (substituted at composition parse time) for machine-specific output, or a build/tmp/deploy/ sibling (e.g. cyclonedx-export/balena-image*/*.json, licenses/**) in place. The deploy side transforms these to the flat contract layout: strip images/<machine>/, cyclonedx-export/ -> cyclonedx/, and tar licenses/ -> licenses.tar.gz and rpi-eeprom/secure-boot-lock/ -> secure-boot-lock.tar.gz.",
+              "description": "Globs of raw build outputs relative to the deploy dir root build/tmp/deploy/, uploaded as web resources attached to the balenaCloud release. Use images/__MACHINE__/ (substituted at composition parse time) for machine-specific output, or a build/tmp/deploy/ sibling (e.g. cyclonedx-export/**/*.json, licenses/**) in place. The build job transforms these to the flat contract layout: strip images/<machine>/, cyclonedx-export/ -> cyclonedx/, and tar licenses/ -> licenses.tar.gz and rpi-eeprom/secure-boot-lock/ -> secure-boot-lock.tar.gz. The assets of all services attach to one release under flat keys, so the build fails when two different files map to one key. The device overlay's list is appended to the meta-balena base list.",
               "type": "array",
               "items": { "type": "string" }
             }

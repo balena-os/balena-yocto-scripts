@@ -118,7 +118,7 @@ to the whole build.
 | Field    | Type            | Required | Description                                                                                                    |
 | -------- | --------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
 | `recipe` | string          | no       | Bitbake image target. Omitted for hostapp (falls back to the device type's `yocto.image`); set for extensions. |
-| `assets` | list of strings | no       | Globs of raw build outputs under `build/tmp/deploy/`; transformed to flat keys on deploy.                      |
+| `assets` | list of strings | no       | Globs of raw build outputs under `build/tmp/deploy/`. See [`x-build.assets`](#x-buildassets).                  |
 
 ### `x-build-args`
 
@@ -137,6 +137,37 @@ The workflow builds the argument list in this order:
 Barys keeps the last value of a repeated flag such as `-t`, and the last `-a`
 assignment of a key wins in `local.conf`. A later source therefore overrides an
 earlier one.
+
+### `x-build.assets`
+
+Each service declares the globs of its own release assets. All services build
+into one `build/tmp/deploy/`, so the workflow attaches the assets of all
+services to one release. The keys are flat, with no service prefix. The build
+job transforms each path to its key (see `__MACHINE__` in
+[Placeholders](#placeholders)).
+The [Hostapp Release Assets Contract](hostapp-release-assets.md) lists the
+keys that image-maker reads.
+
+The workflow builds each service's list in this order:
+
+1. The meta-balena base composition's list.
+2. The device overlay's list.
+
+A device overlay that sets the service, its `x-build`, or its `assets` to `~`
+removes the assets of that service.
+
+Two services can declare the same file. The release gets one asset for that
+file. The build fails when:
+
+- Two different files map to one key. Example: an extension declares `VERSION`
+  and the hostapp declares `images/__MACHINE__/VERSION`.
+- A directory that the transform empties still has content. Example: a file
+  under `rpi-eeprom/` but not under `rpi-eeprom/secure-boot-lock/`.
+- All globs of a service match nothing.
+
+The workflow does not check which service supplies a contract key. An extension
+that supplies a contract key the hostapp does not produce, such as
+`image-raw.json`, becomes the hostapp input that image-maker reads.
 
 ### Overlay services name their runtime
 
@@ -211,8 +242,8 @@ service's `x-build.assets` globs, because those globs are relative to
 only the parsed `assets` value is resolved. The `images/<machine>/`
 prefix it produces (and the other raw-output paths like `cyclonedx-export/`,
 `licenses/`, `rpi-eeprom/secure-boot-lock/`) is transformed to the flat contract
-layout on the deploy side (`hostapp-deploy` and `s3-deploy` share one anchored
-"Transform release assets" step).
+layout by the build job's "Transform release assets" step. The deploy jobs
+receive the transformed files.
 
 Adding a new placeholder is a three-step contract change: this section, the
 workflow's substitution step, and any meta-balena base composition or device
