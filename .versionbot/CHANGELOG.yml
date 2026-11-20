@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update ubuntu:22.04 Docker digest to f64b2ff
+      hash: 8b8e3f01f2b96b189cd55d83b0e90e9606f05cd2
+      body: |
+        Update ubuntu
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.43.1
+  title: ""
+  date: 2026-11-20T15:58:37.452Z
+- commits:
     - subject: "yocto-build-deploy: Build hostapp and extensions in one bitbake
         invocation"
       hash: 8438f5f50e199a99208525b2c49c15a538e5bbb2
