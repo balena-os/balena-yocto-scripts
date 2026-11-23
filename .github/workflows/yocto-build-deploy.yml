@@ -1875,9 +1875,14 @@ jobs:
       # The test job pins the device to this release.
       release_id: ${{ steps.deploy-hostapp.outputs.release_id }}
     # We want to push a hostapp on push events (PR merge) or dispatch
-    # These conditions should match s3-deploy
     # Force finlize will finalize no matter what - so we want to make sure there is something to finlize - so it will always trigger this if true
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || inputs.force-finalize
+    # Pull requests get a draft: should_finalize is false there.
+    # Forks arrive as pull_request_target and get no deploy.
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'pull_request' ||
+      inputs.force-finalize
     needs:
       - approved-commit
       - build
