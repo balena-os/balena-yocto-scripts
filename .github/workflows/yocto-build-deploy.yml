@@ -3123,28 +3123,19 @@ jobs:
           mkdir -p "${HEADERS_DIR}"
           # Copy, because Prepare workspace moves this file for the os suite.
           cp -v "${DEPLOY_PATH}/kernel_modules_headers.tar.gz" "${HEADERS_DIR}/base.tar.gz"
-          # The globs are relative to the deploy dir root, so expand them from there.
+          # The upload stores each match under service/<svc>/<deploy-dir path>.
           cd "${DEPLOY_PATH}/extension-assets"
-          # One "<service>\t<space-separated globs>" line per extension. Re-expanding the globs
-          # picks out what they matched at build time, as the deploy job splits them.
+          # One "<service>\t<space-separated globs>" line per extension.
           # Copy, not move: two extensions can declare a glob that matches the same file.
           while IFS=$'\t' read -r svc assets; do
             [ -n "${svc}" ] || continue
-            found=
             for entry in ${assets}; do
-              for f in ${entry}; do
-                if [ -e "${f}" ]; then
-                  case "${f}" in
-                    */kernel_modules_headers.tar.gz) found="${f}" ;;
-                  esac
-                fi
-              done
+              case "${entry}" in
+                *kernel_modules_headers.tar.gz)
+                  cp -v service/${svc}/${entry} "${HEADERS_DIR}/${svc}.tar.gz"
+                  ;;
+              esac
             done
-            if [ -n "${found}" ]; then
-              cp -v "${found}" "${HEADERS_DIR}/${svc}.tar.gz"
-            else
-              echo "[INFO] No kernel headers for extension ${svc}"
-            fi
           done <<< "${EXTENSION_ASSETS}"
           cd "${WORKSPACE}"
           rm -rf "${DEPLOY_PATH}/extension-assets"
