@@ -201,6 +201,8 @@ env:
   WORKFLOW_NAME: ${{ github.workflow }}
   # Suites that read extension images from their directory.
   EXTENSION_SUITES: '["hup"]'
+  # Suites whose module probes need base and extension headers.
+  HEADERS_SUITES: '["hup","cloud"]'
 
 # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
 # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions
@@ -278,6 +280,7 @@ jobs:
       image_outputs: ${{ steps.composition.outputs.image_outputs }}
       built_images: ${{ steps.composition.outputs.built_images }}
       service_assets: ${{ steps.composition.outputs.service_assets }}
+      extension_assets: ${{ steps.composition.outputs.extension_assets }}
       extension_images: ${{ steps.composition.outputs.extension_images }}
 
     steps:
@@ -704,6 +707,11 @@ jobs:
             // One "<service>\t<archive>\t<image class>" line per built service, for the deploy job.
             core.setOutput('built_images', services.map((service) => [service.name, service.image_output, service.image_class].join('\t')).join('\n'));
             core.setOutput('service_assets', serviceAssets.join('\n'));
+            // Gates the extension kernel headers.
+            core.setOutput('extension_assets', extensions
+              .filter((service) => service.assets.length > 0)
+              .map((service) => `${service.name}\t${service.assets.join(' ')}`)
+              .join('\n'));
             // The test job keys staged images by service name.
             core.setOutput('extension_images', extensions.map((service) => `${service.name}\t${service.image_output}`).join('\n'));
 
@@ -1574,6 +1582,57 @@ jobs:
           encrypt: ${{ env.ARTIFACT_ENCRYPT }}
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
           source: kernel_modules_headers.tar.gz
+
+      # Asset keys drop the service, so map headers here.
+      - name: Stage extension kernel headers
+        if: needs.balena-lib.outputs.extension_assets != ''
+        env:
+          EXTENSION_ASSETS: ${{ needs.balena-lib.outputs.extension_assets }}
+          STAGING: ${{ runner.temp }}/extension-kernel-headers
+        run: |
+          set -euo pipefail
+          rm -rf "${STAGING}"
+          mkdir -p "${STAGING}"
+          cd build/tmp/deploy
+          cp -vL "images/${MACHINE}/kernel_modules_headers.tar.gz" "${STAGING}/base.tar.gz"
+          # One "<service>\t<space-separated globs>" line per extension.
+          while IFS=$'\t' read -r svc assets; do
+            [ -n "${svc}" ] || continue
+            # base.tar.gz holds the hostapp headers
+            if [ "${svc}" = base ]; then
+              echo "::error title=Reserved extension name::An extension named base overwrites the hostapp kernel headers"
+              exit 1
+            fi
+            found=
+            for entry in ${assets}; do
+              for f in ${entry}; do
+                if [ -e "${f}" ]; then
+                  case "${f}" in
+                    */kernel_modules_headers.tar.gz) found="${f}" ;;
+                  esac
+                fi
+              done
+            done
+            if [ -n "${found}" ]; then
+              cp -vL "${found}" "${STAGING}/${svc}.tar.gz"
+            else
+              echo "[INFO] No kernel headers for extension ${svc}"
+            fi
+          done <<< "${EXTENSION_ASSETS}"
+          ls -l "${STAGING}"
+
+      - name: Upload extension-kernel-headers artifact
+        if: needs.balena-lib.outputs.extension_assets != ''
+        uses: product-os/lzma-artifact-action/upload@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
+        with:
+          name: extension-kernel-headers
+          base-directory: ${{ runner.temp }}/extension-kernel-headers
+          if-no-files-found: error
+          retention-days: "3"
+          compression-level: "1"
+          encrypt: ${{ env.ARTIFACT_ENCRYPT }}
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
+          source: .
 
       # Raw image for Leviathan OS/cloud suites (selected via test_image) and AMI creation.
       # Uploaded raw: lzma-artifact-action LZMA-compresses in transit, so the previous .img.zip
@@ -3041,6 +3100,10 @@ jobs:
           destination: ${{ env.DEPLOY_PATH }}
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
+      # Checkout does not clean the meta-balena submodule on reused runners.
+      - name: Remove staged inputs of earlier runs
+        run: rm -rf "${SUITES:?}/${TEST_SUITE:?}/extensions" "${SUITES}/${TEST_SUITE}/headers" "${SUITES}/${TEST_SUITE}/hostapp.json"
+
       # Leviathan uploads only the suite directory to the core.
       - name: Stage extension images in the test suite
         if: needs.balena-lib.outputs.extension_images != '' && contains(fromJSON(env.EXTENSION_SUITES), matrix.test_suite)
@@ -3056,6 +3119,14 @@ jobs:
             mv -v "${DEPLOY_PATH}/${image}" "${EXTENSIONS_DIR}/${svc}.docker"
           done <<< "${EXTENSION_IMAGES}"
           ls -l "${EXTENSIONS_DIR}"
+
+      - name: Stage kernel headers in the test suite
+        if: needs.balena-lib.outputs.extension_assets != '' && contains(fromJSON(env.HEADERS_SUITES), matrix.test_suite)
+        uses: product-os/lzma-artifact-action/download@b6f9f26aacd2e72237224b0d398e9d03f2f28f52 # v0.1.4
+        with:
+          name: extension-kernel-headers
+          destination: ${{ env.SUITES }}/${{ matrix.test_suite }}/headers
+          password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
       # The cloud suite passes silently without a release id.
       - name: Require a deployed hostapp for the cloud suite
