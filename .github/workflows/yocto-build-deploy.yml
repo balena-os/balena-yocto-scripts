@@ -3140,16 +3140,19 @@ jobs:
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
       # The cloud suite passes silently without a release id.
+      # A skipped job is not failed, so test the id.
       - name: Require a deployed hostapp for the cloud suite
-        if: matrix.test_suite == 'cloud' && needs.hostapp-deploy.result == 'failure'
+        if: matrix.test_suite == 'cloud' && (needs.hostapp-deploy.outputs.release_id == '' || needs.hostapp-deploy.outputs.release_id == 'null')
+        env:
+          DEPLOY_RESULT: ${{ needs.hostapp-deploy.result }}
         run: |
-          echo "::error title=hostapp-deploy failed::Cloud suite cannot assert hostapp extensions"
+          echo "::error title=No hostapp release id::hostapp-deploy is ${DEPLOY_RESULT}. The cloud suite cannot assert hostapp extensions."
           exit 1
 
       # Leviathan uploads the suite directory, but no workflow env.
       # A release id is only valid on the cloud that deployed it.
       - name: Skip the hostapp release ids from another cloud
-        if: matrix.test_suite == 'cloud' && needs.hostapp-deploy.outputs.release_id != '' && (matrix.environment || 'balena-cloud.com') != inputs.deploy-environment
+        if: matrix.test_suite == 'cloud' && (matrix.environment || 'balena-cloud.com') != inputs.deploy-environment
         env:
           TEST_ENVIRONMENT: ${{ matrix.environment || 'balena-cloud.com' }}
           DEPLOY_ENVIRONMENT: ${{ inputs.deploy-environment }}
@@ -3157,7 +3160,7 @@ jobs:
           echo "::warning title=Cloud extension cases skipped::The hostapp deployed to ${DEPLOY_ENVIRONMENT}, but the cloud suite tests on ${TEST_ENVIRONMENT}"
 
       - name: Stage the hostapp release ids for the cloud suite
-        if: matrix.test_suite == 'cloud' && needs.hostapp-deploy.outputs.release_id != '' && needs.hostapp-deploy.outputs.release_id != 'null' && (matrix.environment || 'balena-cloud.com') == inputs.deploy-environment
+        if: matrix.test_suite == 'cloud' && (matrix.environment || 'balena-cloud.com') == inputs.deploy-environment
         env:
           HOSTAPP_RELEASE_ID: ${{ needs.hostapp-deploy.outputs.release_id }}
           SUPERVISOR_RELEASE_ID: ${{ matrix.supervisor_release_id || vars.SUPERVISOR_RELEASE_ID }}
