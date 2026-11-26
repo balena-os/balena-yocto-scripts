@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update balena-io/balena-cli to v25.2.44
+      hash: e0c6060164f90b188d5f0e890a508ac1fe6e1e05
+      body: |
+        Update balena-io/balena-cli from 25.1.10 to 25.2.44
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.44.2
+  title: ""
+  date: 2026-11-26T22:49:09.825Z
+- commits:
     - subject: "yocto-build-deploy: fail when the hostapp release lookup finds nothing"
       hash: 14d8f6a7fe9368de35441bd47df69303e2736067
       body: |
