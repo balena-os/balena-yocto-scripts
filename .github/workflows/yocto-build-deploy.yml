@@ -1875,9 +1875,14 @@ jobs:
       # The test job pins the device to this release.
       release_id: ${{ steps.deploy-hostapp.outputs.release_id }}
     # We want to push a hostapp on push events (PR merge) or dispatch
-    # These conditions should match s3-deploy
     # Force finlize will finalize no matter what - so we want to make sure there is something to finlize - so it will always trigger this if true
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || inputs.force-finalize
+    # Pull requests get a draft: should_finalize is false there.
+    # Forks arrive as pull_request_target and get no deploy.
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'pull_request' ||
+      inputs.force-finalize
     needs:
       - approved-commit
       - build
@@ -3135,16 +3140,19 @@ jobs:
           password: ${{ secrets.PBDKF2_PASSPHRASE }}
 
       # The cloud suite passes silently without a release id.
+      # A skipped job is not failed, so test the id.
       - name: Require a deployed hostapp for the cloud suite
-        if: matrix.test_suite == 'cloud' && needs.hostapp-deploy.result == 'failure'
+        if: matrix.test_suite == 'cloud' && (needs.hostapp-deploy.outputs.release_id == '' || needs.hostapp-deploy.outputs.release_id == 'null')
+        env:
+          DEPLOY_RESULT: ${{ needs.hostapp-deploy.result }}
         run: |
-          echo "::error title=hostapp-deploy failed::Cloud suite cannot assert hostapp extensions"
+          echo "::error title=No hostapp release id::hostapp-deploy is ${DEPLOY_RESULT}. The cloud suite cannot assert hostapp extensions."
           exit 1
 
       # Leviathan uploads the suite directory, but no workflow env.
       # A release id is only valid on the cloud that deployed it.
       - name: Skip the hostapp release ids from another cloud
-        if: matrix.test_suite == 'cloud' && needs.hostapp-deploy.outputs.release_id != '' && (matrix.environment || 'balena-cloud.com') != inputs.deploy-environment
+        if: matrix.test_suite == 'cloud' && (matrix.environment || 'balena-cloud.com') != inputs.deploy-environment
         env:
           TEST_ENVIRONMENT: ${{ matrix.environment || 'balena-cloud.com' }}
           DEPLOY_ENVIRONMENT: ${{ inputs.deploy-environment }}
@@ -3152,7 +3160,7 @@ jobs:
           echo "::warning title=Cloud extension cases skipped::The hostapp deployed to ${DEPLOY_ENVIRONMENT}, but the cloud suite tests on ${TEST_ENVIRONMENT}"
 
       - name: Stage the hostapp release ids for the cloud suite
-        if: matrix.test_suite == 'cloud' && needs.hostapp-deploy.outputs.release_id != '' && needs.hostapp-deploy.outputs.release_id != 'null' && (matrix.environment || 'balena-cloud.com') == inputs.deploy-environment
+        if: matrix.test_suite == 'cloud' && (matrix.environment || 'balena-cloud.com') == inputs.deploy-environment
         env:
           HOSTAPP_RELEASE_ID: ${{ needs.hostapp-deploy.outputs.release_id }}
           SUPERVISOR_RELEASE_ID: ${{ matrix.supervisor_release_id || vars.SUPERVISOR_RELEASE_ID }}
