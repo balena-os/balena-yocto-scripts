@@ -1,4 +1,17 @@
 - commits:
+    - subject: Update coffee-script to ~1.12.0
+      hash: 166f23a8d206a84a499be7b93be89465d00a4c7f
+      body: |
+        Update coffee-script from 1.10.0 to 1.12.7
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+      nested: []
+  version: 1.44.3
+  title: ""
+  date: 2026-11-27T03:11:43.064Z
+- commits:
     - subject: Update balena-io/balena-cli to v25.2.44
       hash: e0c6060164f90b188d5f0e890a508ac1fe6e1e05
       body: |
