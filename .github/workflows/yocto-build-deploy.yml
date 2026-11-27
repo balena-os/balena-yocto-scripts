@@ -1936,7 +1936,7 @@ jobs:
           # that branch gains commits, so this installs unreviewed code into the
           # hostApp deploy job. Drop it and restore cli-version below once the CLI
           # change it is testing has been released.
-          cli-channel: os-profiles
+          cli-channel: os-profiles-with-runtimes
           # cli-version and cli-channel are mutually exclusive, so the pinned
           # version above goes unused while a channel is set.
           # cli-version: ${{ env.BALENA_CLI_VERSION }}
