@@ -1,4 +1,18 @@
 - commits:
+    - subject: Change CLI channel to os-profiles-with-runtimes
+      hash: 85596207aca5072bc955d6a6b914c4fc02526847
+      body: >
+        This branch contains support for both profiles and custom container
+        runtimes via the CLI, which are needed to deploy OS Blocks.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Kyle Harding
+      nested: []
+  version: 1.44.5
+  title: ""
+  date: 2026-11-27T17:43:30.263Z
+- commits:
     - subject: Update ubuntu:22.04 Docker digest to b000e69
       hash: c14fb3244cd21272fd6b8f705e3f5a97a2b50f08
       body: |
