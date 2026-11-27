@@ -47,27 +47,37 @@ if ( contractsPaths.length === 0 ) {
     process.exit(1)
 }
 
+const blueprints = _.mapValues(BLUEPRINT_PATHS, (blueprintPath) => {
+  return yaml.safeLoad(fs.readFileSync(blueprintPath, 'utf8'))
+})
+
+// Load only the contract types that the blueprints select. Other types
+// (e.g. sw.stack, sw.blob) can fail contrato's schema validation.
+const contractTypes = _.uniq(_.flatMap(blueprints, (blueprint) => Object.keys(blueprint.selector)))
+
 // Create universe of contracts
 const universe = new contrato.Contract({
   type: 'meta.universe'
 })
-contractsPaths.forEach( (contractPath) => {
-  // Find and build all contracts from the contracts/ directory
-  const allContracts = requireAll({
-    dirname: contractPath,
-    filter: /.json$/,
-    recursive: true,
-    resolve: (json) => {
-      return contrato.Contract.build(json)
+for (const contractPath of contractsPaths) {
+  for (const type of contractTypes) {
+    const typePath = path.join(contractPath, type)
+    if (!fs.pathExistsSync(typePath)) {
+      continue
     }
-  })
 
-  const contracts = _.reduce(_.values(allContracts), (accumulator, value) => {
-    return _.concat(accumulator, _.flattenDeep(_.map(_.values(value), _.values)))
-  }, [])
+    const allContracts = requireAll({
+      dirname: typePath,
+      filter: /.json$/,
+      recursive: true,
+      resolve: (json) => {
+        return contrato.Contract.build(json)
+      }
+    })
 
-  universe.addChildren(contracts)
-})
+    universe.addChildren(_.flattenDeep(_.map(_.values(allContracts), _.values)))
+  }
+}
 
 // Remove the operating systems that are not balenaOS
 const unwantedOS = ['alpine','debian','ubuntu','fedora','resinos']
@@ -82,36 +92,32 @@ unwantedOS.forEach( (slug) => {
   })
 })
 
-let blueprints = Object.keys(BLUEPRINT_PATHS)
+const generate = async () => {
+  for (const query of Object.values(blueprints)) {
+    // contrato.query() returns an iterator, not an array
+    const result = [...contrato.query(universe, query.selector, query.output)]
 
-for (const type of blueprints) {
-  if (!BLUEPRINT_PATHS[type]) {
-    console.error(`Blueprint for this device type: ${type} is missing!`)
-    process.exit(1)
+    const template = query.output.template[0].data
+
+    for (const context of result) {
+      const json = context.toJSON()
+      const destination = path.join(
+        DEST_DIR,
+        json.path,
+        query.output.filename
+      )
+
+      console.log(`Generating ${json.imageName}`)
+      fs.outputFileSync(destination, await contrato.buildTemplate(template, json, {
+        directory: CONTRACTS_PATH
+      }))
+    }
+
+    console.log(`Generated ${result.length} results out of ${universe.getChildren().length} contracts`)
   }
-
-  const query = yaml.safeLoad(fs.readFileSync(BLUEPRINT_PATHS[type], 'utf8'))
-
-  // Execute query
-  const result = contrato.query(universe, query.selector, query.output)
-
-  // Get templates
-  const template = query.output.template[0].data
-
-  // Write output
-  for (const context of result) {
-    const json = context.toJSON()
-    const destination = path.join(
-      DEST_DIR,
-      json.path,
-      query.output.filename
-    )
-
-    console.log(`Generating ${json.imageName}`)
-    fs.outputFileSync(destination, contrato.buildTemplate(template, context, {
-      directory: CONTRACTS_PATH
-    }))
-  }
-
-  console.log(`Generated ${result.length} results out of ${universe.getChildren().length} contracts`)
 }
+
+generate().catch((err) => {
+  console.error(err)
+  process.exit(1)
+})

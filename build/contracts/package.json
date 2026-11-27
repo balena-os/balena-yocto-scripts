@@ -9,8 +9,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@balena/contrato": "^0.6.5",
+    "@balena/contrato": "^0.18.0",
     "fs-extra": "^10.1.0",
+    "js-yaml": "^3.15.2",
     "lodash": "^4.17.21",
     "require-all": "^3.0.0"
   }

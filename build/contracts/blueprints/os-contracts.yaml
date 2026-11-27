@@ -3,15 +3,11 @@ selector:
   hw.device-type: 1
   arch.sw: 1
 output:
+  type: meta.context
   filename: balena.yml
   imageName: "{{this.children.hw.device-type.slug}}-{{this.children.sw.os.slug}}"
   slug: "{{this.children.hw.device-type.slug}}-{{this.children.sw.os.slug}}"
   path: "{{this.children.hw.device-type.slug}}/{{this.children.sw.os.slug}}"
-  requires:
-    - type: hw.device-type
-      arch: "{{this.children.arch.sw.slug}}"
-    - type: sw.os-image
-      arch: "{{this.children.sw.os.slug}}"
   template:
     - name: os-contract
       data: >-
